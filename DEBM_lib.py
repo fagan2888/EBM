@@ -26,18 +26,18 @@ Lv = 2257000  #J/kg
 sig = 5.67e-8 #J/s/m2/K4
 
 # numerical variables
-# dlat = 0.5
-dlat = 1.5
+# dlat = 1.5
+dlat = 0.5
 dy = np.pi*Re*dlat/180
 dtmax = 0.5*dy**2/D
-# dt = dtmax
 dt = 1.0 * dtmax
-# max_iters = 5e4
-max_iters = 1e4
-tolerance = 0.01 # K
+# max_iters = 1e4
+max_iters = 1e5
+# tolerance = 0.01 # K
+tolerance = 0.001
 t_final = max_iters*dt
-# Nplot = 500
 Nplot = 100
+nPrint = 1000
 frames = int(t_final / dt / Nplot)
 anim_length = 8000
 
@@ -49,8 +49,8 @@ lats = np.linspace(-90, 90, int(180/dlat))
 # INSOLATION
 ################################################################################
 # insolation_type = 'annual_mean'
-insolation_type = 'annual_mean_clark'
-# insolation_type = 'perturbed'
+#insolation_type = 'annual_mean_clark'
+insolation_type = 'perturbed'
 # insolation_type = 'summer_mean'
 
 if insolation_type == 'annual_mean':
@@ -70,11 +70,11 @@ elif insolation_type == 'perturbed':
     get_S_control = lambda lat: S0*np.cos(np.deg2rad(lat))/np.pi
     ############################################################################
     ###CHANGE VALS
-    lat0 = 15; sigma = 4.94
-#     lat0 = 60; sigma = 9.89
-#     M = 5
-#     M = 10
-#     M = 15
+    # lat0 = 15; sigma = 4.94
+    lat0 = 60; sigma = 9.89
+    # M = 5
+    # M = 10
+    # M = 15
     M = 18
     ###
     ############################################################################
@@ -226,20 +226,26 @@ if olr_type == 'planck':
     L = lambda T: emis*sig*T**4  #J/m2/s
 elif olr_type == 'linear':
     ''' LINEAR FIT '''
-    lambda_planck = - 3.10 #W/m2/K
-    lambda_water  = + 1.80
-    lambda_clouds = + 0.68
-    lambda_albedo = + 0.26
-    lambda_lapse  = - 0.84
+    # Fitted values from a full_wvf simulation
+    A_full_wvf    = -417.0478973801873
+    B_full_wvf    = 2.349441658553002
+    # A reference temp to calculate A given B
+    T_ref         = 275
+    # Feedback parameters from SoldenHeld2003
+    lambda_planck = -3.10 #W/m2/K
+    lambda_water  = +1.80
+    lambda_clouds = +0.68
+    lambda_albedo = +0.26
+    lambda_lapse  = -0.84
+    # A few tests we want to do:
     # just planck
-    Bcoeff = - (lambda_planck)
-    Acoeff = -652.8783145676047
+    Bcoeff = -(lambda_planck)
     # planck + water + lapse = full_wvf
-    Bcoeff = - (lambda_planck + lambda_water + lambda_lapse)
+    #Bcoeff = -(lambda_planck + lambda_water + lambda_lapse)
     # planck + lapse = full_no_wvf
-    Bcoeff = - (lambda_planck + lambda_lapse)
-#     Acoeff = -281.67
-#     Boeff  = 1.8
+    #Bcoeff = -(lambda_planck + lambda_lapse)
+    # Calculate a decent Acoeff:
+    Acoeff = A_full_wvf + B_full_wvf * T_ref - Bcoeff * T_ref
     L = lambda T: Acoeff + Bcoeff * T
 elif olr_type == 'shell_somerville':
     ''' OLR SCHEME FROM SHELL/SOMERVILLE 2004 '''
