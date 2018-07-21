@@ -176,53 +176,32 @@ class Model():
             L = lambda T: self.A + self.B * T
         elif olr_type == 'shell_somerville':
             ''' OLR SCHEME FROM SHELL/SOMERVILLE 2004 '''
-        #     recalculate_moist_adiabats = True
-            recalculate_moist_adiabats = False
-        
-            if recalculate_moist_adiabats:
-                # MetPy's moist_lapse finds the Temp profile by solving an ODE.
-                # In order to speed things up, we'll solve it for many different 
-                # surface temps and then interpolate.
-                nSamples = 200
-                minT = 217    #overflow if minT is below 217 ???
-                maxT = 350
-                pressures = [101117.36, 97634.04827586208, 94150.73655172413, 90667.4248275862, 87184.11310344828, 83700.80137931035, 80217.48965517241, 76734.17793103449, 73250.86620689656, 69767.55448275861, 66284.24275862069, 62800.93103448275, 59317.619310344824, 55834.307586206894, 52350.99586206897, 48867.68413793103, 45384.372413793106, 41901.060689655176, 38417.74896551724, 34934.43724137931, 31451.12551724138, 27967.813793103443, 24484.502068965514, 21001.190344827588, 17517.878620689648, 14034.566896551722, 10551.255172413794, 7067.943448275866, 3584.6317241379274, 101.32000000000001] * units('Pa') # MetPy requires units
-                Tsample = np.linspace(minT, maxT, nSamples) * units('K')        # Sample surface temps
-                Tdata = np.zeros((nSamples, len(pressures))) * units('K')
-                Tdata[:, 0] = Tsample
-        
-                print('Calculating moist adiabats...')
-                for i in range(nSamples):
-                    if i%10 == 0: print('{}/{}'.format(i, nSamples))
-                    Tdata[i, :] = moist_lapse(temperature=Tdata[i, 0], pressure=pressures)
-                print('{}/{}'.format(nSamples, nSamples))
-        
-                # Keep T constant above 200 hPa for a Tropopause
-                for i in range(len(pressures)):
-                    if pressures[i].magnitude/100 < 200:
-                        Tdata[:, i] = Tdata[:, i-1]
-        
-                # Create the 2d interpolation function: gives function T_moist(p, T_surf)
-                interpolated_moist_adiabat_f = interp2d(pressures, Tsample, Tdata)
+            # Create the 2d interpolation function: gives function T_moist(p, T_surf)
+            moist_data = np.load('moist_adiabat_data.npz')
+            pressures  = moist_data['pressures']
+            Tsample    = moist_data['Tsample']
+            Tdata      = moist_data['Tdata']
+            RH_vals    = moist_data['RH_vals']
+            interpolated_moist_adiabat_f = interp2d(pressures, Tsample, Tdata)
             
             boundary_layer = 650    #hPa -- from H_middle = 3.6 km
             top_layer      = 500    #hPa -- from H_top    = 5.6 km
             k = 0.03                #m2/kg
             up_indx = 0
-            while pressures[up_indx].magnitude / 100 > top_layer:
+            while pressures[up_indx] / 100 > top_layer:
                 up_indx += 1
             bl_indx = 0
-            while pressures[bl_indx].magnitude / 100 > boundary_layer:
+            while pressures[bl_indx] / 100 > boundary_layer:
                 bl_indx += 1
-            T_atmos = np.zeros( (lats.shape[0], pressures.shape[0]))
+            T_atmos = np.zeros( (self.lats.shape[0], pressures.shape[0]))
         
             def L(T):
                 # Unfortunately, SciPy's 'interp2d' function returns sorted arrays.
                 # This forces us to do a for loop over lats.
-                for i in range(len(lats)):
+                for i in range(len(self.lats)):
                     # We flip the output since, as stated above, it comes out sorted, and we want high pressure first.
                     T_atmos[i, :] = np.flip(interpolated_moist_adiabat_f(pressures, T[i]), axis=0)
-                esat_bl = humidsat(T_atmos[:, bl_indx], pressures[bl_indx].magnitude / 100)[0]
+                esat_bl = humidsat(T_atmos[:, bl_indx], pressures[bl_indx] / 100)[0]
                 optical_depth = 0.622 * k * RH * esat_bl / g
                 emis = 0.3 + 0.7 * (1 - np.exp(-optical_depth))
                 return emis * sig * T_atmos[:, up_indx]**4 + (1 - emis) * sig * T**4
@@ -240,16 +219,18 @@ class Model():
             nLevels = 30
             radiation = climt.RRTMGLongwave(cloud_overlap_method='clear_only')
             state = climt.get_default_state([radiation], x={}, 
-                            y={'label' : 'latitude', 'values': lats, 'units' : 'degress N'},
+                            y={'label' : 'latitude', 'values': self.lats, 'units' : 'degress N'},
                             mid_levels={'label' : 'mid_levels', 'values': np.arange(nLevels), 'units' : ''},
                             interface_levels={'label' : 'interface_levels', 'values': np.arange(nLevels + 1), 'units' : ''}
                             )
+            pressures = state['air_pressure'].values[0, 0, :]
         
             # Create the 2d interpolation function: gives function T_moist(p, T_surf)
             moist_data = np.load('moist_adiabat_data.npz')
-            pres = moist_data['pressures']
-            Tsample = moist_data['Tsample']
-            Tdata = moist_data['Tdata']
+            pres       = moist_data['pressures']
+            Tsample    = moist_data['Tsample']
+            Tdata      = moist_data['Tdata']
+            RH_vals    = moist_data['RH_vals']
             interpolated_moist_adiabat_f = interp2d(pres, Tsample, Tdata)
             if water_vapor_feedback == False:
                 state['specific_humidity'].values[:, :, :] = prescribed_vapor
@@ -266,12 +247,12 @@ class Model():
                 state['surface_temperature'].values[:] = T
                 # Unfortunately, SciPy's 'interp2d' function returns sorted arrays.
                 # This forces us to do a for loop over lats.
-                for i in range(len(lats)):
+                for i in range(len(self.lats)):
                     # We flip the output since, as stated above, it comes out sorted, and we want high pressure first.
                     state['air_temperature'].values[0, i, :] = np.flip(interpolated_moist_adiabat_f(pressures, T[i]), axis=0)
                 # Set specific hum assuming constant RH
                 if water_vapor_feedback == True:
-                    state['specific_humidity'].values[:] = RH_vals * humidsat(state['air_temperature'].values[:], 
+                    state['specific_humidity'].values[:] = RH_vals * self.humidsat(state['air_temperature'].values[:], 
                                                                     state['air_pressure'].values[:] / 100)[1]
                 tendencies, diagnostics = radiation(state)
                 return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=nLevels).values[0]

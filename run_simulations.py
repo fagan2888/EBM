@@ -35,7 +35,8 @@ sim.albedo(albedo_feedback=False)
 #A = A_full_wvf + B_full_wvf * T_ref - B * T_ref
 
 # sim.outgoing_longwave('linear', A=A, B=B)
-sim.outgoing_longwave('planck', emissivity=0.6)
+# sim.outgoing_longwave('planck', emissivity=0.6)
+sim.outgoing_longwave('full_wvf')
 
 sim.solve(numerical_method='crank', nPlot=1000, nPrint=1000)
 
