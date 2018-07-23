@@ -1,0 +1,26 @@
+#!/bin/bash
+#SBATCH --output="EBM.%j.%N.out"  
+#SBATCH --error="EBM.%j.%N.err"
+#SBATCH --job-name=EBM
+#SBATCH --account=fc_tropical
+#SBATCH --partition=savio
+#SBATCH --qos=savio_normal
+#SBATCH --mem-per-cpu=60G
+#SBATCH --time=04:00:00
+#SBATCH --mail-user=hpeter@berkeley.edu
+#SBATCH --mail-type=all
+
+# Make new out file
+i=0
+while [ -e out$i ]; do
+    i=`echo "$i + 1" | bc`
+done
+out=out$i
+# Load programs
+module load python
+# Use my EPSenv python conda virtual environment
+source activate EPSenv
+# Run code, direct output
+python -u /global/home/users/hpeter/EBM/perturbation_sims.py > $out
+# Print time of finish
+date

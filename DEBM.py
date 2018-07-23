@@ -212,7 +212,7 @@ class Model():
                 water_vapor_feedback = True
             else:
                 water_vapor_feedback = False
-                prescribed_vapor = np.load('data/prescirbed_vapor.npz')['arr_0']
+                prescribed_vapor = np.load('data/prescribed_vapor.npz')['arr_0']
         
         
             # Use CliMT radiation scheme along with MetPy's moist adiabat calculator
@@ -314,14 +314,14 @@ class Model():
             self.C = np.dot(Ainv, B)
         print('\nModel Params:')
         print("dtmax:      {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax/60/60/24))
-        print("dt:         {:.2f} s / {:.4f} days".format(self.dt, self.dt/60/60/24))
-        print("dy:         {:.2f} m".format(self.dy))
-        print("iterations: {}".format(int(self.max_iters)))
+        print("dt:         {:.2f} s / {:.4f} days = {:.2f} * dtmax".format(self.dt, self.dt/60/60/24, self.dt/self.dtmax))
+        print("dlat:       {:.2f} m".format(self.dlat))
         print("tolerance:  {}".format(self.tol * self.dt))
+        print("nPlot:      {}".format(nPlot))
         print("frames:     {}\n".format(frames))
         
         print('Insolation Type:   {}'.format(self.insolation_type))
-        if self.insolation_type == 'perturbed':
+        if self.insolation_type == 'perturbation':
             print('\tlat0 = {:.0f}, M = {:.0f}, sigma = {:.2f}'.format(
                 self.perturb_center, self.perturb_intensity, self.perturb_spread))
         print('Initial Temp Dist: {}'.format(self.initial_condition))

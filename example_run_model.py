@@ -23,6 +23,4 @@ model.solve(numerical_method='crank', nPlot=1000, nPrint=1000)
 
 model.save_data()
 
-model.log_efe('perturbed_efe_planck_linear.dat')
-
 model.save_plots()

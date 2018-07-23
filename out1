@@ -1,0 +1,47 @@
+
+Model Params:
+dtmax:      1458.06 s / 0.0169 days
+dt:         1458.06 s / 0.0169 days
+dy:         55597.46 m
+iterations: 100000
+tolerance:  1.4580556263548108
+frames:     1000
+
+Insolation Type:   annual_mean_clark
+Initial Temp Dist: triangle
+Albedo Feedback:   False
+OLR Scheme:        full_wvf
+Numerical Method:  crank
+
+    0/100000 iterations.
+  500/100000 iterations. Last error: 160.2920000007654835
+ 1000/100000 iterations. Last error: 135.7500000006497203
+ 1500/100000 iterations. Last error: 114.3640000005464685
+ 2000/100000 iterations. Last error: 95.4660000004560061
+ 2500/100000 iterations. Last error: 79.1800000003787545
+ 3000/100000 iterations. Last error: 65.4540000003120781
+ 3500/100000 iterations. Last error: 54.0120000002578990
+ 4000/100000 iterations. Last error: 44.5040000002127840
+ 4500/100000 iterations. Last error: 36.6260000001747130
+ 5000/100000 iterations. Last error: 30.1260000001441881
+ 5500/100000 iterations. Last error: 24.7640000001181306
+ 6000/100000 iterations. Last error: 20.3800000000972545
+ 6500/100000 iterations. Last error: 16.7180000000798259
+ 7000/100000 iterations. Last error: 13.7320000000648292
+ 7500/100000 iterations. Last error: 11.3060000000533023
+ 8000/100000 iterations. Last error: 9.2780000000444716
+ 8500/100000 iterations. Last error: 7.6180000000366022
+ 9000/100000 iterations. Last error: 6.2580000000299947
+ 9500/100000 iterations. Last error: 5.1720000000252071
+10000/100000 iterations. Last error: 4.2640000000208147
+10500/100000 iterations. Last error: 3.5320000000156142
+11000/100000 iterations. Last error: 2.9200000000132604
+11500/100000 iterations. Last error: 2.4560000000122955
+12000/100000 iterations. Last error: 2.0800000000105001
+12500/100000 iterations. Last error: 1.7820000000079972
+13000/100000 iterations. Last error: 1.5140000000083091
+13100/100000 iterations. Last error: 1.4380000000056157
+Equilibrium reached in 13100 iterations (221.1 days).
+
+Time: 0.7537114504 seconds/iteration
+
