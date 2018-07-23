@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 from cycler import cycler
 from scipy.integrate import quadrature
 from matplotlib import animation, rc
+from matplotlib import colors as mcolors
 
 rc('animation', html='html5')
-rc('lines', linewidth=2, color='b', markersize=10)
+rc('lines', linewidth=2, color='b', markersize=8)
 rc('axes', titlesize=20, labelsize=16, xmargin=0.05, ymargin=0.05, linewidth=2)
 rc('axes.spines', top=False, right=False)
 rc('xtick', labelsize=13)
@@ -33,71 +34,57 @@ def get_data(filename, location):
 ################################################################################
 ### SENSITIVITY COMPARISONS
 ################################################################################
-
+# lat_itcz = scaling * lat_efe
 scaling = 0.64 
 
-f, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,6), sharey=True)
+# two plots: tropics and extratropics perturbations
+f, axes = plt.subplots(1, 2, figsize=(10,6), sharey=True)
+ax1 = axes[0]; ax2 = axes[1]
 
+# dictionary of 'file' : ['label', 'color'] elements
+# (see matplotlib.colors.CSS4_COLORS in a terminal to see all the names)
+files = {
+        # 'perturbed_efe_clark_no_wvf.dat':           ['Prescirbed WV (Clark et al.)', 'darkorange'], 
+        # 'perturbed_efe_clark_wvf.dat':              ['Interactive WV (Clark et al.)', 'darkorange'], 
+
+        'perturbed_efe_planck.dat':                 ['Planck OLR',                            'yellow'],
+        'perturbed_efe_planck_linear.dat':          ['Linear Planck OLR (Solden & Held)',     'firebrick'],
+        'perturbed_efe_planck_linear_fit.dat':      ['Linear Planck OLR Fit',                 'lawngreen'],
+
+        'perturbed_efe_full_wvf.dat':               ['CliMT Interactive WV',                  'red'],
+        'perturbed_efe_full_wvf_linear.dat':        ['Linear Interactive WV (Solden & Held)', 'pink'],
+        'perturbed_efe_full_wvf_linear_fit.dat':    ['Linear CliMT Interactive WV Fit',       'lightskyblue'],
+
+        'perturbed_efe_full_no_wvf.dat':            ['CliMT Prescribed WV',                   'green'],
+        'perturbed_efe_full_no_wvf_linear.dat':     ['Linear Prescribed WV (Solden & Held)',  'black'],
+        'perturbed_efe_full_no_wvf_linear_fit.dat': ['Linear CliMT Prescribed WV Fit',        'purple']
+        }
+color_dict = mcolors.CSS4_COLORS
+
+# do the Clark data separately (it doesn't need scaling and also uses markeredgewidth
 centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_no_wvf.dat', 'tropics')
-ax1.plot(intensities, itczs, 'bo', label='Prescribed WV (Clark et al.)',
-         markerfacecolor='w', markeredgewidth=1.5)
-
+ax1.plot(intensities, itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Prescribed WV (Clark et al.)', markerfacecolor='w', markeredgewidth=1.5)
 centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_wvf.dat', 'tropics')
-ax1.plot(intensities, itczs, 'bo', label='Interactive WV (Clark et al.)')
+ax1.plot(intensities, itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Interactive WV (Clark et al.)')
 
-centers, spreads, intensities, EFEs = get_data('perturbed_efe_planck.dat', 'tropics')
-ax1.plot(intensities, scaling * EFEs, 'yo', label='Planck OLR (This Work)')
+centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_no_wvf.dat', 'extratropics')
+ax2.plot(intensities, itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Prescribed WV (Clark et al.)', markerfacecolor='w', markeredgewidth=1.5)
+centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_wvf.dat', 'extratropics')
+ax2.plot(intensities, itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Interactive WV (Clark et al.)')
 
-centers, spreads, intensities, EFEs = get_data('perturbed_efe_planck_linear.dat', 'tropics')
-ax1.plot(intensities, scaling * EFEs, 'go', label='Linear Planck OLR (This Work)')
-
-centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_wvf_linear.dat', 'tropics')
-ax1.plot(intensities, scaling * EFEs, 'co', label='Linear CliMT Interactive WV (This Work)')
-
-centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_no_wvf_linear.dat', 'tropics')
-ax1.plot(intensities, scaling * EFEs, 'ro', label='Linear CliMT Prescribed WV (This Work)')
-
-#centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_wvf.dat', 'tropics')
-#ax1.plot(intensities, scaling * EFEs, 'mo', label='CliMT Interactive WV (This Work)')
-#
-#centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_no_wvf.dat', 'tropics')
-#ax1.plot(intensities, scaling * EFEs, 'po', label='CliMT Prescribed WV (This Work)')
+# plot all the data
+for f in files:
+    for i, location in enumerate(['tropics', 'extratropics']):
+        centers, spreads, intensities, EFEs = get_data(f, location)
+        axes[i].plot(intensities, scaling * EFEs, marker='o', color=color_dict[files[f][1]], linestyle='', label=files[f][0])
 
 ax1.set_xlim(3, 20)
 ax1.set_xticks([5, 10, 15, 18])
 ax1.set_ylim(-10, 0)
-# ax1.legend(loc='lower left')
-ax1.set_yticklabels(['EQ', '2$^\\circ$S', '4$^\\circ$S', '6$^\\circ$S', '8$^\\circ$S', '10$^\\circ$S'])
+ax1.set_yticklabels(['10$^\\circ$S', '8$^\\circ$S', '6$^\\circ$S', '4$^\\circ$S', '2$^\\circ$S', 'EQ'])
 ax1.set_title('Tropics')
 ax1.set_xlabel('M (W/m$^2$)')
 ax1.set_ylabel('ITCZ Location')
-
-### 
-
-centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_no_wvf.dat', 'extratropics')
-ax2.plot(intensities, itczs, 'bo', label='Prescribed WV (Clark et al.)',
-         markerfacecolor='w', markeredgewidth=1.5)
-
-centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_wvf.dat', 'extratropics')
-ax2.plot(intensities, itczs, 'bo', label='Interactive WV (Clark et al.)')
-
-centers, spreads, intensities, EFEs = get_data('perturbed_efe_planck.dat', 'extratropics')
-ax2.plot(intensities, scaling * EFEs, 'yo', label='Planck OLR (This Work)')
-
-centers, spreads, intensities, EFEs = get_data('perturbed_efe_planck_linear.dat', 'extratropics')
-ax2.plot(intensities, scaling * EFEs, 'go', label='Linear Planck OLR (This Work)')
-
-centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_wvf_linear.dat', 'extratropics')
-ax2.plot(intensities, scaling * EFEs, 'co', label='Linear CliMT Interactive WV (This Work)')
-
-centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_no_wvf_linear.dat', 'extratropics')
-ax2.plot(intensities, scaling * EFEs, 'ro', label='Linear CliMT Prescribed WV (This Work)')
-
-#centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_wvf.dat', 'extratropics')
-#ax2.plot(intensities, scaling * EFEs, 'mo', label='CliMT Interactive WV (This Work)')
-#
-#centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_no_wvf.dat', 'extratropics')
-#ax2.plot(intensities, scaling * EFEs, 'po', label='CliMT Prescribed WV (This Work)')
 
 ax2.set_xlim(3, 20)
 ax2.set_xticks([5, 10, 15, 18])

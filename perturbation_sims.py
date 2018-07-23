@@ -9,8 +9,8 @@ model.initial_temperature(initial_condition='triangle', triangle_low=270, triang
 model.albedo(albedo_feedback=False)
 
 # Fitted values from a full_wvf modelulation
-A_full_wvf    = -417.0478973801873
-B_full_wvf    = 2.349441658553002
+A_full_wvf    = -412.05
+B_full_wvf    =    2.33
 # A reference temp to calculate A given B
 T_ref         = 275
 # Feedback parameters from SoldenHeld2003
@@ -19,28 +19,38 @@ lambda_water  = +1.80
 lambda_clouds = +0.68
 lambda_albedo = +0.26
 lambda_lapse  = -0.84
-# A few tests we want to do:
 
-# Just planck
+# # Just planck
 # B = -(lambda_planck)
 
-# Planck + water + lapse = full_wvf
+# # Planck + water + lapse = full_wvf
 # B = -(lambda_planck + lambda_water + lambda_lapse)
 
-# Planck + lapse = full_no_wvf
-B = -(lambda_planck + lambda_lapse)
+# # Planck + lapse = full_no_wvf
+# B = -(lambda_planck + lambda_lapse)
 
-# Calculate a decent A:
-A = A_full_wvf + B_full_wvf * T_ref - B * T_ref
+# # Calculate a decent A:
+# A = A_full_wvf + B_full_wvf * T_ref - B * T_ref
+# print('A = {:3.2f}; B = {:1.2f}'.format(A, B))
 
-# model.outgoing_longwave('linear', A=A, B=B)
+# Values from SoldenHeld2003
+# A = -623.80; B = 3.10    # planck
+# A = -359.80; B = 2.14    # wvf
+# A = -854.80; B = 3.94    # no wvf
+
+# Fits:
+# A = -652.88; B = 3.10    # planck
+# A = -412.05; B = 2.33    # wvf
+# A = -418.26; B = 2.36    # no wvf
+
+model.outgoing_longwave('linear', A=A, B=B)
 # model.outgoing_longwave('planck', emissivity=0.6)
 # model.outgoing_longwave('full_wvf')
-model.outgoing_longwave('full_no_wvf')
+# model.outgoing_longwave('full_no_wvf')
 
 sigmas = [4.94, 9.89]
 lats   = [15, 60]
-fname = 'perturbed_efe_full_no_wvf.dat'
+fname = 'perturbed_efe_planck_linear_fit.dat'
 for sigma, lat0 in zip(sigmas, lats):
     for M in [5, 10, 15, 18]:
         model.insolation(insolation_type='perturbation', perturb_center=lat0, perturb_spread=sigma, perturb_intensity=M)
