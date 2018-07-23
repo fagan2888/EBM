@@ -52,7 +52,7 @@ for i in range(len(pressures)):
 ################################################################################
 ### DATA SAVING
 ################################################################################
-fname = 'moist_adiabat_data.npz'
+fname = 'data/moist_adiabat_data.npz'
 np.savez(fname, pressures=pressures, Tsample=Tsample, Tdata=Tdata, RH_vals=RH_vals)
 print('Data saved in {}.'.format(fname))
 

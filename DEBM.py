@@ -174,37 +174,37 @@ class Model():
             self.A = A
             self.B = B
             L = lambda T: self.A + self.B * T
-        elif olr_type == 'shell_somerville':
-            ''' OLR SCHEME FROM SHELL/SOMERVILLE 2004 '''
-            # Create the 2d interpolation function: gives function T_moist(p, T_surf)
-            moist_data = np.load('moist_adiabat_data.npz')
-            pressures  = moist_data['pressures']
-            Tsample    = moist_data['Tsample']
-            Tdata      = moist_data['Tdata']
-            RH_vals    = moist_data['RH_vals']
-            interpolated_moist_adiabat_f = interp2d(pressures, Tsample, Tdata)
+        # elif olr_type == 'shell_somerville':
+        #     ''' OLR SCHEME FROM SHELL/SOMERVILLE 2004 '''
+        #     # Create the 2d interpolation function: gives function T_moist(p, T_surf)
+        #     moist_data = np.load('data/moist_adiabat_data.npz')
+        #     pressures  = moist_data['pressures']
+        #     Tsample    = moist_data['Tsample']
+        #     Tdata      = moist_data['Tdata']
+        #     RH_vals    = moist_data['RH_vals']
+        #     interpolated_moist_adiabat_f = interp2d(pressures, Tsample, Tdata)
             
-            boundary_layer = 650    #hPa -- from H_middle = 3.6 km
-            top_layer      = 500    #hPa -- from H_top    = 5.6 km
-            k = 0.03                #m2/kg
-            up_indx = 0
-            while pressures[up_indx] / 100 > top_layer:
-                up_indx += 1
-            bl_indx = 0
-            while pressures[bl_indx] / 100 > boundary_layer:
-                bl_indx += 1
-            T_atmos = np.zeros( (self.lats.shape[0], pressures.shape[0]))
+        #     boundary_layer = 650    #hPa -- from H_middle = 3.6 km
+        #     top_layer      = 500    #hPa -- from H_top    = 5.6 km
+        #     k = 0.03                #m2/kg
+        #     up_indx = 0
+        #     while pressures[up_indx] / 100 > top_layer:
+        #         up_indx += 1
+        #     bl_indx = 0
+        #     while pressures[bl_indx] / 100 > boundary_layer:
+        #         bl_indx += 1
+        #     T_atmos = np.zeros( (self.lats.shape[0], pressures.shape[0]))
         
-            def L(T):
-                # Unfortunately, SciPy's 'interp2d' function returns sorted arrays.
-                # This forces us to do a for loop over lats.
-                for i in range(len(self.lats)):
-                    # We flip the output since, as self.stated above, it comes out sorted, and we want high pressure first.
-                    T_atmos[i, :] = np.flip(interpolated_moist_adiabat_f(pressures, T[i]), axis=0)
-                esat_bl = humidsat(T_atmos[:, bl_indx], pressures[bl_indx] / 100)[0]
-                optical_depth = 0.622 * k * RH * esat_bl / g
-                emis = 0.3 + 0.7 * (1 - np.exp(-optical_depth))
-                return emis * sig * T_atmos[:, up_indx]**4 + (1 - emis) * sig * T**4
+        #     def L(T):
+        #         # Unfortunately, SciPy's 'interp2d' function returns sorted arrays.
+        #         # This forces us to do a for loop over lats.
+        #         for i in range(len(self.lats)):
+        #             # We flip the output since, as self.stated above, it comes out sorted, and we want high pressure first.
+        #             T_atmos[i, :] = np.flip(interpolated_moist_adiabat_f(pressures, T[i]), axis=0)
+        #         esat_bl = humidsat(T_atmos[:, bl_indx], pressures[bl_indx] / 100)[0]
+        #         optical_depth = 0.622 * k * RH * esat_bl / g
+        #         emis = 0.3 + 0.7 * (1 - np.exp(-optical_depth))
+        #         return emis * sig * T_atmos[:, up_indx]**4 + (1 - emis) * sig * T**4
             
         elif olr_type in ['full_wvf', 'full_no_wvf']:
             ''' FULL BLOWN '''
@@ -225,7 +225,7 @@ class Model():
                             )
         
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
-            moist_data = np.load('moist_adiabat_data.npz')
+            moist_data = np.load('data/moist_adiabat_data.npz')
             pressures  = moist_data['pressures']
             Tsample    = moist_data['Tsample']
             Tdata      = moist_data['Tdata']
