@@ -17,7 +17,7 @@ import climt
 from metpy.calc import moist_lapse
 from metpy.units import units
 from scipy.integrate import quadrature
-from scipy.interpolate import interp2d
+from scipy.interpolate import RectBivariateSpline
 from time import clock
 import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
@@ -199,7 +199,7 @@ class Model():
                 # Unfortunately, SciPy's 'interp2d' function returns sorted arrays.
                 # This forces us to do a for loop over lats.
                 for i in range(len(self.lats)):
-                    # We flip the output since, as stated above, it comes out sorted, and we want high pressure first.
+                    # We flip the output since, as self.stated above, it comes out sorted, and we want high pressure first.
                     T_atmos[i, :] = np.flip(interpolated_moist_adiabat_f(pressures, T[i]), axis=0)
                 esat_bl = humidsat(T_atmos[:, bl_indx], pressures[bl_indx] / 100)[0]
                 optical_depth = 0.622 * k * RH * esat_bl / g
@@ -218,22 +218,26 @@ class Model():
             # Use CliMT radiation scheme along with MetPy's moist adiabat calculator
             nLevels = 30
             radiation = climt.RRTMGLongwave(cloud_overlap_method='clear_only')
-            state = climt.get_default_state([radiation], x={}, 
+            self.state = climt.get_default_state([radiation], x={}, 
                             y={'label' : 'latitude', 'values': self.lats, 'units' : 'degress N'},
                             mid_levels={'label' : 'mid_levels', 'values': np.arange(nLevels), 'units' : ''},
                             interface_levels={'label' : 'interface_levels', 'values': np.arange(nLevels + 1), 'units' : ''}
                             )
-            pressures = state['air_pressure'].values[0, 0, :]
         
-            # Create the 2d interpolation function: gives function T_moist(p, T_surf)
+            # Create the 2d interpolation function: gives function T_moist(T_surf, p)
             moist_data = np.load('moist_adiabat_data.npz')
-            pres       = moist_data['pressures']
+            pressures  = moist_data['pressures']
             Tsample    = moist_data['Tsample']
             Tdata      = moist_data['Tdata']
             RH_vals    = moist_data['RH_vals']
-            interpolated_moist_adiabat_f = interp2d(pres, Tsample, Tdata)
+
+            # RectBivariateSpline needs increasing x values
+            pressures = np.flip(pressures, axis=0)
+            Tdata = np.flip(Tdata, axis=1)
+            interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures, Tdata)
+
             if water_vapor_feedback == False:
-                state['specific_humidity'].values[:, :, :] = prescribed_vapor
+                self.state['specific_humidity'].values[:, :, :] = prescribed_vapor
         
             def L(T):
                 ''' 
@@ -244,17 +248,17 @@ class Model():
                 Sets specific hum profile by assuming constant RH and using humidsat function from Boos
                 '''
                 # Set surface state
-                state['surface_temperature'].values[:] = T
-                # Unfortunately, SciPy's 'interp2d' function returns sorted arrays.
-                # This forces us to do a for loop over lats.
-                for i in range(len(self.lats)):
-                    # We flip the output since, as stated above, it comes out sorted, and we want high pressure first.
-                    state['air_temperature'].values[0, i, :] = np.flip(interpolated_moist_adiabat_f(pressures, T[i]), axis=0)
+                self.state['surface_temperature'].values[:] = T
+                # Create a 2D array of the T vals and pass to interpolated_moist_adiabat
+                #   note: shape of 'air_temperature' is (lons, lats, press) 
+                Tgrid = np.repeat(T, pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
+                self.state['air_temperature'].values[0, :, :] = interpolated_moist_adiabat.ev(Tgrid, self.state['air_pressure'].values[0, :, :])
                 # Set specific hum assuming constant RH
                 if water_vapor_feedback == True:
-                    state['specific_humidity'].values[:] = RH_vals * self.humidsat(state['air_temperature'].values[:], 
-                                                                    state['air_pressure'].values[:] / 100)[1]
-                tendencies, diagnostics = radiation(state)
+                    self.state['specific_humidity'].values[:] = RH_vals * self.humidsat(self.state['air_temperature'].values[:], 
+                                                                    self.state['air_pressure'].values[:] / 100)[1]
+                # CliMT takes over here, this is where the slowdown occurs
+                tendencies, diagnostics = radiation(self.state)
                 return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=nLevels).values[0]
 
         self.L = L
@@ -327,19 +331,19 @@ class Model():
             print('\tA = {:.2f}, B = {:.2f}'.format(self.A, self.B))
         print('Numerical Method:  {}\n'.format(self.numerical_method))
         
-        T_array = np.zeros((frames, len(self.lats)))
-        E_array = np.zeros((frames, len(self.lats)))
+        T_array   = np.zeros((frames, len(self.lats)))
+        E_array   = np.zeros((frames, len(self.lats)))
         alb_array = np.zeros((frames, len(self.lats)))
-        L_array = np.zeros((frames, len(self.lats)))
+        L_array   = np.zeros((frames, len(self.lats)))
         
-        self.T = self.init_temp
-        self.E = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
-        self.alb = self.init_alb
+        self.T    = self.init_temp
+        self.E    = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
+        self.alb  = self.init_alb
         
-        t0 = clock()
-        iter_count = 0
+        t0          = clock()
+        iter_count  = 0
         frame_count = 0
-        error = -1
+        error       = -1
         while iter_count < self.max_iters:
             if iter_count % nPrint == 0: 
                 if iter_count == 0:
@@ -347,17 +351,17 @@ class Model():
                 else:
                     print('{:5d}/{:.0f} iterations. Last error: {:.16f}'.format(iter_count, self.max_iters, error))
             if iter_count % nPlot == 0:
-                T_array[frame_count, :] = self.T
-                E_array[frame_count, :] = self.E
+                T_array[frame_count, :]   = self.T
+                E_array[frame_count, :]   = self.E
                 alb_array[frame_count, :] = self.alb
-                L_array[frame_count, :] = self.L(self.T)
-                error = np.sum(np.abs(T_array[frame_count, :] - T_array[frame_count-1, :]))
+                L_array[frame_count, :]   = self.L(self.T)
+                error                     = np.sum(np.abs(T_array[frame_count, :] - T_array[frame_count-1, :]))
                 if error < self.tol * self.dt:
                     frame_count += 1
-                    T_array = T_array[:frame_count, :]
-                    E_array = E_array[:frame_count, :]
-                    alb_array = alb_array[:frame_count, :]
-                    L_array = L_array[:frame_count, :]
+                    T_array      = T_array[:frame_count, :]
+                    E_array      = E_array[:frame_count, :]
+                    alb_array    = alb_array[:frame_count, :]
+                    L_array      = L_array[:frame_count, :]
                     print('{:5d}/{:.0f} iterations. Last error: {:.16f}'.format(iter_count, self.max_iters, error))
                     print('Equilibrium reached in {} iterations ({:.1f} days).'.format(iter_count, iter_count * self.dt/60/60/24))
                     break
@@ -369,10 +373,10 @@ class Model():
         if T_array.shape[0] == frames:
             print('Failed to reach equilibrium. Final error: {:.16f} K'.format(np.max(np.abs(T_array[-1, :] - T_array[-2, :]))))
         print('\nTime: {:.10f} seconds/iteration\n'.format((tf-t0)/iter_count))
-        self.T_array = T_array
-        self.E_array = E_array
+        self.T_array   = T_array
+        self.E_array   = E_array
         self.alb_array = alb_array
-        self.L_array = L_array
+        self.L_array   = L_array
 
     def save_data(self):
         # Save data
@@ -385,9 +389,9 @@ class Model():
             np.savez('data/prescribed_vapor.npz', prescribed_vapor)
 
 
-    def calculate_efe(self):
+    def log_efe(self, fname):
         # Get data and final dist
-        E_f = self.E_array[-1, :] / 1000
+        E_f = self.E_array[-1, :]
         
         # Interp and find roots
         spl = UnivariateSpline(self.lats, E_f, k=4, s=0)
@@ -401,8 +405,10 @@ class Model():
         min_error_index = np.argmin( np.abs(roots - efe_lat) )
         closest_root = roots[min_error_index]
 
-        return closest_root
-
+        with open('data/' + fname, 'a') as f:
+            data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, closest_root)
+            f.write(data + '\n')
+            print('Logged "{}" in "{}"'.format(data, fname))
 
     def save_plots(self):
         ### STYLES
@@ -443,6 +449,9 @@ class Model():
         
         ### FINAL TEMP DIST
         print('\nPlotting Final T Dist')
+
+        print('Mean T: {:.2f} K'.format(np.mean(self.T_array[-1,:])))
+
         f, ax = plt.subplots(1, figsize=(12,5))
         ax.plot(self.lats, self.T_array[-1, :], 'k')
         ax.set_title("Final Temperature Distribution")
@@ -458,7 +467,6 @@ class Model():
         print('{} created.'.format(fname))
         plt.close()
         
-        print('Mean T: {:.2f} K'.format(np.mean(self.T_array[-1,:])))
         
         ### FIND ITCZ
         print('\nPlotting EFE')
@@ -499,12 +507,14 @@ class Model():
         
         ### FINAL RADIATION DIST
         print('\nPlotting Final Radiation Dist')
-        f, ax = plt.subplots(1, figsize=(12, 5))
-        
+
         T_f = self.T_array[-1, :]
         alb_f = self.alb_array[-1, :]
         SW_f = self.S * (1 - alb_f)
         LW_f = self.L(T_f)
+        print('(SW - LW) at EFE: {:.2f} W/m^2'.format(SW_f[max_index] - LW_f[max_index]))
+
+        f, ax = plt.subplots(1, figsize=(12, 5))
         ax.plot(self.lats, SW_f, 'r', label='S(1-$\\alpha$)')
         ax.plot(self.lats, LW_f, 'b', label='OLR')
         ax.plot(self.lats, SW_f - LW_f, 'g', label='Net')
@@ -522,7 +532,6 @@ class Model():
         print('{} created.'.format(fname))
         plt.close()
         
-        print('(SW - LW) at EFE: {:.2f} W/m^2'.format(SW_f[max_index] - LW_f[max_index]))
         
         ### LW vs. T
         print('\nPlotting LW vs. T')
@@ -622,33 +631,37 @@ class Model():
         anim.save(fname)
         print('{} created.'.format(fname))
         
-        #### VERTICAL AIR TEMP
-        #for i in range(nLevels):
-        #    plt.plot(lats, state['air_temperature'].values[0, :, i], 'k-', lw=1.0)
-        #plt.plot(lats, state['air_temperature'].values[0, :, 0], 'r-')
-        #plt.xlabel('latitude')
-        #plt.ylabel('temp')
-        #print(state['air_temperature'])
-        #plt.figure()
-        #lat = 45
-        #plt.plot(state['air_temperature'].values[0, int(lat/dlat), :], pressures/100, 'k-', label='{}$^\\circ$ lat'.format(lat))
-        #plt.gca().invert_yaxis()
-        #plt.legend()
-        #plt.xlabel('temp')
-        #plt.ylabel('pressure')
-        #
-        #
-        #### VERTICAL MOISTURE
-        #for i in range(nLevels):
-        #    plt.plot(lats, state['specific_humidity'].values[0, :, i], 'k-', lw=1.0)
-        #plt.plot(lats, state['specific_humidity'].values[0, :, 0], 'r-')
-        #plt.xlabel('latitude')
-        #plt.ylabel('sp hum')
-        #print(state['specific_humidity'])
-        #plt.figure()
-        #lat = 45
-        #plt.plot(state['specific_humidity'].values[0, int(lat/dlat), :], pressures/100, 'k-', label='{}$^\\circ$ lat'.format(lat))
-        #plt.gca().invert_yaxis()
-        #plt.legend()
-        #plt.xlabel('sp hum')
-        #plt.ylabel('pressure')
+        #if self.olr_type in ['full_wvf', 'full_no_wvf']:
+        #    ### VERTICAL AIR TEMP
+        #    air_temp = self.state['air_temperature'].values[0, :, :]
+        #    pressures = self.state['air_pressure'].values[0, 0, :]
+        #    for i in range(air_temp.shape[1]):
+        #        plt.plot(self.lats, air_temp[:, i], 'k-', lw=1.0)
+        #    plt.plot(self.lats, air_temp[:, 0], 'r-')
+        #    plt.xlabel('latitude')
+        #    plt.ylabel('temp')
+
+        #    plt.figure()
+        #    lat = 45
+        #    plt.plot(air_temp[int(lat/self.dlat), :], pressures/100, 'k-', label='{}$^\\circ$ lat'.format(lat))
+        #    plt.gca().invert_yaxis()
+        #    plt.legend()
+        #    plt.xlabel('temp')
+        #    plt.ylabel('pressure')
+        #    
+        #    
+        #    ### VERTICAL MOISTURE
+        #    sp_hum = self.state['air_temperature'].values[0, :, :]
+        #    for i in range(sp_hum.shape[1]):
+        #        plt.plot(self.lats, sp_hum[:, i], 'k-', lw=1.0)
+        #    plt.plot(self.lats, sp_hum[:, 0], 'r-')
+        #    plt.xlabel('latitude')
+        #    plt.ylabel('sp hum')
+
+        #    plt.figure()
+        #    lat = 45
+        #    plt.plot(sp_hum[int(lat/self.dlat), :], pressures/100, 'k-', label='{}$^\\circ$ lat'.format(lat))
+        #    plt.gca().invert_yaxis()
+        #    plt.legend()
+        #    plt.xlabel('sp hum')
+        #    plt.ylabel('pressure')

@@ -17,12 +17,18 @@ rc('ytick.major', size=8, width=2)
 rc('legend', fontsize=9)
 
 
-def get_data(filename):
-    filename = 'data/' + filename
-    A = np.loadtxt(filename, delimiter=',')
-    xvals = A[:, 0]
-    yvals = A[:, 1]
-    return xvals, yvals
+def get_data(filename, location):
+    filename   = 'data/' + filename
+    data_array = np.loadtxt(filename, delimiter=',')
+    if location == 'tropics':
+        data_array = data_array[np.where(data_array[:, 0] == 15)]
+    elif location == 'extratropics':
+        data_array = data_array[np.where(data_array[:, 0] == 60)]
+    centers     = data_array[:, 0]
+    spreads     = data_array[:, 1]
+    intensities = data_array[:, 2]
+    EFEs        = data_array[:, 3]
+    return centers, spreads, intensities, EFEs
 
 ################################################################################
 ### SENSITIVITY COMPARISONS
@@ -32,57 +38,66 @@ scaling = 0.64
 
 f, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,6), sharey=True)
 
-
-xvals, yvals = get_data('tropics_perturbations_clark.dat')
-ax1.plot(xvals[:4], yvals[:4], 'bo', label='Prescribed Water Vapor (Clark et al.)',
+centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_no_wvf.dat', 'tropics')
+ax1.plot(intensities, itczs, 'bo', label='Prescribed WV (Clark et al.)',
          markerfacecolor='w', markeredgewidth=1.5)
-ax1.plot(xvals[4:], yvals[4:], 'bo', label='Interactive Water Vapor (Clark et al.)')
 
-#xvals, yvals = get_data('tropics_perturbations_gray_clark_alb.dat')
-#ax1.plot(xvals, scaling*yvals, 'ko', label='Gray Gas Model (This Work, Clark albedo)')
+centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_wvf.dat', 'tropics')
+ax1.plot(intensities, itczs, 'bo', label='Interactive WV (Clark et al.)')
 
-xvals, yvals = get_data('tropics_perturbations_gray.dat')
-ax1.plot(xvals, scaling*yvals, 'yo', label='Planck Model (This Work)')
+centers, spreads, intensities, EFEs = get_data('perturbed_efe_planck.dat', 'tropics')
+ax1.plot(intensities, scaling * EFEs, 'yo', label='Planck OLR (This Work)')
 
-xvals, yvals = get_data('tropics_perturbations_planck_linear.dat')
-ax1.plot(xvals, scaling*yvals, 'go', label='Linear Planck Model (This Work)')
+centers, spreads, intensities, EFEs = get_data('perturbed_efe_planck_linear.dat', 'tropics')
+ax1.plot(intensities, scaling * EFEs, 'go', label='Linear Planck OLR (This Work)')
 
-#xvals, yvals = get_data('tropics_perturbations_CliMT_qfeedback.dat')
-#ax1.plot(xvals, scaling*yvals, 'co', label='Interactive Water Vapor (This Work)')
+centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_wvf_linear.dat', 'tropics')
+ax1.plot(intensities, scaling * EFEs, 'co', label='Linear CliMT Interactive WV (This Work)')
+
+centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_no_wvf_linear.dat', 'tropics')
+ax1.plot(intensities, scaling * EFEs, 'ro', label='Linear CliMT Prescribed WV (This Work)')
+
+#centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_wvf.dat', 'tropics')
+#ax1.plot(intensities, scaling * EFEs, 'mo', label='CliMT Interactive WV (This Work)')
 #
-#xvals, yvals = get_data('tropics_perturbations_CliMT_qprescribed.dat')
-#ax1.plot(xvals, scaling*yvals, 'ro', label='Prescribed Water Vapor (This Work)')
+#centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_no_wvf.dat', 'tropics')
+#ax1.plot(intensities, scaling * EFEs, 'po', label='CliMT Prescribed WV (This Work)')
 
 ax1.set_xlim(3, 20)
 ax1.set_xticks([5, 10, 15, 18])
-ax1.set_ylim(10, 0)
+ax1.set_ylim(-10, 0)
 # ax1.legend(loc='lower left')
 ax1.set_yticklabels(['EQ', '2$^\\circ$S', '4$^\\circ$S', '6$^\\circ$S', '8$^\\circ$S', '10$^\\circ$S'])
 ax1.set_title('Tropics')
 ax1.set_xlabel('M (W/m$^2$)')
 ax1.set_ylabel('ITCZ Location')
 
-#new pts
-# ax1.plot([5, 10, 15, 18], [1.38, 2.60, 3.73, 4.36], 'go')
+### 
 
-xvals, yvals = get_data('extratropics_perturbations_clark.dat')
-ax2.plot(xvals[:4], yvals[:4], 'bo', label='Prescribed Water Vapor (Clark et al.)', markerfacecolor='w', markeredgewidth=1.5)
-ax2.plot(xvals[4:], yvals[4:], 'bo', label='Interactive Water Vapor (Clark et al.)')
+centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_no_wvf.dat', 'extratropics')
+ax2.plot(intensities, itczs, 'bo', label='Prescribed WV (Clark et al.)',
+         markerfacecolor='w', markeredgewidth=1.5)
 
-#xvals, yvals = get_data('extratropics_perturbations_gray_clark_alb.dat')
-#ax2.plot(xvals, scaling*yvals, 'ko', label='Gray Gas Model (This Work, Clark albedo)')
+centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_wvf.dat', 'extratropics')
+ax2.plot(intensities, itczs, 'bo', label='Interactive WV (Clark et al.)')
 
-xvals, yvals = get_data('extratropics_perturbations_gray.dat')
-ax2.plot(xvals, scaling*yvals, 'yo', label='Planck Model (This Work)')
+centers, spreads, intensities, EFEs = get_data('perturbed_efe_planck.dat', 'extratropics')
+ax2.plot(intensities, scaling * EFEs, 'yo', label='Planck OLR (This Work)')
 
-xvals, yvals = get_data('extratropics_perturbations_planck_linear.dat')
-ax2.plot(xvals, scaling*yvals, 'go', label='Linear Planck Model (This Work)')
+centers, spreads, intensities, EFEs = get_data('perturbed_efe_planck_linear.dat', 'extratropics')
+ax2.plot(intensities, scaling * EFEs, 'go', label='Linear Planck OLR (This Work)')
 
-#xvals, yvals = get_data('extratropics_perturbations_CliMT_qfeedback.dat')
-#ax2.plot(xvals, scaling*yvals, 'co', label='Interactive Water Vapor (This Work)')
+centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_wvf_linear.dat', 'extratropics')
+ax2.plot(intensities, scaling * EFEs, 'co', label='Linear CliMT Interactive WV (This Work)')
+
+centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_no_wvf_linear.dat', 'extratropics')
+ax2.plot(intensities, scaling * EFEs, 'ro', label='Linear CliMT Prescribed WV (This Work)')
+
+#centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_wvf.dat', 'extratropics')
+#ax2.plot(intensities, scaling * EFEs, 'mo', label='CliMT Interactive WV (This Work)')
 #
-#xvals, yvals = get_data('extratropics_perturbations_CliMT_qprescribed.dat')
-#ax2.plot(xvals, scaling*yvals, 'ro', label='Prescribed Water Vapor (This Work)')
+#centers, spreads, intensities, EFEs = get_data('perturbed_efe_full_no_wvf.dat', 'extratropics')
+#ax2.plot(intensities, scaling * EFEs, 'po', label='CliMT Prescribed WV (This Work)')
 
 ax2.set_xlim(3, 20)
 ax2.set_xticks([5, 10, 15, 18])
