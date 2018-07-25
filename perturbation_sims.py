@@ -43,17 +43,21 @@ lambda_lapse  = -0.84
 # A = -412.05; B = 2.33    # wvf
 # A = -418.26; B = 2.36    # no wvf
 
-model.outgoing_longwave('linear', A=A, B=B)
+# model.outgoing_longwave('linear', A=A, B=B)
 # model.outgoing_longwave('planck', emissivity=0.6)
 # model.outgoing_longwave('full_wvf')
-# model.outgoing_longwave('full_no_wvf')
+model.outgoing_longwave('full_no_wvf', RH_profile='steps')
 
-sigmas = [4.94, 9.89]
-lats   = [15, 60]
-fname = 'perturbed_efe_planck_linear_fit.dat'
-for sigma, lat0 in zip(sigmas, lats):
-    for M in [5, 10, 15, 18]:
-        model.insolation(insolation_type='perturbation', perturb_center=lat0, perturb_spread=sigma, perturb_intensity=M)
-        model.solve(numerical_method='crank', nPlot=100, nPrint=500)
-        model.log_efe(fname)
+# sigmas = [4.94, 9.89]
+# lats   = [15, 60]
+# fname = 'perturbed_efe_planck_linear_fit.dat'
+# for sigma, lat0 in zip(sigmas, lats):
+#     for M in [5, 10, 15, 18]:
+#         model.insolation(insolation_type='perturbation', perturb_center=lat0, perturb_spread=sigma, perturb_intensity=M)
+#         model.solve(numerical_method='crank', nPlot=100, nPrint=500)
+#         model.log_efe(fname)
+
+lat0 = 15; sigma = 4.94; M = 15
+model.insolation(insolation_type='perturbation', perturb_center=lat0, perturb_spread=sigma, perturb_intensity=M)
+model.solve(numerical_method='crank', nPlot=100, nPrint=500)
 model.save_data()

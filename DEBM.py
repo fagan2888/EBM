@@ -14,8 +14,6 @@
 ################################################################################
 import numpy as np
 import climt
-from metpy.calc import moist_lapse
-from metpy.units import units
 from scipy.integrate import quadrature
 from scipy.interpolate import RectBivariateSpline
 from time import clock
@@ -164,7 +162,7 @@ class Model():
         self.alb = self.init_alb
 
 
-    def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None):
+    def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, RH_profile=None):
         self.olr_type = olr_type
         if olr_type == 'planck':
             ''' PLANCK RADIATION '''
@@ -181,7 +179,7 @@ class Model():
         #     pressures  = moist_data['pressures']
         #     Tsample    = moist_data['Tsample']
         #     Tdata      = moist_data['Tdata']
-        #     RH_vals    = moist_data['RH_vals']
+        #     RH_vert    = moist_data['RH_vert']
         #     interpolated_moist_adiabat_f = interp2d(pressures, Tsample, Tdata)
             
         #     boundary_layer = 650    #hPa -- from H_middle = 3.6 km
@@ -212,33 +210,55 @@ class Model():
                 water_vapor_feedback = True
             else:
                 water_vapor_feedback = False
-                prescribed_vapor = np.load('data/prescribed_vapor.npz')['arr_0']
-        
         
             # Use CliMT radiation scheme along with MetPy's moist adiabat calculator
-            nLevels = 30
+            self.nLevels = 30
             radiation = climt.RRTMGLongwave(cloud_overlap_method='clear_only')
             self.state = climt.get_default_state([radiation], x={}, 
                             y={'label' : 'latitude', 'values': self.lats, 'units' : 'degress N'},
-                            mid_levels={'label' : 'mid_levels', 'values': np.arange(nLevels), 'units' : ''},
-                            interface_levels={'label' : 'interface_levels', 'values': np.arange(nLevels + 1), 'units' : ''}
+                            mid_levels={'label' : 'mid_levels', 'values': np.arange(self.nLevels), 'units' : ''},
+                            interface_levels={'label' : 'interface_levels', 'values': np.arange(self.nLevels + 1), 'units' : ''}
                             )
-        
+            pressures = self.state['air_pressure'].values[0, 0, :]
+
+            # Vertical RH profile
+            RH_vert = RH * np.ones(self.nLevels)
+            if RH_profile == 'steps':
+                for i in range(self.nLevels):
+                    # 0-200:    0
+                    # 200-300:  0.8
+                    # 300-800:  0.2
+                    # 800-1000: 0.8
+                    if pressures[i]/100 < 200:
+                        RH_vert[i] = 0
+                    elif pressures[i]/200 > 300 and pressures[i] < 800:
+                        RH_vert[i] = 0.2
+            elif RH_profile == 'zero_top':
+                for i in range(self.nLevels):
+                    # 0-200:    0
+                    # 200-1000: 0.8
+                    if pressures[i]/100 < 200:
+                        RH_vert[i] = 0
+            self.RH_profile = RH_profile
+
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
             moist_data = np.load('data/moist_adiabat_data.npz')
-            pressures  = moist_data['pressures']
+            # pressures  = moist_data['pressures']
             Tsample    = moist_data['Tsample']
             Tdata      = moist_data['Tdata']
-            RH_vals    = moist_data['RH_vals']
 
             # RectBivariateSpline needs increasing x values
-            pressures = np.flip(pressures, axis=0)
+            pressures_flipped = np.flip(pressures, axis=0)
             Tdata = np.flip(Tdata, axis=1)
-            interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures, Tdata)
+            interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures_flipped, Tdata)
 
             if water_vapor_feedback == False:
-                self.state['specific_humidity'].values[:, :, :] = prescribed_vapor
-        
+                T_control = np.load('data/T_array_full_wvf_annual_mean_clark.npz')['arr_0']
+                T_control = T_control[-1, :]
+                Tgrid_control = np.repeat(T_control, pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
+                air_temp = interpolated_moist_adiabat.ev(Tgrid_control, self.state['air_pressure'].values[0, :, :])
+                self.state['specific_humidity'].values[0, :, :] = RH_vert * self.humidsat(air_temp, self.state['air_pressure'].values[0, :, :] / 100)[1]
+       
             def L(T):
                 ''' 
                 OLR function.
@@ -255,11 +275,11 @@ class Model():
                 self.state['air_temperature'].values[0, :, :] = interpolated_moist_adiabat.ev(Tgrid, self.state['air_pressure'].values[0, :, :])
                 # Set specific hum assuming constant RH
                 if water_vapor_feedback == True:
-                    self.state['specific_humidity'].values[:] = RH_vals * self.humidsat(self.state['air_temperature'].values[:], 
-                                                                    self.state['air_pressure'].values[:] / 100)[1]
+                    self.state['specific_humidity'].values[0, :, :] = RH_vert * self.humidsat(self.state['air_temperature'].values[0, :, :], 
+                            self.state['air_pressure'].values[0, :, :] / 100)[1]
                 # CliMT takes over here, this is where the slowdown occurs
                 tendencies, diagnostics = radiation(self.state)
-                return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=nLevels).values[0]
+                return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
 
         self.L = L
 
@@ -315,7 +335,7 @@ class Model():
         print('\nModel Params:')
         print("dtmax:      {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax/60/60/24))
         print("dt:         {:.2f} s / {:.4f} days = {:.2f} * dtmax".format(self.dt, self.dt/60/60/24, self.dt/self.dtmax))
-        print("dlat:       {:.2f} m".format(self.dlat))
+        print("dlat:       {:.2f} degrees".format(self.dlat))
         print("tolerance:  {}".format(self.tol * self.dt))
         print("nPlot:      {}".format(nPlot))
         print("frames:     {}\n".format(frames))
@@ -331,10 +351,11 @@ class Model():
             print('\tA = {:.2f}, B = {:.2f}'.format(self.A, self.B))
         print('Numerical Method:  {}\n'.format(self.numerical_method))
         
-        T_array   = np.zeros((frames, len(self.lats)))
-        E_array   = np.zeros((frames, len(self.lats)))
-        alb_array = np.zeros((frames, len(self.lats)))
-        L_array   = np.zeros((frames, len(self.lats)))
+        T_array   = np.zeros((frames, self.lats.shape[0]))
+        E_array   = np.zeros((frames, self.lats.shape[0]))
+        alb_array = np.zeros((frames, self.lats.shape[0]))
+        L_array   = np.zeros((frames, self.lats.shape[0]))
+        q_array   = np.zeros((frames, self.lats.shape[0], self.nLevels))
         
         self.T    = self.init_temp
         self.E    = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
@@ -351,17 +372,20 @@ class Model():
                 else:
                     print('{:5d}/{:.0f} iterations. Last error: {:.16f}'.format(iter_count, self.max_iters, error))
             if iter_count % nPlot == 0:
-                T_array[frame_count, :]   = self.T
-                E_array[frame_count, :]   = self.E
-                alb_array[frame_count, :] = self.alb
-                L_array[frame_count, :]   = self.L(self.T)
-                error                     = np.sum(np.abs(T_array[frame_count, :] - T_array[frame_count-1, :]))
+                T_array[frame_count, :]    = self.T
+                E_array[frame_count, :]    = self.E
+                L_array[frame_count, :]    = self.L(self.T)
+                alb_array[frame_count, :]  = self.alb
+                q_array[frame_count, :, :] = self.state['specific_humidity'].values[0, :, :]
+
+                error = np.sum(np.abs(T_array[frame_count, :] - T_array[frame_count-1, :]))
                 if error < self.tol * self.dt:
                     frame_count += 1
                     T_array      = T_array[:frame_count, :]
                     E_array      = E_array[:frame_count, :]
                     alb_array    = alb_array[:frame_count, :]
                     L_array      = L_array[:frame_count, :]
+                    q_array      = q_array[:frame_count, :]
                     print('{:5d}/{:.0f} iterations. Last error: {:.16f}'.format(iter_count, self.max_iters, error))
                     print('Equilibrium reached in {} iterations ({:.1f} days).'.format(iter_count, iter_count * self.dt/60/60/24))
                     break
@@ -377,16 +401,15 @@ class Model():
         self.E_array   = E_array
         self.alb_array = alb_array
         self.L_array   = L_array
+        self.q_array   = q_array
 
     def save_data(self):
         # Save data
-        np.savez('data/T_array.npz',   self.T_array)
-        np.savez('data/E_array.npz',   self.E_array)
-        np.savez('data/L_array.npz',   self.L_array)
-        np.savez('data/alb_array.npz', self.alb_array)
-        if self.olr_type == 'full_wvf':
-            prescribed_vapor = self.state['specific_humidity'].values[:, :, :]
-            np.savez('data/prescribed_vapor.npz', prescribed_vapor)
+        np.savez(  'data/T_array_{}_{}.npz'.format(self.olr_type, self.insolation_type),   self.T_array)
+        np.savez(  'data/E_array_{}_{}.npz'.format(self.olr_type, self.insolation_type),   self.E_array)
+        np.savez(  'data/L_array_{}_{}.npz'.format(self.olr_type, self.insolation_type),   self.L_array)
+        np.savez(  'data/q_array_{}_{}.npz'.format(self.olr_type, self.insolation_type),   self.q_array)
+        np.savez('data/alb_array_{}_{}.npz'.format(self.olr_type, self.insolation_type), self.alb_array)
 
 
     def log_efe(self, fname):

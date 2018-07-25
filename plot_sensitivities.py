@@ -48,16 +48,16 @@ files = {
         # 'perturbed_efe_clark_wvf.dat':              ['Interactive WV (Clark et al.)', 'darkorange'], 
 
         'perturbed_efe_planck.dat':                 ['Planck OLR',                            'yellow'],
-        'perturbed_efe_planck_linear.dat':          ['Linear Planck OLR (Solden & Held)',     'firebrick'],
-        'perturbed_efe_planck_linear_fit.dat':      ['Linear Planck OLR Fit',                 'lawngreen'],
+        # 'perturbed_efe_planck_linear.dat':          ['Linear Planck OLR (Solden & Held)',     'firebrick'],
+        # 'perturbed_efe_planck_linear_fit.dat':      ['Linear Planck OLR Fit',                 'lawngreen'],
 
         'perturbed_efe_full_wvf.dat':               ['CliMT Interactive WV',                  'red'],
-        'perturbed_efe_full_wvf_linear.dat':        ['Linear Interactive WV (Solden & Held)', 'pink'],
-        'perturbed_efe_full_wvf_linear_fit.dat':    ['Linear CliMT Interactive WV Fit',       'lightskyblue'],
+        # 'perturbed_efe_full_wvf_linear.dat':        ['Linear Interactive WV (Solden & Held)', 'pink'],
+        # 'perturbed_efe_full_wvf_linear_fit.dat':    ['Linear CliMT Interactive WV Fit',       'lightskyblue'],
 
         'perturbed_efe_full_no_wvf.dat':            ['CliMT Prescribed WV',                   'green'],
-        'perturbed_efe_full_no_wvf_linear.dat':     ['Linear Prescribed WV (Solden & Held)',  'black'],
-        'perturbed_efe_full_no_wvf_linear_fit.dat': ['Linear CliMT Prescribed WV Fit',        'purple']
+        # 'perturbed_efe_full_no_wvf_linear.dat':     ['Linear Prescribed WV (Solden & Held)',  'black'],
+        # 'perturbed_efe_full_no_wvf_linear_fit.dat': ['Linear CliMT Prescribed WV Fit',        'purple']
         }
 color_dict = mcolors.CSS4_COLORS
 

@@ -43,16 +43,14 @@ print('{}/{}'.format(nSamples, nSamples))
 
 # Keep T constant above 200 hPa for a Tropopause
 # Zero RH past this hieght
-RH_vals = RH * np.ones(len(pressures))
 for i in range(len(pressures)):
     if pressures[i].magnitude/100 < 200:
         Tdata[:, i] = Tdata[:, i-1]
-        RH_vals[i] = 0
 
 ################################################################################
 ### DATA SAVING
 ################################################################################
 fname = 'data/moist_adiabat_data.npz'
-np.savez(fname, pressures=pressures, Tsample=Tsample, Tdata=Tdata, RH_vals=RH_vals)
+np.savez(fname, pressures=pressures, Tsample=Tsample, Tdata=Tdata)
 print('Data saved in {}.'.format(fname))
 
