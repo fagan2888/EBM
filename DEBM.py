@@ -301,10 +301,6 @@ class Model():
                                 self.nLevels).reshape((self.lats.shape[0], self.nLevels))
                     self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self.humidsat(self.state['air_temperature'].values[0, :, :], 
                             self.state['air_pressure'].values[0, :, :] / 100)[1]
-                    plt.contourf(self.state['specific_humidity'].values[0, :, :].T)
-                    plt.colorbar()
-                    plt.show()
-                    os.sys.exit()
                 # CliMT takes over here, this is where the slowdown occurs
                 tendencies, diagnostics = radiation(self.state)
                 return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
@@ -436,11 +432,11 @@ class Model():
 
     def save_data(self):
         # Save data
-        np.savez(  'data/T_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile),   self.T_array)
-        np.savez(  'data/E_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile),   self.E_array)
-        np.savez(  'data/L_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile),   self.L_array)
-        np.savez(  'data/q_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile),   self.q_array)
-        np.savez('data/alb_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile), self.alb_array)
+        np.savez('data/T_array_{}_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_vert_profile, self.RH_lat_profile),   self.T_array)
+        np.savez('data/E_array_{}_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_vert_profile, self.RH_lat_profile),   self.E_array)
+        np.savez('data/L_array_{}_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_vert_profile, self.RH_lat_profile),   self.L_array)
+        np.savez('data/q_array_{}_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_vert_profile, self.RH_lat_profile),   self.q_array)
+        #np.savez('data/alb_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile), self.alb_array)
 
 
     def log_efe(self, fname):
