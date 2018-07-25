@@ -223,7 +223,7 @@ class Model():
             pressures = self.state['air_pressure'].values[0, 0, :]
 
             # Vertical RH profile
-            RH_vert = RH * np.ones(self.nLevels)
+            self.RH_dist = RH * np.ones( (self.lats.shape[0], self.nLevels) )
             if RH_vert_profile == 'steps':
                 for i in range(self.nLevels):
                     # 0-200:    0
@@ -231,15 +231,15 @@ class Model():
                     # 300-800:  0.2
                     # 800-1000: 0.8
                     if pressures[i]/100 < 200:
-                        RH_vert[i] = 0
+                        self.RH_dist[:, i] = 0
                     elif pressures[i]/100 > 300 and pressures[i]/100 < 800:
-                        RH_vert[i] = 0.2
+                        self.RH_dist[:, i] = 0.2
             elif RH_vert_profile == 'zero_top':
                 for i in range(self.nLevels):
                     # 0-200:    0
                     # 200-1000: 0.8
                     if pressures[i]/100 < 200:
-                        RH_vert[i] = 0
+                        self.RH_dist[:, i] = 0
             else:
                 RH_vert_profile = 'constant'
             self.RH_vert_profile = RH_vert_profile
@@ -247,13 +247,13 @@ class Model():
             # Latitudinal RH profile
             if RH_lat_profile == 'gaussian':
                 gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )
-                spread = 45
+                spread = 10
                 lat0 = 0
-                self.RH_dist = RH_vert * np.repeat(gaussian(lat0, spread, self.lats), 
-                        self.nLevels).reshape((self.lats.shape[0], self.nLevels))
+                midlevels = np.where(self.RH_dist == 0.2)[1]
+                self.RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread, self.lats), 
+                    len(midlevels)).reshape( (self.lats.shape[0], len(midlevels)) )
             else:
                 RH_lat_profile = 'constant'
-                self.RH_dist = RH_vert * np.ones( (self.lats.shape[0], self.nLevels) )
             self.RH_lat_profile = RH_lat_profile
                 
 
@@ -297,8 +297,8 @@ class Model():
                 if water_vapor_feedback == True:
                     if RH_lat_profile == 'gaussian':
                         lat0 = self.lats[np.argmax(T)]
-                        self.RH_dist = RH_vert * np.repeat(gaussian(lat0, spread, self.lats), 
-                                self.nLevels).reshape((self.lats.shape[0], self.nLevels))
+                        self.RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread, self.lats), 
+                            len(midlevels)).reshape( (self.lats.shape[0], len(midlevels)) )
                     self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self.humidsat(self.state['air_temperature'].values[0, :, :], 
                             self.state['air_pressure'].values[0, :, :] / 100)[1]
                 # CliMT takes over here, this is where the slowdown occurs

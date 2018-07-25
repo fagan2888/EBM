@@ -11,39 +11,48 @@ Insolation Type:   perturbation
 	lat0 = 15, M = 15, sigma = 4.94
 Initial Temp Dist: triangle
 Albedo Feedback:   False
-OLR Scheme:        full_no_wvf
+OLR Scheme:        full_wvf
 	RH Vertical Profile: steps
 	RH Latitudinal Profile: gaussian
 Numerical Method:  crank
 
     0/100000 iterations.
-  500/100000 iterations. Last error: 195.8370000009351770
- 1000/100000 iterations. Last error: 155.2000000007390668
- 1500/100000 iterations. Last error: 124.6950000005960533
- 2000/100000 iterations. Last error: 99.5390000004748856
- 2500/100000 iterations. Last error: 79.3130000003789917
- 3000/100000 iterations. Last error: 63.2530000003015118
- 3500/100000 iterations. Last error: 50.5320000002409699
- 4000/100000 iterations. Last error: 40.4540000001929059
- 4500/100000 iterations. Last error: 32.4660000001555318
- 5000/100000 iterations. Last error: 26.0840000001248882
- 5500/100000 iterations. Last error: 21.0090000001002863
- 6000/100000 iterations. Last error: 16.9750000000816499
- 6500/100000 iterations. Last error: 13.7460000000658908
- 7000/100000 iterations. Last error: 11.1580000000537893
- 7500/100000 iterations. Last error: 9.0840000000431189
- 8000/100000 iterations. Last error: 7.4220000000352115
- 8500/100000 iterations. Last error: 6.1130000000290465
- 9000/100000 iterations. Last error: 5.0230000000238135
- 9500/100000 iterations. Last error: 4.1470000000193181
-10000/100000 iterations. Last error: 3.4390000000167049
-10500/100000 iterations. Last error: 2.8300000000132286
-11000/100000 iterations. Last error: 2.3560000000113916
-11500/100000 iterations. Last error: 1.9580000000086955
-12000/100000 iterations. Last error: 1.6220000000070627
-12300/100000 iterations. Last error: 1.3870000000069638
-Equilibrium reached in 12300 iterations (207.6 days).
+  500/100000 iterations. Last error: 158.5160000007574581
+ 1000/100000 iterations. Last error: 131.1750000006271648
+ 1500/100000 iterations. Last error: 110.2590000005262709
+ 2000/100000 iterations. Last error: 93.5670000004460292
+ 2500/100000 iterations. Last error: 79.4530000003796033
+ 3000/100000 iterations. Last error: 67.2130000003213866
+ 3500/100000 iterations. Last error: 56.7110000002702463
+ 4000/100000 iterations. Last error: 47.7970000002287918
+ 4500/100000 iterations. Last error: 40.2940000001925682
+ 5000/100000 iterations. Last error: 34.0280000001631038
+ 5500/100000 iterations. Last error: 28.7650000001368369
+ 6000/100000 iterations. Last error: 24.3750000001155058
+ 6500/100000 iterations. Last error: 20.7380000000995608
+ 7000/100000 iterations. Last error: 17.7240000000847715
+ 7500/100000 iterations. Last error: 15.2320000000725884
+ 8000/100000 iterations. Last error: 13.1720000000632353
+ 8500/100000 iterations. Last error: 11.3980000000543100
+ 9000/100000 iterations. Last error: 9.9040000000472332
+ 9500/100000 iterations. Last error: 8.6170000000409743
+10000/100000 iterations. Last error: 7.5180000000350731
+10500/100000 iterations. Last error: 6.5600000000306409
+11000/100000 iterations. Last error: 5.7500000000271143
+11500/100000 iterations. Last error: 5.0410000000237574
+12000/100000 iterations. Last error: 4.4380000000209918
+12500/100000 iterations. Last error: 3.9020000000180914
+13000/100000 iterations. Last error: 3.4470000000167431
+13500/100000 iterations. Last error: 3.0600000000146963
+14000/100000 iterations. Last error: 2.6910000000128775
+14500/100000 iterations. Last error: 2.3950000000116063
+15000/100000 iterations. Last error: 2.1340000000101327
+15500/100000 iterations. Last error: 1.9140000000090538
+16000/100000 iterations. Last error: 1.7040000000077953
+16500/100000 iterations. Last error: 1.5040000000068687
+16600/100000 iterations. Last error: 1.4570000000071843
+Equilibrium reached in 16600 iterations (280.1 days).
 
-Time: 0.7520382114 seconds/iteration
+Time: 1.0577789157 seconds/iteration
 
-Logged "15, 4.94, 15, -4.7688751097798212" in "efe_full_no_wvf_m15.txt"
+Logged "15, 4.94, 15, -6.4173670589880345" in "efe_full_wvf_m15.txt"
