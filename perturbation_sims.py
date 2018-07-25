@@ -61,3 +61,4 @@ lat0 = 15; sigma = 4.94; M = 15
 model.insolation(insolation_type='perturbation', perturb_center=lat0, perturb_spread=sigma, perturb_intensity=M)
 model.solve(numerical_method='crank', nPlot=100, nPrint=500)
 model.save_data()
+model.log_efe('efe_full_no_wvf_m15.txt')

@@ -231,7 +231,7 @@ class Model():
                     # 800-1000: 0.8
                     if pressures[i]/100 < 200:
                         RH_vert[i] = 0
-                    elif pressures[i]/200 > 300 and pressures[i] < 800:
+                    elif pressures[i]/100 > 300 and pressures[i]/100 < 800:
                         RH_vert[i] = 0.2
             elif RH_profile == 'zero_top':
                 for i in range(self.nLevels):
@@ -349,6 +349,8 @@ class Model():
         print('OLR Scheme:        {}'.format(self.olr_type))
         if self.olr_type == 'linear':
             print('\tA = {:.2f}, B = {:.2f}'.format(self.A, self.B))
+        elif self.olr_type in ['full_wvf', 'full_no_wvf']:
+            print('\tRH Vertical Profile: {}'.format(self.RH_profile))
         print('Numerical Method:  {}\n'.format(self.numerical_method))
         
         T_array   = np.zeros((frames, self.lats.shape[0]))
