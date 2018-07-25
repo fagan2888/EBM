@@ -1,0 +1,7 @@
+#!/bin/bash
+
+mv L_array_full_no_wvf_perturbation_steps.npz L_array_full_no_wvf_perturbation_steps_constant.npz
+mv L_array_full_no_wvf_perturbation_zero_top.npz L_array_full_no_wvf_perturbation_zero_top_constant.npz
+mv L_array_full_wvf_perturbation_steps.npz L_array_full_wvf_perturbation_steps_constant.npz
+mv L_array_full_wvf_perturbation_zero_top.npz L_array_full_wvf_perturbation_zero_top_constant.npz
+
