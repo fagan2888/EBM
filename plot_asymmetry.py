@@ -20,25 +20,17 @@ def asym(A):
     return A[L//2:] - np.flip(A[:L//2], axis=0)
 
 # Load data
-L_wvf = np.load('data/L_array_full_wvf_perturbation.npz')['arr_0']
-L_no_wvf = np.load('data/L_array_full_no_wvf_perturbation.npz')['arr_0']
-q_wvf = np.load('data/q_array_full_wvf_perturbation.npz')['arr_0']
-q_no_wvf = np.load('data/q_array_full_no_wvf_perturbation.npz')['arr_0']
+L_wvf     = np.load('data/L_array_full_wvf_perturbation_steps.npz')['arr_0']
+L_no_wvf  = np.load('data/L_array_full_no_wvf_perturbation_steps.npz')['arr_0']
+q_wvf     = np.load('data/q_array_full_wvf_perturbation_steps.npz')['arr_0']
+q_no_wvf  = np.load('data/q_array_full_no_wvf_perturbation_steps.npz')['arr_0']
 pressures = np.load('data/moist_adiabat_data.npz')['pressures']
 
 # Use equilibrated data
 L_wvf = L_wvf[-1, :]
 L_no_wvf = L_no_wvf[-1, :]
-i = -1
-while q_wvf[i, 0, 0] == 0:
-    i -= 1
-q_wvf = q_wvf[i, :, :]
-# print(q_wvf[180,:])
-# print(pressures)
-i = -1
-while q_no_wvf[i, 0, 0] == 0:
-    i -= 1
-q_no_wvf = q_no_wvf[i, :, :]
+q_wvf = q_wvf[-1, :, :]
+q_no_wvf = q_no_wvf[-1, :, :]
 
 # Vertically integrate q
 g = 9.81
@@ -78,5 +70,6 @@ ax.legend()
 
 plt.tight_layout()
 
+plt.savefig('asymmetries_steps.png', dpi=120)
 
 plt.show()
