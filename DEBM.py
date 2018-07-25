@@ -239,6 +239,8 @@ class Model():
                     # 200-1000: 0.8
                     if pressures[i]/100 < 200:
                         RH_vert[i] = 0
+            else:
+                RH_profile = 'constant'
             self.RH_profile = RH_profile
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
@@ -407,11 +409,11 @@ class Model():
 
     def save_data(self):
         # Save data
-        np.savez(  'data/T_array_{}_{}.npz'.format(self.olr_type, self.insolation_type),   self.T_array)
-        np.savez(  'data/E_array_{}_{}.npz'.format(self.olr_type, self.insolation_type),   self.E_array)
-        np.savez(  'data/L_array_{}_{}.npz'.format(self.olr_type, self.insolation_type),   self.L_array)
-        np.savez(  'data/q_array_{}_{}.npz'.format(self.olr_type, self.insolation_type),   self.q_array)
-        np.savez('data/alb_array_{}_{}.npz'.format(self.olr_type, self.insolation_type), self.alb_array)
+        np.savez(  'data/T_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile),   self.T_array)
+        np.savez(  'data/E_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile),   self.E_array)
+        np.savez(  'data/L_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile),   self.L_array)
+        np.savez(  'data/q_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile),   self.q_array)
+        np.savez('data/alb_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile), self.alb_array)
 
 
     def log_efe(self, fname):

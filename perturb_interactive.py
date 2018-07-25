@@ -45,7 +45,7 @@ lambda_lapse  = -0.84
 
 # model.outgoing_longwave('linear', A=A, B=B)
 # model.outgoing_longwave('planck', emissivity=0.6)
-model.outgoing_longwave('full_wvf', RH_profile='steps')
+model.outgoing_longwave('full_wvf', RH_profile='zero_top')
 # model.outgoing_longwave('full_no_wvf', RH_profile='steps')
 
 # sigmas = [4.94, 9.89]
