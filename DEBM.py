@@ -162,7 +162,8 @@ class Model():
         self.alb = self.init_alb
 
 
-    def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, RH_profile=None):
+    def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, 
+            RH_vert_profile=None, RH_lat_profile=None):
         self.olr_type = olr_type
         if olr_type == 'planck':
             ''' PLANCK RADIATION '''
@@ -223,7 +224,7 @@ class Model():
 
             # Vertical RH profile
             RH_vert = RH * np.ones(self.nLevels)
-            if RH_profile == 'steps':
+            if RH_vert_profile == 'steps':
                 for i in range(self.nLevels):
                     # 0-200:    0
                     # 200-300:  0.8
@@ -233,15 +234,28 @@ class Model():
                         RH_vert[i] = 0
                     elif pressures[i]/100 > 300 and pressures[i]/100 < 800:
                         RH_vert[i] = 0.2
-            elif RH_profile == 'zero_top':
+            elif RH_vert_profile == 'zero_top':
                 for i in range(self.nLevels):
                     # 0-200:    0
                     # 200-1000: 0.8
                     if pressures[i]/100 < 200:
                         RH_vert[i] = 0
             else:
-                RH_profile = 'constant'
-            self.RH_profile = RH_profile
+                RH_vert_profile = 'constant'
+            self.RH_vert_profile = RH_vert_profile
+
+            # Latitudinal RH profile
+            if RH_lat_profile == 'gaussian':
+                gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )
+                spread = 45
+                lat0 = 0
+                self.RH_dist = RH_vert * np.repeat(gaussian(lat0, spread, self.lats), 
+                        self.nLevels).reshape((self.lats.shape[0], self.nLevels))
+            else:
+                RH_lat_profile = 'constant'
+                self.RH_dist = RH_vert * np.ones( (self.lats.shape[0], self.nLevels) )
+            self.RH_lat_profile = RH_lat_profile
+                
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
             moist_data = np.load('data/moist_adiabat_data.npz')
@@ -257,9 +271,12 @@ class Model():
             if water_vapor_feedback == False:
                 T_control = np.load('data/T_array_full_wvf_annual_mean_clark.npz')['arr_0']
                 T_control = T_control[-1, :]
-                Tgrid_control = np.repeat(T_control, pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
-                air_temp = interpolated_moist_adiabat.ev(Tgrid_control, self.state['air_pressure'].values[0, :, :])
-                self.state['specific_humidity'].values[0, :, :] = RH_vert * self.humidsat(air_temp, self.state['air_pressure'].values[0, :, :] / 100)[1]
+                Tgrid_control = np.repeat(T_control, 
+                        pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
+                air_temp = interpolated_moist_adiabat.ev(Tgrid_control, 
+                        self.state['air_pressure'].values[0, :, :])
+                self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self.humidsat(air_temp, 
+                        self.state['air_pressure'].values[0, :, :] / 100)[1]
        
             def L(T):
                 ''' 
@@ -274,11 +291,20 @@ class Model():
                 # Create a 2D array of the T vals and pass to interpolated_moist_adiabat
                 #   note: shape of 'air_temperature' is (lons, lats, press) 
                 Tgrid = np.repeat(T, pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
-                self.state['air_temperature'].values[0, :, :] = interpolated_moist_adiabat.ev(Tgrid, self.state['air_pressure'].values[0, :, :])
+                self.state['air_temperature'].values[0, :, :] = interpolated_moist_adiabat.ev(Tgrid, 
+                        self.state['air_pressure'].values[0, :, :])
                 # Set specific hum assuming constant RH
                 if water_vapor_feedback == True:
-                    self.state['specific_humidity'].values[0, :, :] = RH_vert * self.humidsat(self.state['air_temperature'].values[0, :, :], 
+                    if RH_lat_profile == 'gaussian':
+                        lat0 = self.lats[np.argmax(T)]
+                        self.RH_dist = RH_vert * np.repeat(gaussian(lat0, spread, self.lats), 
+                                self.nLevels).reshape((self.lats.shape[0], self.nLevels))
+                    self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self.humidsat(self.state['air_temperature'].values[0, :, :], 
                             self.state['air_pressure'].values[0, :, :] / 100)[1]
+                    plt.contourf(self.state['specific_humidity'].values[0, :, :].T)
+                    plt.colorbar()
+                    plt.show()
+                    os.sys.exit()
                 # CliMT takes over here, this is where the slowdown occurs
                 tendencies, diagnostics = radiation(self.state)
                 return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
@@ -352,7 +378,8 @@ class Model():
         if self.olr_type == 'linear':
             print('\tA = {:.2f}, B = {:.2f}'.format(self.A, self.B))
         elif self.olr_type in ['full_wvf', 'full_no_wvf']:
-            print('\tRH Vertical Profile: {}'.format(self.RH_profile))
+            print('\tRH Vertical Profile: {}'.format(self.RH_vert_profile))
+            print('\tRH Latitudinal Profile: {}'.format(self.RH_lat_profile))
         print('Numerical Method:  {}\n'.format(self.numerical_method))
         
         T_array   = np.zeros((frames, self.lats.shape[0]))

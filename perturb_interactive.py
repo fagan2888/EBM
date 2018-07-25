@@ -8,45 +8,7 @@ model.initial_temperature(initial_condition='triangle', triangle_low=270, triang
 
 model.albedo(albedo_feedback=False)
 
-# Fitted values from a full_wvf modelulation
-A_full_wvf    = -412.05
-B_full_wvf    =    2.33
-# A reference temp to calculate A given B
-T_ref         = 275
-# Feedback parameters from SoldenHeld2003
-lambda_planck = -3.10 #W/m2/K
-lambda_water  = +1.80
-lambda_clouds = +0.68
-lambda_albedo = +0.26
-lambda_lapse  = -0.84
-
-# # Just planck
-# B = -(lambda_planck)
-
-# # Planck + water + lapse = full_wvf
-# B = -(lambda_planck + lambda_water + lambda_lapse)
-
-# # Planck + lapse = full_no_wvf
-# B = -(lambda_planck + lambda_lapse)
-
-# # Calculate a decent A:
-# A = A_full_wvf + B_full_wvf * T_ref - B * T_ref
-# print('A = {:3.2f}; B = {:1.2f}'.format(A, B))
-
-# Values from SoldenHeld2003
-# A = -623.80; B = 3.10    # planck
-# A = -359.80; B = 2.14    # wvf
-# A = -854.80; B = 3.94    # no wvf
-
-# Fits:
-# A = -652.88; B = 3.10    # planck
-# A = -412.05; B = 2.33    # wvf
-# A = -418.26; B = 2.36    # no wvf
-
-# model.outgoing_longwave('linear', A=A, B=B)
-# model.outgoing_longwave('planck', emissivity=0.6)
-model.outgoing_longwave('full_wvf', RH_profile='zero_top')
-# model.outgoing_longwave('full_no_wvf', RH_profile='steps')
+model.outgoing_longwave('full_wvf', RH_vert_profile='steps', RH_lat_profile='gaussian')
 
 # sigmas = [4.94, 9.89]
 # lats   = [15, 60]
