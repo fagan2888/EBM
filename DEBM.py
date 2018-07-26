@@ -252,6 +252,9 @@ class Model():
                 midlevels = np.where(self.RH_dist == 0.2)[1]
                 self.RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread, self.lats), 
                     len(midlevels)).reshape( (self.lats.shape[0], len(midlevels)) )
+                plt.contourf(self.RH_dist.T)
+                plt.colorbar()
+                plt.show()
             else:
                 RH_lat_profile = 'constant'
             self.RH_lat_profile = RH_lat_profile

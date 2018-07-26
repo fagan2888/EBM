@@ -19,61 +19,60 @@ def asym(A):
     L = A.shape[0]
     return A[L//2:] - np.flip(A[:L//2], axis=0)
 
-# Load data
-RH_vert_profile = 'steps'
-RH_lat_profile = 'gaussian'
-L_wvf     = np.load('data/L_array_full_wvf_perturbation_{}_{}.npz'.format(RH_vert_profile, RH_lat_profile))['arr_0']
-q_wvf     = np.load('data/q_array_full_wvf_perturbation_{}_{}.npz'.format(RH_vert_profile, RH_lat_profile))['arr_0']
-L_no_wvf  = np.load('data/L_array_full_no_wvf_perturbation_{}_{}.npz'.format(RH_vert_profile, RH_lat_profile))['arr_0']
-q_no_wvf  = np.load('data/q_array_full_no_wvf_perturbation_{}_{}.npz'.format(RH_vert_profile, RH_lat_profile))['arr_0']
-pressures = np.load('data/moist_adiabat_data.npz')['pressures']
+lats = np.linspace(0, 90, 180)
 
-# Use equilibrated data
-L_wvf = L_wvf[-1, :]
-L_no_wvf = L_no_wvf[-1, :]
-q_wvf = q_wvf[-1, :, :]
-q_no_wvf = q_no_wvf[-1, :, :]
-
-# Vertically integrate q
-g = 9.81
-dp = pressures[0] - pressures[1]
-q_wvf_column = np.sum(q_wvf, axis=1) * dp / g 
-q_no_wvf_column = np.sum(q_no_wvf, axis=1) * dp / g
-
-# Compute difference in pointwise asymmetries (see Clark et al.)
-L = asym(L_wvf) - asym(L_no_wvf)
-q = asym(q_wvf_column) - asym(q_no_wvf_column)
-
-# Plot
-lats = np.linspace(0, 90, L.shape[0])
 f = plt.figure(figsize=(10,12))
 
-ax = plt.subplot(211)
-ax.set_title('Tropical Forcing')
-ax.set_ylabel('Diif. in Asymmetry [W m$^{-2}$]\nInteractive - Prescribed')
-ax.set_xticks([0, 0.5, np.sqrt(3)/2, 1])
-ax.set_xticklabels(['EQ', '30', '60', '90'])
-ax.set_ylim([-np.max(np.abs(L)) - 1, np.max(np.abs(L)) + 1])
+ax1 = plt.subplot(211)
+ax1.set_title('Tropical Forcing')
+ax1.set_ylabel('Diif. in Asymmetry [W m$^{-2}$]\nInteractive - Prescribed')
+ax1.set_xticks([0, 0.5, np.sqrt(3)/2, 1])
+ax1.set_xticklabels(['EQ', '30', '60', '90'])
+ax1.set_ylim([-25, 25])
 
-ax.plot(np.sin(np.deg2rad(lats)), -L, label='$-\\delta P(\\bar L)$')
-ax.plot([0, 1], [0, 0], 'k--')
-ax.legend()
+ax1.plot([0, 1], [0, 0], 'k--')
 
-ax = plt.subplot(212)
-ax.set_title('Tropical Forcing')
-ax.set_ylabel('Diif. in Asymmetry [kg m$^{-2}$]\nInteractive - Prescribed')
-ax.set_xlabel('Latitude')
-ax.set_xticks([0, 0.5, np.sqrt(3)/2, 1])
-ax.set_xticklabels(['EQ', '30', '60', '90'])
-ax.set_ylim([np.min(q) - 1, -np.min(q) + 1])
+ax2 = plt.subplot(212)
+ax2.set_title('Tropical Forcing')
+ax2.set_ylabel('Diif. in Asymmetry [kg m$^{-2}$]\nInteractive - Prescribed')
+ax2.set_xlabel('Latitude')
+ax2.set_xticks([0, 0.5, np.sqrt(3)/2, 1])
+ax2.set_xticklabels(['EQ', '30', '60', '90'])
+ax2.set_ylim([-50, 50])
 
-ax.plot(np.sin(np.deg2rad(lats)), q, label='$\\delta P($Column Integrated WV)')
-ax.plot([0, 1], [0, 0], 'k--')
-ax.plot([np.sin(np.deg2rad(6.19 * 0.64)), np.sin(np.deg2rad(6.19 * 0.64))], [np.min(q), np.max(q)], 'k-.', label='$\\theta_{ITCZ}$ (Interactive)')
-ax.legend()
+ax2.plot([0, 1], [0, 0], 'k--')
 
+sim_types = ['steps_constant.npz', 'zero_top_constant.npz', 'steps_gaussian.npz', 'steps_gaussian.npz1']
+for sim_type in sim_types:
+    # Load data
+    L_wvf     = np.load('data/L_array_full_wvf_perturbation_{}'.format(sim_type))['arr_0']
+    q_wvf     = np.load('data/q_array_full_wvf_perturbation_{}'.format(sim_type))['arr_0']
+    L_no_wvf  = np.load('data/L_array_full_no_wvf_perturbation_{}'.format(sim_type))['arr_0']
+    q_no_wvf  = np.load('data/q_array_full_no_wvf_perturbation_{}'.format(sim_type))['arr_0']
+    pressures = np.load('data/moist_adiabat_data.npz')['pressures']
+    
+    # Use equilibrated data
+    L_wvf = L_wvf[-1, :]
+    L_no_wvf = L_no_wvf[-1, :]
+    q_wvf = q_wvf[-1, :, :]
+    q_no_wvf = q_no_wvf[-1, :, :]
+    
+    # Vertically integrate q
+    g = 9.81
+    dp = pressures[0] - pressures[1]
+    q_wvf_column = np.sum(q_wvf, axis=1) * dp / g 
+    q_no_wvf_column = np.sum(q_no_wvf, axis=1) * dp / g
+    
+    # Compute difference in pointwise asymmetries (see Clark et al.)
+    L = asym(L_wvf) - asym(L_no_wvf)
+    q = asym(q_wvf_column) - asym(q_no_wvf_column)
+    
+    ax1.plot(np.sin(np.deg2rad(lats)), -L, label=sim_type)
+    ax2.plot(np.sin(np.deg2rad(lats)), q, label=sim_type)
+    #ax2.plot([np.sin(np.deg2rad(6.19 * 0.64)), np.sin(np.deg2rad(6.19 * 0.64))], [-100, 100], 'k-.', label='$\\theta_{ITCZ}$ (Interactive)')
+    
+ax1.legend()
+ax2.legend()
 plt.tight_layout()
 
-plt.savefig('asymmetries_{}_{}.png'.format(RH_vert_profile, RH_lat_profile), dpi=120)
-
-#plt.show()
+plt.savefig('asymmetries.png')
