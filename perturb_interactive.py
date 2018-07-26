@@ -8,7 +8,7 @@ model.initial_temperature(initial_condition='triangle', triangle_low=270, triang
 
 model.albedo(albedo_feedback=False)
 
-model.outgoing_longwave('full_wvf', RH_vert_profile='steps', RH_lat_profile='gaussian')
+model.outgoing_longwave('full_wvf', RH_vert_profile='steps', RH_lat_profile='mid_and_upper_level_gaussian')
 
 # sigmas = [4.94, 9.89]
 # lats   = [15, 60]

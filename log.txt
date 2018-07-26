@@ -18,3 +18,4 @@ dy  dt  tol    T
 # 7-26
 ---
 sim0 | perturbed | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian |
+sim1 | perturbed | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian |

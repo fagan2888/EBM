@@ -8,9 +8,9 @@ model.initial_temperature(initial_condition=, triangle_low=, triangle_high=)
 
 model.albedo(albedo_feedback=, alb_ice=, alb_water=)
 
-model.outgoing_longwave(olr_type=, A=, B=, emissivity=, RH_vert_profile=, RH_lat_profile=)
-
 model.insolation(insolation_type=, perturb_center=, perturb_spread=, perturb_intensity=)
+
+model.outgoing_longwave(olr_type=, A=, B=, emissivity=, RH_vert_profile=, RH_lat_profile=, scale_efe=)
 
 model.solve(numerical_method=, nPlot=, nPrint=)
 

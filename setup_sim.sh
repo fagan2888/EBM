@@ -18,19 +18,20 @@ albedo_feedback=False
 alb_ice=None
 alb_water=None
 
-olr_type=full_wvf
-A=None
-B=None
-emissivity=None
-RH_vert_profile=steps
-RH_lat_profile=gaussian
-
 insolation_type=perturbed
 perturb_center=15
 # perturb_center=60
 perturb_spread=4.94
 # perturb_spread=9.89
 perturb_intensity=15
+
+olr_type=full_wvf
+A=None
+B=None
+emissivity=None
+RH_vert_profile=steps
+RH_lat_profile=gaussian
+scale_efe=True
 
 numerical_method=crank
 nPlot=100
@@ -48,7 +49,7 @@ echo "Making new simulation in ${sim_dir}sim$i"
 mkdir ${sim_dir}sim$i
 cd ${sim_dir}sim$i
 
-echo "Copying template files."
+# echo "Copying template files."
 sed -e 's/dlat=/dlat='$dlat'/g' \
     -e 's/dtmax_multiple=/dtmax_multiple='$dtmax_multiple'/g' \
     -e 's/max_iters=/max_iters='$max_iters'/g' \
@@ -59,16 +60,17 @@ sed -e 's/dlat=/dlat='$dlat'/g' \
     -e 's/albedo_feedback=/albedo_feedback='$albedo_feedback'/g' \
     -e 's/alb_ice=/alb_ice='$alb_ice'/g' \
     -e 's/alb_water=/alb_water='$alb_water'/g' \
+    -e 's/insolation_type=/insolation_type="'$insolation_type'"/g' \
+    -e 's/perturb_center=/perturb_center='$perturb_center'/g' \
+    -e 's/perturb_spread=/perturb_spread='$perturb_spread'/g' \
+    -e 's/perturb_intensity=/perturb_intensity='$perturb_intensity'/g' \
     -e 's/olr_type=/olr_type="'$olr_type'"/g' \
     -e 's/A=/A='$A'/g' \
     -e 's/B=/B='$B'/g' \
     -e 's/emissivity=/emissivity='$emissivity'/g' \
     -e 's/RH_vert_profile=/RH_vert_profile="'$RH_vert_profile'"/g' \
     -e 's/RH_lat_profile=/RH_lat_profile="'$RH_lat_profile'"/g' \
-    -e 's/insolation_type=/insolation_type="'$insolation_type'"/g' \
-    -e 's/perturb_center=/perturb_center='$perturb_center'/g' \
-    -e 's/perturb_spread=/perturb_spread='$perturb_spread'/g' \
-    -e 's/perturb_intensity=/perturb_intensity='$perturb_intensity'/g' \
+    -e 's/scale_efe=/scale_efe="'$scale_efe'"/g' \
     -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
     -e 's/nPlot=/nPlot='$nPlot'/g' \
     -e 's/nPrint=/nPrint='$nPrint'/g' \
@@ -76,10 +78,12 @@ sed -e 's/dlat=/dlat='$dlat'/g' \
     ${EBM_dir}simulation.py > simulation.py
 
 sed -e 's/NAME/'sim$i'/g' ${EBM_dir}run_EBM.job > run_EBM.job
+cp -p ${EBM_dir}DEBM.py .
 
-echo "Logging simulation."
+# echo "Logging simulation."
 log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | RH_vert_profile=$RH_vert_profile | RH_lat_profile=$RH_lat_profile |"
 echo "Adding line to log.txt: $log"
 echo $log >> ${EBM_dir}log.txt 
 
-echo "Done."
+cd ..
+# echo "Done."

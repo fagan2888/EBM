@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import curve_fit
 from matplotlib import animation, rc
+import os
 
 ################################################################################
 ### CONSTANTS 
@@ -40,6 +41,8 @@ sig = 5.67e-8  #J/s/m2/K4
 ### CLASS 
 ################################################################################
 class Model():
+    
+    EBM_PATH = os.environ['EBM_PATH']
     
     def __init__(self, dlat, dtmax_multiple, max_iters, tol):
         self.dlat       = dlat
@@ -163,7 +166,7 @@ class Model():
 
 
     def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, 
-            RH_vert_profile=None, RH_lat_profile=None):
+            RH_vert_profile=None, RH_lat_profile=None, scale_efe=False):
         self.olr_type = olr_type
         if olr_type == 'planck':
             ''' PLANCK RADIATION '''
@@ -245,23 +248,54 @@ class Model():
             self.RH_vert_profile = RH_vert_profile
 
             # Latitudinal RH profile
+            gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )
             if RH_lat_profile == 'gaussian':
-                gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )
+                spread = 45
+                lat0 = 0
+                def shift_dist(RH_dist, lat0):
+                    if scale_efe:
+                        lat0 *= 0.64
+                    RH_dist *=  np.repeat(gaussian(lat0, spread, self.lats), 
+                        self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
+                    return RH_dist
+                self.RH_dist = shift_dist(self.RH_dist, lat0)
+            elif RH_lat_profile == 'mid_level_gaussian':
                 spread = 10
                 lat0 = 0
-                midlevels = np.where(self.RH_dist == 0.2)[1]
-                self.RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread, self.lats), 
-                    len(midlevels)).reshape( (self.lats.shape[0], len(midlevels)) )
-                plt.contourf(self.RH_dist.T)
-                plt.colorbar()
-                plt.show()
+                midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]
+                def shift_dist(RH_dist, lat0):
+                    if scale_efe:
+                        lat0 *= 0.64
+                    RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread, self.lats), 
+                        len(midlevels)).reshape( (self.lats.shape[0], len(midlevels)) )
+                    return RH_dist
+                self.RH_dist = shift_dist(self.RH_dist, lat0)
+            elif RH_lat_profile == 'mid_and_upper_level_gaussian':
+                spread1 = 10
+                spread2 = 45
+                lat0 = 0
+                midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]
+                upperlevels = np.where( np.logical_and(pressures/100 < 300, pressures/100 > 200) )[0]
+                def shift_dist(RH_dist, lat0):
+                    if scale_efe:
+                        lat0 *= 0.64
+                    RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread1, self.lats), 
+                        len(midlevels)).reshape( (self.lats.shape[0], len(midlevels)) )
+                    RH_dist[:, upperlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread2, self.lats), 
+                        len(upperlevels)).reshape( (self.lats.shape[0], len(upperlevels)) )
+                    return RH_dist
+                self.RH_dist = shift_dist(self.RH_dist, lat0)
             else:
                 RH_lat_profile = 'constant'
             self.RH_lat_profile = RH_lat_profile
-                
+
+            ## Debug:
+            plt.imshow(self.RH_dist.T, extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
+            plt.colorbar()
+            plt.show()
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
-            moist_data = np.load('data/moist_adiabat_data.npz')
+            moist_data = np.load(self.EBM_PATH + '/data/moist_adiabat_data.npz')
             # pressures  = moist_data['pressures']
             Tsample    = moist_data['Tsample']
             Tdata      = moist_data['Tdata']
@@ -272,7 +306,7 @@ class Model():
             interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures_flipped, Tdata)
 
             if water_vapor_feedback == False:
-                T_control = np.load('data/T_array_full_wvf_annual_mean_clark.npz')['arr_0']
+                T_control = np.load(self.EBM_PATH + '/data/T_array_full_wvf_annual_mean_clark.npz')['arr_0']
                 T_control = T_control[-1, :]
                 Tgrid_control = np.repeat(T_control, 
                         pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
@@ -298,10 +332,11 @@ class Model():
                         self.state['air_pressure'].values[0, :, :])
                 # Set specific hum assuming constant RH
                 if water_vapor_feedback == True:
-                    if RH_lat_profile == 'gaussian':
-                        lat0 = self.lats[np.argmax(T)]
-                        self.RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread, self.lats), 
-                            len(midlevels)).reshape( (self.lats.shape[0], len(midlevels)) )
+                    if RH_lat_profile != 'constant':
+                        # Change RH based on ITCZ
+                        E = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
+                        lat0 = self.lats[np.argmax(E)] 
+                        self.RH_dist = shift_dist(self.RH_dist, lat0)
                     self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self.humidsat(self.state['air_temperature'].values[0, :, :], 
                             self.state['air_pressure'].values[0, :, :] / 100)[1]
                 # CliMT takes over here, this is where the slowdown occurs
@@ -435,11 +470,11 @@ class Model():
 
     def save_data(self):
         # Save data
-        np.savez('data/T_array_{}_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_vert_profile, self.RH_lat_profile),   self.T_array)
-        np.savez('data/E_array_{}_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_vert_profile, self.RH_lat_profile),   self.E_array)
-        np.savez('data/L_array_{}_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_vert_profile, self.RH_lat_profile),   self.L_array)
-        np.savez('data/q_array_{}_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_vert_profile, self.RH_lat_profile),   self.q_array)
-        #np.savez('data/alb_array_{}_{}_{}.npz'.format(self.olr_type, self.insolation_type, self.RH_profile), self.alb_array)
+        np.savez('T_array.npz', self.T_array)
+        np.savez('E_array.npz', self.E_array)
+        np.savez('L_array.npz', self.L_array)
+        np.savez('q_array.npz', self.q_array)
+        np.savez('alb_array.npz', self.alb_array)
 
 
     def log_efe(self, fname):
@@ -458,7 +493,7 @@ class Model():
         min_error_index = np.argmin( np.abs(roots - efe_lat) )
         closest_root = roots[min_error_index]
 
-        with open('data/' + fname, 'a') as f:
+        with open(fname, 'a') as f:
             data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, closest_root)
             f.write(data + '\n')
             print('Logged "{}" in "{}"'.format(data, fname))
