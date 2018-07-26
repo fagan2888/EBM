@@ -1,6 +1,20 @@
+################################################################################
+# Logfile for EBM simulation
+# Henry Peterson 2018
+################################################################################
+
+---
+# 7-20-2018
+---
+# A rough analysis of accuracy depending on dy, dy, an tol with linear olr
 dy  dt  tol    T
 0.5 1.0 0.01   279.82
 0.5 1.0 0.001  279.88 ***
 0.5 1.0 0.0001 279.89
 0.5 0.5 0.01   279.82
 0.5 0.5 0.001  279.87
+
+---
+# 7-26
+---
+sim0 | perturbed | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian |
