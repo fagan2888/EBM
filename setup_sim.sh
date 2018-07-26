@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# EBM_dir=~/EBM/templates/
-# sim_dir=~/my-scratch/EBM_sims/
-EBM_dir=~/Research2018/EBM_files/EBM/
-sim_dir=~/Research2018/EBM_files/EBM_sims/
+sim_dir=~/my-scratch/EBM_sims/
+# sim_dir=~/Research2018/EBM_files/EBM_sims/
 
 dlat=0.5
 dtmax_multiple=1.0
@@ -18,7 +16,7 @@ albedo_feedback=False
 alb_ice=None
 alb_water=None
 
-insolation_type=perturbed
+insolation_type=perturbation
 perturb_center=15
 # perturb_center=60
 perturb_spread=4.94
@@ -30,7 +28,7 @@ A=None
 B=None
 emissivity=None
 RH_vert_profile=steps
-RH_lat_profile=gaussian
+RH_lat_profile=mid_and_upper_level_gaussian
 scale_efe=True
 
 numerical_method=crank
@@ -75,15 +73,18 @@ sed -e 's/dlat=/dlat='$dlat'/g' \
     -e 's/nPlot=/nPlot='$nPlot'/g' \
     -e 's/nPrint=/nPrint='$nPrint'/g' \
     -e 's/fname=/fname="'$fname'"/g' \
-    ${EBM_dir}simulation.py > simulation.py
+    ${EBM_PATH}/simulation.py > simulation.py
 
-sed -e 's/NAME/'sim$i'/g' ${EBM_dir}run_EBM.job > run_EBM.job
-cp -p ${EBM_dir}DEBM.py .
+sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job
+cp -p ${EBM_PATH}/DEBM.py .
+
+# echo "Running job."
+sbatch run_EBM.job
 
 # echo "Logging simulation."
-log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | RH_vert_profile=$RH_vert_profile | RH_lat_profile=$RH_lat_profile |"
+log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | RH_vert_profile=$RH_vert_profile | RH_lat_profile=$RH_lat_profile | scale_efe=$scale_efe |"
 echo "Adding line to log.txt: $log"
-echo $log >> ${EBM_dir}log.txt 
+echo $log >> ${EBM_PATH}/log.txt 
 
 cd ..
 # echo "Done."

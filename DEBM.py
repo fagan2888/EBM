@@ -290,9 +290,9 @@ class Model():
             self.RH_lat_profile = RH_lat_profile
 
             ## Debug:
-            plt.imshow(self.RH_dist.T, extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
-            plt.colorbar()
-            plt.show()
+            # plt.imshow(self.RH_dist.T, extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
+            # plt.colorbar()
+            # plt.show()
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
             moist_data = np.load(self.EBM_PATH + '/data/moist_adiabat_data.npz')
@@ -652,72 +652,55 @@ class Model():
         print('{} created.'.format(fname))
         plt.close()
         
-        # Linear OLR: It works!
-        # A: -281.6700000000001 W/m2, B: 1.8000000000000003 W/m2/K
+        # ### ANIMATION
+        # show = 'T'
+        # # show = 'E'
+        # # show = 'alb'
+        # # show = 'L'
+        # print('\nCreating Animation of {}'.format(show))
         
-        # PLANCK OLR:
-        # A: -652.8783145676047 W/m2, B: 3.1022145805413275 W/m2/K
+        # # set up the figure, the axis, and the plot element we want to animate
+        # fig, ax = plt.subplots(1, figsize=(9,5))
         
-        # Full OLR, WV Feedback:
-        # A: -417.0478973801873 W/m2, B: 2.349441658553002 W/m2/K
+        # ax.set_xticks([-90, -60, -30, 0, 30, 60, 90])
+        # ax.set_xlabel('Latitude (degrees)')
+        # if show == 'T':
+        #     array = self.T_array
+        #     ax.set_ylabel('T (K)')
+        # elif show == 'E':
+        #     array = self.E_array
+        #     ax.set_ylabel("W/m$^2$")
+        # elif show == 'alb':
+        #     array = self.alb_array
+        #     ax.set_ylabel("$\\alpha$")
+        # elif show == 'L':
+        #     array = self.L_array
+        #     ax.set_ylabel("W/m$^2$")
+        # ax.set_title('EBM t =  0 days')
+        # plt.tight_layout(pad=3)
         
-        # Full OLR, No WV Feedback:
-        # A: -383.62200068534526 W/m2, B: 2.2236068235897157 W/m2/K
-        # A: -418.26464942476156 W/m2, B: 2.3554184845083475 W/m2/K    (starting at T_f from WV feedback)
+        # line, = ax.plot(self.lats, array[0, :], 'b')
         
-        # Shell Somerville:
-        # A: -999.1626913063144 W/m2, B: 4.033450693435474 W/m2/K      (k = 0.03)
-        # A: -1417.4283920090295 W/m2, B: 5.681866740765462 W/m2/K     (k = 0.20)
+        # def init():
+        #     line.set_data(self.lats, array[0, :])
+        #     return (line,)
         
-        ### ANIMATION
-        show = 'T'
-        # show = 'E'
-        # show = 'alb'
-        # show = 'L'
-        print('\nCreating Animation of {}'.format(show))
+        # def animate(i):
+        #     if i%100 == 0: 
+        #         print("{}/{} frames".format(i, len(array)))
+        #     ax.set_title('EBM t = {:.0f} days'.format((i+1)*self.nPlot*self.dt/60/60/24))
+        #     graph = array[i, :]
+        #     line.set_data(self.lats, graph)
+        #     m = graph.min()
+        #     M = graph.max()
+        #     ax.set_ylim([m - 0.01*np.abs(m), M + 0.01*np.abs(M)])
+        #     return line,
         
-        # set up the figure, the axis, and the plot element we want to animate
-        fig, ax = plt.subplots(1, figsize=(9,5))
+        # anim = animation.FuncAnimation(fig, animate, init_func=init, frames=len(array), interval=int(8000/len(array)), blit=True)
         
-        ax.set_xticks([-90, -60, -30, 0, 30, 60, 90])
-        ax.set_xlabel('Latitude (degrees)')
-        if show == 'T':
-            array = self.T_array
-            ax.set_ylabel('T (K)')
-        elif show == 'E':
-            array = self.E_array
-            ax.set_ylabel("W/m$^2$")
-        elif show == 'alb':
-            array = self.alb_array
-            ax.set_ylabel("$\\alpha$")
-        elif show == 'L':
-            array = self.L_array
-            ax.set_ylabel("W/m$^2$")
-        ax.set_title('EBM t =  0 days')
-        plt.tight_layout(pad=3)
-        
-        line, = ax.plot(self.lats, array[0, :], 'b')
-        
-        def init():
-            line.set_data(self.lats, array[0, :])
-            return (line,)
-        
-        def animate(i):
-            if i%100 == 0: 
-                print("{}/{} frames".format(i, len(array)))
-            ax.set_title('EBM t = {:.0f} days'.format((i+1)*self.nPlot*self.dt/60/60/24))
-            graph = array[i, :]
-            line.set_data(self.lats, graph)
-            m = graph.min()
-            M = graph.max()
-            ax.set_ylim([m - 0.01*np.abs(m), M + 0.01*np.abs(M)])
-            return line,
-        
-        anim = animation.FuncAnimation(fig, animate, init_func=init, frames=len(array), interval=int(8000/len(array)), blit=True)
-        
-        fname = '{}_anim.mp4'.format(show)
-        anim.save(fname)
-        print('{} created.'.format(fname))
+        # fname = '{}_anim.mp4'.format(show)
+        # anim.save(fname)
+        # print('{} created.'.format(fname))
         
         #if self.olr_type in ['full_wvf', 'full_no_wvf']:
         #    ### VERTICAL AIR TEMP

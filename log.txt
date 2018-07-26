@@ -4,6 +4,25 @@
 ################################################################################
 
 ---
+# Unknown Date
+---
+# Some linear fits:
+
+PLANCK OLR:
+A: -652.8783145676047 W/m2, B: 3.1022145805413275 W/m2/K
+
+Full OLR, WV Feedback:
+A: -417.0478973801873 W/m2, B: 2.349441658553002 W/m2/K
+
+Full OLR, No WV Feedback:
+A: -383.62200068534526 W/m2, B: 2.2236068235897157 W/m2/K
+A: -418.26464942476156 W/m2, B: 2.3554184845083475 W/m2/K    (starting at T_f from WV feedback)
+
+Shell Somerville:
+A: -999.1626913063144 W/m2, B: 4.033450693435474 W/m2/K      (k = 0.03)
+A: -1417.4283920090295 W/m2, B: 5.681866740765462 W/m2/K     (k = 0.20)
+        
+---
 # 7-20-2018
 ---
 # A rough analysis of accuracy depending on dy, dy, an tol with linear olr
@@ -17,5 +36,16 @@ dy  dt  tol    T
 ---
 # 7-26
 ---
-sim0 | perturbed | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian |
-sim1 | perturbed | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian |
+sim0 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant |
+sim1 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant |
+sim2 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=constant |
+sim3 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=constant |
+sim4 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian |
+sim5 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian |
+sim6 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian | scale_efe=True |
+sim7 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | scale_efe=False |
+sim8 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | scale_efe=False |
+sim9 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | scale_efe=True |
+sim10 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
+sim11 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
+sim12 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=True |
