@@ -36,6 +36,7 @@ dy  dt  tol    T
 ---
 # 7-26
 ---
+# Some initial tests of RH profiles
 sim0  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant                     | scale_efe=False |
 sim1  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=zero_top | RH_lat_profile=constant                     | scale_efe=False |
 sim2  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=constant                     | scale_efe=False |
@@ -55,9 +56,47 @@ sim12 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    |
 ---
 # 7-27
 ---
+# Check the profiles for annual mean
 sim13 | annual_mean_clark | lat0=None | M=None | full_wvf    | RH_vert_profile=zero_top | RH_lat_profile=constant | scale_efe=False |
 sim14 | annual_mean_clark | lat0=None | M=None | full_no_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant | scale_efe=False |
 sim15 | annual_mean_clark | lat0=None | M=None | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=constant | scale_efe=False |
 sim16 | annual_mean_clark | lat0=None | M=None | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=constant | scale_efe=False |
 sim17 | annual_mean_clark | lat0=None | M=None | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian | scale_efe=False |
 sim18 | annual_mean_clark | lat0=None | M=None | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=gaussian | scale_efe=False |
+
+# Changes made to lats now -- must make new prescribed water vapor T arrays for each type of RH
+# (The change was that lats did not contain 0, and thus the EFE was slightly offset all the time. Fixed now.)
+sim19 | annual_mean_clark | full_wvf | RH_vert_profile=steps    | RH_lat_profile=constant                     |
+sim20 | annual_mean_clark | full_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant                     |
+sim21 | annual_mean_clark | full_wvf | RH_vert_profile=steps    | RH_lat_profile=gaussian                     |
+sim22 | annual_mean_clark | full_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           |
+sim23 | annual_mean_clark | full_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian |
+
+# Now redo the perturbations
+sim24 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=constant                     | scale_efe=False |
+sim25 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=constant                     | scale_efe=False |
+sim26 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=zero_top | RH_lat_profile=constant                     | scale_efe=False |
+sim27 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant                     | scale_efe=False |
+sim28 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=False |
+sim29 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=False |
+sim30 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=False |
+sim31 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=False |
+sim32 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
+sim33 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=True  |
+sim34 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=True  |
+sim35 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=True  |
+
+# the efe logs:
+FOLDER L0  SIG   M   EFE
+sim24: 15, 4.94, 15, -6.4752348845995886
+sim25: 15, 4.94, 15, -5.0940033650012930
+sim26: 15, 4.94, 15, -6.1948242987685704
+sim27: 15, 4.94, 15, -4.7757420199444205
+sim28: 15, 4.94, 15, -7.2394332459199893
+sim29: 15, 4.94, 15, -5.6341989642593902
+sim30: 15, 4.94, 15, -6.4627919835991019
+sim31: 15, 4.94, 15, -4.1669575379738646
+sim32: 15, 4.94, 15, -6.4799025209573653
+sim33: 15, 4.94, 15, -7.1196716893246927
+sim34: 15, 4.94, 15, -6.0080486755648836
+sim35: 15, 4.94, 15, -6.0063756769752317

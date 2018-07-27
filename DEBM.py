@@ -306,7 +306,7 @@ class Model():
             interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures_flipped, Tdata)
 
             if water_vapor_feedback == False:
-                T_control = np.load(self.EBM_PATH + '/data/T_array_full_wvf_annual_mean_clark.npz')['arr_0']
+                T_control = np.load(self.EBM_PATH + '/data/T_array_{}_{}_n{}.npz'.format(self.RH_vert_profile, self.RH_lat_profile, self.lats.shape[0]))['arr_0']
                 T_control = T_control[-1, :]
                 Tgrid_control = np.repeat(T_control, 
                         pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
