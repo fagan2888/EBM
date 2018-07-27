@@ -42,13 +42,18 @@ ax2.set_ylim([-50, 50])
 
 ax2.plot([0, 1], [0, 0], 'k--')
 
-sim_types = ['steps_constant.npz', 'zero_top_constant.npz', 'steps_gaussian.npz', 'steps_gaussian.npz1']
-for sim_type in sim_types:
+sim_dir_pairs = [ ['sim0','sim1'],
+            ['sim2','sim3'],
+            ['sim4','sim5'],
+            ['sim7','sim8'],
+            ['sim10','sim11']
+            ]
+for sim_dir_pair in sim_dir_pairs:
     # Load data
-    L_wvf     = np.load('data/L_array_full_wvf_perturbation_{}'.format(sim_type))['arr_0']
-    q_wvf     = np.load('data/q_array_full_wvf_perturbation_{}'.format(sim_type))['arr_0']
-    L_no_wvf  = np.load('data/L_array_full_no_wvf_perturbation_{}'.format(sim_type))['arr_0']
-    q_no_wvf  = np.load('data/q_array_full_no_wvf_perturbation_{}'.format(sim_type))['arr_0']
+    L_no_wvf  = np.load('../EBM_sims/{}/L_array.npz'.format(sim_dir_pair[0]))['arr_0']
+    q_no_wvf  = np.load('../EBM_sims/{}/q_array.npz'.format(sim_dir_pair[0]))['arr_0']
+    L_wvf     = np.load('../EBM_sims/{}/L_array.npz'.format(sim_dir_pair[1]))['arr_0']
+    q_wvf     = np.load('../EBM_sims/{}/q_array.npz'.format(sim_dir_pair[1]))['arr_0']
     pressures = np.load('data/moist_adiabat_data.npz')['pressures']
     
     # Use equilibrated data
@@ -67,8 +72,8 @@ for sim_type in sim_types:
     L = asym(L_wvf) - asym(L_no_wvf)
     q = asym(q_wvf_column) - asym(q_no_wvf_column)
     
-    ax1.plot(np.sin(np.deg2rad(lats)), -L, label=sim_type)
-    ax2.plot(np.sin(np.deg2rad(lats)), q, label=sim_type)
+    ax1.plot(np.sin(np.deg2rad(lats)), -L, label=sim_dir_pair)
+    ax2.plot(np.sin(np.deg2rad(lats)), q, label=sim_dir_pair)
     #ax2.plot([np.sin(np.deg2rad(6.19 * 0.64)), np.sin(np.deg2rad(6.19 * 0.64))], [-100, 100], 'k-.', label='$\\theta_{ITCZ}$ (Interactive)')
     
 ax1.legend()
