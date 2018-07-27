@@ -48,13 +48,14 @@ sim_dir_pairs = [ ['sim0','sim1'],
             ['sim7','sim8'],
             ['sim10','sim11']
             ]
+
+pressures = np.load('data/moist_adiabat_data.npz')['pressures']
 for sim_dir_pair in sim_dir_pairs:
     # Load data
     L_no_wvf  = np.load('../EBM_sims/{}/L_array.npz'.format(sim_dir_pair[0]))['arr_0']
     q_no_wvf  = np.load('../EBM_sims/{}/q_array.npz'.format(sim_dir_pair[0]))['arr_0']
     L_wvf     = np.load('../EBM_sims/{}/L_array.npz'.format(sim_dir_pair[1]))['arr_0']
     q_wvf     = np.load('../EBM_sims/{}/q_array.npz'.format(sim_dir_pair[1]))['arr_0']
-    pressures = np.load('data/moist_adiabat_data.npz')['pressures']
     
     # Use equilibrated data
     L_wvf = L_wvf[-1, :]

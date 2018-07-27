@@ -2,25 +2,20 @@
 
 from DEBM import Model
 
-model = Model(dlat=0.5, dtmax_multiple=1.0, max_iters=1e5, tol=0.001)
+model = Model(dlat=0.5, dtmax_multiple=1.0, max_iters=1e5, tol=0.1)
 
 model.initial_temperature(initial_condition='triangle', triangle_low=270, triangle_high=305)
 
-model.albedo(albedo_feedback=False)
+model.albedo(albedo_feedback=False, alb_ice=None, alb_water=None)
 
-model.outgoing_longwave('full_wvf', RH_vert_profile='steps', RH_lat_profile='mid_and_upper_level_gaussian')
+model.insolation(insolation_type='annual_mean_clark', perturb_center=None, perturb_spread=None, perturb_intensity=None)
 
-# sigmas = [4.94, 9.89]
-# lats   = [15, 60]
-# fname = 'perturbed_efe_planck_linear_fit.dat'
-# for sigma, lat0 in zip(sigmas, lats):
-#     for M in [5, 10, 15, 18]:
-#         model.insolation(insolation_type='perturbation', perturb_center=lat0, perturb_spread=sigma, perturb_intensity=M)
-#         model.solve(numerical_method='crank', nPlot=100, nPrint=500)
-#         model.log_efe(fname)
+model.outgoing_longwave(olr_type='full_wvf', A=None, B=None, emissivity=None, RH_vert_profile='steps', RH_lat_profile='gaussian', scale_efe=False)
 
-lat0 = 15; sigma = 4.94; M = 15
-model.insolation(insolation_type='perturbation', perturb_center=lat0, perturb_spread=sigma, perturb_intensity=M)
-model.solve(numerical_method='crank', nPlot=100, nPrint=500)
-model.save_data()
-model.log_efe('efe_full_wvf_m15.txt')
+# model.solve(numerical_method='crank', nPlot=100, nPrint=500)
+
+# model.save_data()
+
+# model.log_efe(fname='efe.log')
+
+# model.save_plots()

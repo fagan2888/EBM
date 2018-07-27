@@ -51,7 +51,7 @@ class Model():
         self.dt         = dtmax_multiple * self.dtmax
         self.max_iters  = max_iters
         self.tol        = tol
-        self.lats       = np.linspace(-90, 90, int(180/dlat))
+        self.lats       = np.linspace(-90, 90, int(180/dlat) + 1)
         self.T_dataset  = np.arange(100, 400, 1e-3)
         self.q_dataset  = self.humidsat(self.T_dataset, ps/100)[1]
         self.E_dataset  = cp*self.T_dataset + RH*self.q_dataset*Lv
@@ -334,7 +334,7 @@ class Model():
                 if water_vapor_feedback == True:
                     if RH_lat_profile != 'constant':
                         # Change RH based on ITCZ
-                        E = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
+                        E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
                         lat0 = self.lats[np.argmax(E)] 
                         self.RH_dist = shift_dist(self.RH_dist, lat0)
                     self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self.humidsat(self.state['air_temperature'].values[0, :, :], 
