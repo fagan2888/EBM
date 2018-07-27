@@ -82,9 +82,10 @@ sim29 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    |
 sim30 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=False |
 sim31 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=False |
 sim32 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
-sim33 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=True  |
-sim34 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=True  |
-sim35 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=True  |
+sim33 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
+sim34 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=True  |
+sim35 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=True  |
+sim36 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=True  |
 
 # the efe logs:
 FOLDER L0  SIG   M   EFE
@@ -97,6 +98,7 @@ sim29: 15, 4.94, 15, -5.6341989642593902
 sim30: 15, 4.94, 15, -6.4627919835991019
 sim31: 15, 4.94, 15, -4.1669575379738646
 sim32: 15, 4.94, 15, -6.4799025209573653
-sim33: 15, 4.94, 15, -7.1196716893246927
-sim34: 15, 4.94, 15, -6.0080486755648836
-sim35: 15, 4.94, 15, -6.0063756769752317
+j
+sim34: 15, 4.94, 15, -7.1196716893246927
+sim35: 15, 4.94, 15, -6.0080486755648836
+sim36: 15, 4.94, 15, -6.0063756769752317

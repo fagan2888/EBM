@@ -37,8 +37,8 @@ if [ "$1" == "perturbation" ]; then
 	perturb_intensity=15
 	# perturb_intensity=18
 	
-	olr_type=full_wvf
-	# olr_type=full_no_wvf
+	# olr_type=full_wvf
+	olr_type=full_no_wvf
 	A=None
 	B=None
 	emissivity=None
@@ -48,8 +48,8 @@ if [ "$1" == "perturbation" ]; then
 	# RH_lat_profile=gaussian
 	# RH_lat_profile=mid_level_gaussian
 	RH_lat_profile=mid_and_upper_level_gaussian
-	scale_efe=True
-	# scale_efe=False
+	# scale_efe=True
+	scale_efe=False
 	
 	
 	i=0
