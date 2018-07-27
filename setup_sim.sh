@@ -16,20 +16,33 @@ albedo_feedback=False
 alb_ice=None
 alb_water=None
 
-insolation_type=perturbation
-perturb_center=15
+insolation_type=annual_mean_clark
+# insolation_type=perturbation
+perturb_center=None
+# perturb_center=15
 # perturb_center=60
-perturb_spread=4.94
+perturb_spread=None
+# perturb_spread=4.94
 # perturb_spread=9.89
-perturb_intensity=15
+perturb_intensity=None
+# perturb_intensity=5
+# perturb_intensity=10
+# perturb_intensity=15
+# perturb_intensity=18
 
-olr_type=full_wvf
+# olr_type=full_wvf
+olr_type=full_no_wvf
 A=None
 B=None
 emissivity=None
+# RH_vert_profile=zero_top
 RH_vert_profile=steps
-RH_lat_profile=mid_and_upper_level_gaussian
-scale_efe=True
+RH_lat_profil=constant
+RH_lat_profile=gaussian
+# RH_lat_profile=upper_level_gaussian
+# RH_lat_profile=mid_and_upper_level_gaussian
+# scale_efe=True
+scale_efe=False
 
 numerical_method=crank
 nPlot=100
@@ -68,11 +81,12 @@ sed -e 's/dlat=/dlat='$dlat'/g' \
     -e 's/emissivity=/emissivity='$emissivity'/g' \
     -e 's/RH_vert_profile=/RH_vert_profile="'$RH_vert_profile'"/g' \
     -e 's/RH_lat_profile=/RH_lat_profile="'$RH_lat_profile'"/g' \
-    -e 's/scale_efe=/scale_efe="'$scale_efe'"/g' \
+    -e 's/scale_efe=/scale_efe='$scale_efe'/g' \
     -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
     -e 's/nPlot=/nPlot='$nPlot'/g' \
     -e 's/nPrint=/nPrint='$nPrint'/g' \
     -e 's/fname=/fname="'$fname'"/g' \
+    -e 's/model.log_efe/# model.log_efe/g' \
     ${EBM_PATH}/simulation.py > simulation.py
 
 sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job

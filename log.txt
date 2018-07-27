@@ -36,16 +36,28 @@ dy  dt  tol    T
 ---
 # 7-26
 ---
-sim0 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant |
-sim1 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant |
-sim2 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=constant |
-sim3 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=constant |
-sim4 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian |
-sim5 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian |
-sim6 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=gaussian | scale_efe=True |
-sim7 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | scale_efe=False |
-sim8 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | scale_efe=False |
-sim9 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | scale_efe=True |
-sim10 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
-sim11 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
-sim12 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=True |
+sim0  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant                     | scale_efe=False |
+sim1  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=zero_top | RH_lat_profile=constant                     | scale_efe=False |
+sim2  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=constant                     | scale_efe=False |
+sim3  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=constant                     | scale_efe=False |
+sim4  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=False |
+sim5  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=False |
+sim6  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=True  |
+sim7  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=False |
+sim8  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=False |
+sim9  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=True  |
+sim10 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
+sim11 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
+sim12 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=True  |
+
+--> Noticed sharp dips in init OLR for the full_wvf runs with latitudinally varying RH
+
+---
+# 7-27
+---
+sim13 | annual_mean_clark | lat0=None | M=None | full_wvf    | RH_vert_profile=zero_top | RH_lat_profile=constant | scale_efe=False |
+sim14 | annual_mean_clark | lat0=None | M=None | full_no_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant | scale_efe=False |
+sim15 | annual_mean_clark | lat0=None | M=None | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=constant | scale_efe=False |
+sim16 | annual_mean_clark | lat0=None | M=None | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=constant | scale_efe=False |
+sim17 | annual_mean_clark | lat0=None | M=None | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian | scale_efe=False |
+sim18 | annual_mean_clark | lat0=None | M=None | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=gaussian | scale_efe=False |
