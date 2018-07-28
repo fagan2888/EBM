@@ -17,9 +17,9 @@ rc('legend', fontsize=13)
 def asym(A):
     ''' returns pointwise asymmetry in A assuming A is a 1D array '''
     L = A.shape[0]
-    return A[L//2:] - np.flip(A[:L//2], axis=0)
+    return A[L//2:] - np.flip(A[:L//2 + L%2], axis=0)
 
-lats = np.linspace(0, 90, 180)
+lats = np.linspace(0, 90, 181)
 
 f = plt.figure(figsize=(10,12))
 
@@ -42,20 +42,20 @@ ax2.set_ylim([-50, 50])
 
 ax2.plot([0, 1], [0, 0], 'k--')
 
-sim_dir_pairs = [ ['sim0','sim1'],
-            ['sim2','sim3'],
-            ['sim4','sim5'],
-            ['sim7','sim8'],
-            ['sim10','sim11']
-            ]
+sim_dir_pairs = [ ['sim24','sim25'],
+                  ['sim26','sim27'],
+                  ['sim28','sim29'],
+                  ['sim30','sim31'],
+                  ['sim32','sim33']
+                  ]
 
 pressures = np.load('data/moist_adiabat_data.npz')['pressures']
 for sim_dir_pair in sim_dir_pairs:
     # Load data
-    L_no_wvf  = np.load('../EBM_sims/{}/L_array.npz'.format(sim_dir_pair[0]))['arr_0']
-    q_no_wvf  = np.load('../EBM_sims/{}/q_array.npz'.format(sim_dir_pair[0]))['arr_0']
-    L_wvf     = np.load('../EBM_sims/{}/L_array.npz'.format(sim_dir_pair[1]))['arr_0']
-    q_wvf     = np.load('../EBM_sims/{}/q_array.npz'.format(sim_dir_pair[1]))['arr_0']
+    L_wvf     = np.load('../EBM_sims/{}/L_array.npz'.format(sim_dir_pair[0]))['arr_0']
+    q_wvf     = np.load('../EBM_sims/{}/q_array.npz'.format(sim_dir_pair[0]))['arr_0']
+    L_no_wvf  = np.load('../EBM_sims/{}/L_array.npz'.format(sim_dir_pair[1]))['arr_0']
+    q_no_wvf  = np.load('../EBM_sims/{}/q_array.npz'.format(sim_dir_pair[1]))['arr_0']
     
     # Use equilibrated data
     L_wvf = L_wvf[-1, :]
