@@ -255,3 +255,44 @@ sim73: 60, 9.89, 5,  -0.8927612348056017
 sim74: 60, 9.89, 10, -1.6609440345329189
 sim75: 60, 9.89, 15, -2.4583530435298759
 sim76: 60, 9.89, 18, -2.9054364337455789
+
+# Choosing gaussian_spread1=5
+sim101 | annual_mean_clark | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim102 | annual_mean_clark | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian |
+
+# The fitted A, B
+sim103 | perturbation | lat0=15 | M=5  | linear | A=-452.68 | B=2.51 |
+sim104 | perturbation | lat0=15 | M=10 | linear | A=-452.68 | B=2.51 |
+sim105 | perturbation | lat0=15 | M=15 | linear | A=-452.68 | B=2.51 |
+sim106 | perturbation | lat0=15 | M=18 | linear | A=-452.68 | B=2.51 |
+sim107 | perturbation | lat0=60 | M=5  | linear | A=-452.68 | B=2.51 |
+sim108 | perturbation | lat0=60 | M=10 | linear | A=-452.68 | B=2.51 |
+sim109 | perturbation | lat0=60 | M=15 | linear | A=-452.68 | B=2.51 |
+sim110 | perturbation | lat0=60 | M=18 | linear | A=-452.68 | B=2.51 |
+sim111 | perturbation | lat0=15 | M=5  | linear | A=-448.73 | B=2.50 |
+sim112 | perturbation | lat0=15 | M=10 | linear | A=-448.73 | B=2.50 |
+sim113 | perturbation | lat0=15 | M=15 | linear | A=-448.73 | B=2.50 |
+sim114 | perturbation | lat0=15 | M=18 | linear | A=-448.73 | B=2.50 |
+sim115 | perturbation | lat0=60 | M=5  | linear | A=-448.73 | B=2.50 |
+sim116 | perturbation | lat0=60 | M=10 | linear | A=-448.73 | B=2.50 |
+sim117 | perturbation | lat0=60 | M=15 | linear | A=-448.73 | B=2.50 |
+sim118 | perturbation | lat0=60 | M=18 | linear | A=-448.73 | B=2.50 |
+
+# wvf
+sim103: 15, 4.94, 5,  -2.4096553007944470
+sim104: 15, 4.94, 10, -4.5363085069089637
+sim105: 15, 4.94, 15, -6.4430431617864627
+sim106: 15, 4.94, 18, -7.4959671344414023
+sim107: 60, 9.89, 5,  -0.8609869201245035
+sim108: 60, 9.89, 10, -1.6456144287159502
+sim109: 60, 9.89, 15, -2.3675494022788608
+sim110: 60, 9.89, 18, -2.7689740114898918
+# no wvf
+sim111: 15, 4.94, 5,  -2.4126870577289909
+sim112: 15, 4.94, 10, -4.5434452876711404
+sim113: 15, 4.94, 15, -6.4519735774198921
+sim114: 15, 4.94, 18, -7.5050152320612096
+sim115: 60, 9.89, 5,  -0.8620308748135537
+sim116: 60, 9.89, 10, -1.6511469892765396
+sim117: 60, 9.89, 15, -2.3702073861341288
+sim118: 60, 9.89, 18, -2.7707160026373625

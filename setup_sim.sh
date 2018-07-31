@@ -109,23 +109,32 @@ if [ "$1" == "-p" ]; then
 	cd ..
 elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS
-	# insolation_type=annual_mean_clark
 	
 	# olr_type=full_wvf
-	olr_type=full_no_wvf
-	A=None
-	B=None
+	# olr_type=full_no_wvf
+	olr_type=linear
+	# A=None
+	# A=-452.68
+	A=-448.73
+	# B=None
+	# B=2.51
+	B=2.5
 	emissivity=None
+	RH_vert_profile=None
 	# RH_vert_profile=zero_top
-	RH_vert_profile=steps
+	# RH_vert_profile=steps
+	RH_lat_profile=None
 	# RH_lat_profile=constant
 	# RH_lat_profile=gaussian
-	RH_lat_profile=mid_level_gaussian
+	# RH_lat_profile=mid_level_gaussian
 	# RH_lat_profile=mid_and_upper_level_gaussian
-	gaussian_spread1=5
-	gaussian_spread2=45
+	gaussian_spread1=None
+	# gaussian_spread1=5
+	gaussian_spread2=None
+	# gaussian_spread2=45
+	scale_efe=None
 	# scale_efe=True
-	scale_efe=False
+	# scale_efe=False
 	
 	insolation_type=perturbation
 	for perturb_center in 15 60; do
@@ -182,7 +191,8 @@ elif [ "$1" == "-s" ]; then
 	        sbatch run_EBM.job
 	        
 	        # echo "Logging simulation."
-	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | RH_vert_profile=$RH_vert_profile | RH_lat_profile=$RH_lat_profile | gaussian_spread1=$gaussian_spread1 |"
+	        # log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | RH_vert_profile=$RH_vert_profile | RH_lat_profile=$RH_lat_profile | gaussian_spread1=$gaussian_spread1 |"
+	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | A=$A | B=$B |"
 	        echo "Adding line to log.txt: $log"
 	        echo $log >> ${EBM_PATH}/log.txt 
 	        
@@ -205,8 +215,8 @@ elif [ "$1" == "-amc" ]; then
 	# perturb_intensity=15
 	# perturb_intensity=18
 	
-	olr_type=full_wvf
-	# olr_type=full_no_wvf
+	# olr_type=full_wvf
+	olr_type=full_no_wvf
 	A=None
 	B=None
 	emissivity=None
@@ -214,13 +224,12 @@ elif [ "$1" == "-amc" ]; then
 	RH_vert_profile=steps
 	# RH_lat_profile=constant
 	# RH_lat_profile=gaussian
-	# RH_lat_profile=mid_level_gaussian
-	RH_lat_profile=mid_and_upper_level_gaussian
-	gaussian_spread1=10
+	RH_lat_profile=mid_level_gaussian
+	# RH_lat_profile=mid_and_upper_level_gaussian
+	gaussian_spread1=5
 	gaussian_spread2=45
 	# scale_efe=True
 	scale_efe=False
-	
 	
 	i=0
 	while [ -d ${sim_dir}sim$i ];

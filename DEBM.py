@@ -289,12 +289,14 @@ class Model():
             else:
                 RH_lat_profile = 'constant'
             self.RH_lat_profile = RH_lat_profile
+            self.gaussian_spread1 = gaussian_spread1
+            self.gaussian_spread2 = gaussian_spread2
 
             ## Debug:
-            plt.imshow(self.RH_dist.T, extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
-            plt.colorbar()
-            plt.show()
-            os.sys.exit()
+            # plt.imshow(self.RH_dist.T, extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
+            # plt.colorbar()
+            # plt.show()
+            # os.sys.exit()
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
             moist_data = np.load(self.EBM_PATH + '/data/moist_adiabat_data.npz')
@@ -308,7 +310,7 @@ class Model():
             interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures_flipped, Tdata)
 
             if water_vapor_feedback == False:
-                T_control = np.load(self.EBM_PATH + '/data/T_array_{}_{}_n{}.npz'.format(self.RH_vert_profile, self.RH_lat_profile, self.lats.shape[0]))['arr_0']
+                T_control = np.load(self.EBM_PATH + '/data/T_array_{}_{}{}_n{}.npz'.format(self.RH_vert_profile, self.RH_lat_profile, self.gaussian_spread1, self.lats.shape[0]))['arr_0']
                 T_control = T_control[-1, :]
                 Tgrid_control = np.repeat(T_control, 
                         pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
@@ -422,7 +424,8 @@ class Model():
         E_array   = np.zeros((frames, self.lats.shape[0]))
         alb_array = np.zeros((frames, self.lats.shape[0]))
         L_array   = np.zeros((frames, self.lats.shape[0]))
-        q_array   = np.zeros((frames, self.lats.shape[0], self.nLevels))
+        if self.olr_type in ['full_wvf', 'full_no_wvf']:
+            q_array   = np.zeros((frames, self.lats.shape[0], self.nLevels))
         
         self.T    = self.init_temp
         self.E    = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
@@ -443,7 +446,8 @@ class Model():
                 E_array[frame_count, :]    = self.E
                 L_array[frame_count, :]    = self.L(self.T)
                 alb_array[frame_count, :]  = self.alb
-                q_array[frame_count, :, :] = self.state['specific_humidity'].values[0, :, :]
+                if self.olr_type in ['full_wvf', 'full_no_wvf']:
+                    q_array[frame_count, :, :] = self.state['specific_humidity'].values[0, :, :]
 
                 error = np.sum(np.abs(T_array[frame_count, :] - T_array[frame_count-1, :]))
                 if error < self.tol * self.dt:
@@ -452,7 +456,8 @@ class Model():
                     E_array      = E_array[:frame_count, :]
                     alb_array    = alb_array[:frame_count, :]
                     L_array      = L_array[:frame_count, :]
-                    q_array      = q_array[:frame_count, :]
+                    if self.olr_type in ['full_wvf', 'full_no_wvf']:
+                        q_array      = q_array[:frame_count, :]
                     print('{:5d}/{:.0f} iterations. Last error: {:.16f}'.format(iter_count, self.max_iters, error))
                     print('Equilibrium reached in {} iterations ({:.1f} days).'.format(iter_count, iter_count * self.dt/60/60/24))
                     break
@@ -468,15 +473,17 @@ class Model():
         self.E_array   = E_array
         self.alb_array = alb_array
         self.L_array   = L_array
-        self.q_array   = q_array
+        if self.olr_type in ['full_wvf', 'full_no_wvf']:
+            self.q_array   = q_array
 
     def save_data(self):
         # Save data
         np.savez('T_array.npz', self.T_array)
         np.savez('E_array.npz', self.E_array)
         np.savez('L_array.npz', self.L_array)
-        np.savez('q_array.npz', self.q_array)
         np.savez('alb_array.npz', self.alb_array)
+        if self.olr_type in ['full_wvf', 'full_no_wvf']:
+            np.savez('q_array.npz', self.q_array)
 
 
     def log_efe(self, fname):
