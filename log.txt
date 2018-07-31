@@ -103,3 +103,100 @@ sim34: 15, 4.94, 15, -7.1196716893246927
 sim35: 15, 4.94, 15, -6.0080486755648836
 sim36: 15, 4.94, 15, -6.0063756769752317
 
+---
+# 7-31
+---
+# Run some sensitivity experiments for mid_level_gaussian
+sim37 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim38 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim39 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim40 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim41 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim42 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim43 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim44 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+
+sim45 | perturbation | lat0=15 | M=5  | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim46 | perturbation | lat0=15 | M=10 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim47 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim48 | perturbation | lat0=15 | M=18 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim49 | perturbation | lat0=60 | M=5  | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim50 | perturbation | lat0=60 | M=10 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim51 | perturbation | lat0=60 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim52 | perturbation | lat0=60 | M=18 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+
+sim53 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim54 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim55 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim56 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim57 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim58 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim59 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim60 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+
+sim61 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim62 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim63 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim64 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim65 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim66 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim67 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim68 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+
+sim69 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim70 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim71 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim72 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim73 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim74 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim75 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim76 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+
+# EFE results
+# no wvf (gaussian_spread1=10)
+sim45: 15, 4.94, 5,  -1.5916657723569547
+sim46: 15, 4.94, 10, -2.9614363673422153
+sim47: 15, 4.94, 15, -4.1669575379738646
+sim48: 15, 4.94, 18, -4.8280824570009155
+sim49: 60, 9.89, 5,  -0.3572446459302813
+sim50: 60, 9.89, 10, -0.7066951431770163
+sim51: 60, 9.89, 15, -1.0534624231683849
+sim52: 60, 9.89, 18, -1.2628755675775780
+
+# wvf
+#gaussian_spread1=2
+sim61: 15, 4.94, 5,  -2.4750341453338454
+sim62: 15, 4.94, 10, -4.5689701023052560
+sim63: 15, 4.94, 15, -6.4782207122961939
+sim64: 15, 4.94, 18, -7.5051207999746889
+sim65: 60, 9.89, 5,  -0.9152626377272597
+sim66: 60, 9.89, 10, -1.6446020672361223
+sim67: 60, 9.89, 15, -2.4651740313813870
+sim68: 60, 9.89, 18, -2.9163396328907343
+#gaussian_spread1=5
+sim53: 15, 4.94, 5,  -2.4726204969475534
+sim54: 15, 4.94, 10, -4.5680990552587781
+sim55: 15, 4.94, 15, -6.4723546421838298
+sim56: 15, 4.94, 18, -7.4999258230063779
+sim57: 60, 9.89, 5,  -0.9099198250036619
+sim58: 60, 9.89, 10, -1.6489771372096687
+sim59: 60, 9.89, 15, -2.4635508491408515
+sim60: 60, 9.89, 18, -2.9130917115943804
+#gaussian_spread1=10
+sim37: 15, 4.94, 5,  -2.4691280649892948
+sim38: 15, 4.94, 10, -4.5657596295947558
+sim39: 15, 4.94, 15, -6.4627919835991019
+sim40: 15, 4.94, 18, -7.4905004558989203
+sim41: 60, 9.89, 5,  -0.9007737951193726
+sim42: 60, 9.89, 10, -1.6541595843329675
+sim43: 60, 9.89, 15, -2.4601513532319128
+sim44: 60, 9.89, 18, -2.9083547947150299
+#gaussian_spread1=15
+sim69: 15, 4.94, 5,  -2.4638333014884073
+sim70: 15, 4.94, 10, -4.5600348546104845
+sim71: 15, 4.94, 15, -6.4495817316482800
+sim72: 15, 4.94, 18, -7.4765071510544301
+sim73: 60, 9.89, 5,  -0.8927612348056017
+sim74: 60, 9.89, 10, -1.6609440345329189
+sim75: 60, 9.89, 15, -2.4583530435298759
+sim76: 60, 9.89, 18, -2.9054364337455789

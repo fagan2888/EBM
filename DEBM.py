@@ -166,7 +166,8 @@ class Model():
 
 
     def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, 
-            RH_vert_profile=None, RH_lat_profile=None, scale_efe=False):
+            RH_vert_profile=None, RH_lat_profile=None, gaussian_spread1=None, 
+			gaussian_spread2=None, scale_efe=False):
         self.olr_type = olr_type
         if olr_type == 'planck':
             ''' PLANCK RADIATION '''
@@ -260,7 +261,7 @@ class Model():
                     return RH_dist
                 self.RH_dist = shift_dist(self.RH_dist, lat0)
             elif RH_lat_profile == 'mid_level_gaussian':
-                spread = 10
+                spread = gaussian_spread1
                 lat0 = 0
                 midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]
                 def shift_dist(RH_dist, lat0):
@@ -271,8 +272,8 @@ class Model():
                     return RH_dist
                 self.RH_dist = shift_dist(self.RH_dist, lat0)
             elif RH_lat_profile == 'mid_and_upper_level_gaussian':
-                spread1 = 10
-                spread2 = 45
+                spread1 = gaussian_spread1
+                spread2 = gaussian_spread2
                 lat0 = 0
                 midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]
                 upperlevels = np.where( np.logical_and(pressures/100 < 300, pressures/100 > 200) )[0]
