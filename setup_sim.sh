@@ -111,8 +111,8 @@ elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS
 	# insolation_type=annual_mean_clark
 	
-	olr_type=full_wvf
-	# olr_type=full_no_wvf
+	# olr_type=full_wvf
+	olr_type=full_no_wvf
 	A=None
 	B=None
 	emissivity=None
@@ -122,7 +122,7 @@ elif [ "$1" == "-s" ]; then
 	# RH_lat_profile=gaussian
 	RH_lat_profile=mid_level_gaussian
 	# RH_lat_profile=mid_and_upper_level_gaussian
-	gaussian_spread1=15
+	gaussian_spread1=5
 	gaussian_spread2=45
 	# scale_efe=True
 	scale_efe=False
