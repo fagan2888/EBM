@@ -291,9 +291,10 @@ class Model():
             self.RH_lat_profile = RH_lat_profile
 
             ## Debug:
-            # plt.imshow(self.RH_dist.T, extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
-            # plt.colorbar()
-            # plt.show()
+            plt.imshow(self.RH_dist.T, extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
+            plt.colorbar()
+            plt.show()
+            os.sys.exit()
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
             moist_data = np.load(self.EBM_PATH + '/data/moist_adiabat_data.npz')

@@ -10,7 +10,8 @@ model.albedo(albedo_feedback=False, alb_ice=None, alb_water=None)
 
 model.insolation(insolation_type='annual_mean_clark', perturb_center=None, perturb_spread=None, perturb_intensity=None)
 
-model.outgoing_longwave(olr_type='full_wvf', A=None, B=None, emissivity=None, RH_vert_profile='steps', RH_lat_profile='gaussian', scale_efe=False)
+model.outgoing_longwave(olr_type='full_wvf', A=None, B=None, emissivity=None, RH_vert_profile='steps', RH_lat_profile='mid_level_gaussian', 
+        gaussian_spread1=5, gaussian_spread2=45, scale_efe=False)
 
 # model.solve(numerical_method='crank', nPlot=100, nPrint=500)
 
