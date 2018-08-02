@@ -47,7 +47,8 @@ class Model():
     def __init__(self, dlat=0.5, dtmax_multiple=1.0, max_iters=1e5, tol=0.001):
         self.dlat       = dlat
         self.dy         = np.pi*Re*dlat/180
-        self.dtmax      = 0.5 * self.dy**2 / D
+        # self.dtmax      = 0.5 * self.dy**2 / D
+        self.dtmax      = 0.5 * self.dlat**2 / (ps * D / g / Re**2)
         self.dt         = dtmax_multiple * self.dtmax
         self.max_iters  = max_iters
         self.tol        = tol
@@ -363,13 +364,18 @@ class Model():
         #     self.Estar = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
         # elif self.numerical_method == 'crank':
         #     self.E = np.dot(self.C, self.E) + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T))
+        print(np.max(self.E), np.argmax(self.E))
         if self.numerical_method == 'euler_for':
             self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ) + self.dt * D / Re**2 / self.cos_lats * np.gradient( (np.gradient(self.E, self.dlat) * self.cos_lats), self.dlat)
+        elif self.numerical_method == 'euler_back':
+            self.E = np.dot(self.C, self.E) + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) )
+        print(np.max(self.E), np.argmax(self.E))
     
         # insulated boundaries
         self.E[0] = self.E[1]; self.E[-1] = self.E[-2]
 
         self.T = self.T_dataset[np.searchsorted(self.E_dataset, self.E)]
+
         if self.albedo_feedback:
             self.alb = self.alb_water * np.ones(len(self.lats))
             self.alb[np.where(T <= 273.16)] = self.alb_ice    
@@ -379,6 +385,30 @@ class Model():
         self.numerical_method = numerical_method
         self.nPlot = nPlot
         frames = int(self.max_iters / nPlot)
+        if numerical_method == 'euler_back':
+            K = ps * D / g / Re**2
+            c1 = K * self.dt / self.dlat**2 * np.ones(self.lats.shape)
+            c2 = - K * self.sin_lats / self.cos_lats * self.dt / self.dlat
+
+            A = np.zeros((len(self.lats), len(self.lats)))
+            B = np.zeros((len(self.lats), len(self.lats)))
+
+            rng = np.arange(len(self.lats)-1)
+
+            np.fill_diagonal(A, 1)
+
+            np.fill_diagonal(B, 1 + 2*c1 + c2)
+            B[rng, rng+1] = -c1[:-1] - c2[:-1]
+            B[rng+1, rng] = c1[1:]
+
+            # A[0, 0] = 1; A[0, 1] = -1
+            # A[-1, -2] = 1; A[-1, -1] = -1
+            
+            # B[0, 0] = 1; B[0, 1] = -1
+            # B[-1, -2] = 1; B[-1, -1] = -1
+
+            Binv = np.linalg.inv(B)
+            self.C = np.dot(Binv, A)
         if numerical_method == 'crank':
             alpha = 0.5
             
