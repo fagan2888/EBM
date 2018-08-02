@@ -44,7 +44,7 @@ class Model():
     
     EBM_PATH = os.environ['EBM_PATH']
     
-    def __init__(self, dlat, dtmax_multiple, max_iters, tol):
+    def __init__(self, dlat=0.5, dtmax_multiple=1.0, max_iters=1e5, tol=0.001):
         self.dlat       = dlat
         self.dy         = np.pi*Re*dlat/180
         self.dtmax      = 0.5 * self.dy**2 / D
@@ -52,6 +52,8 @@ class Model():
         self.max_iters  = max_iters
         self.tol        = tol
         self.lats       = np.linspace(-90, 90, int(180/dlat) + 1)
+        self.cos_lats   = np.cos(np.deg2rad(self.lats))
+        self.sin_lats   = np.sin(np.deg2rad(self.lats))
         self.T_dataset  = np.arange(100, 400, 1e-3)
         self.q_dataset  = self.humidsat(self.T_dataset, ps/100)[1]
         self.E_dataset  = cp*self.T_dataset + RH*self.q_dataset*Lv
@@ -346,21 +348,27 @@ class Model():
                 # CliMT takes over here, this is where the slowdown occurs
                 tendencies, diagnostics = radiation(self.state)
                 return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
+        else:
+            os.sys.exit('Invalid keyword for olr_type: {}'.format(self.olr_type))
+
 
         self.L = L
 
 
     def take_step(self):
+        # if self.numerical_method == 'euler_for':
+        #     self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
+        # elif self.numerical_method == 'euler_back':
+        #     self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
+        #     self.Estar = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
+        # elif self.numerical_method == 'crank':
+        #     self.E = np.dot(self.C, self.E) + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T))
         if self.numerical_method == 'euler_for':
-            self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
-        elif self.numerical_method == 'euler_back':
-            self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
-            self.Estar = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
-        elif self.numerical_method == 'crank':
-            self.E = np.dot(self.C, self.E) + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T))
+            self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ) + self.dt * D / Re**2 / self.cos_lats * np.gradient( (np.gradient(self.E, self.dlat) * self.cos_lats), self.dlat)
     
-        self.E[0] = self.E[1]
-        self.E[-1] = self.E[-2]
+        # insulated boundaries
+        self.E[0] = self.E[1]; self.E[-1] = self.E[-2]
+
         self.T = self.T_dataset[np.searchsorted(self.E_dataset, self.E)]
         if self.albedo_feedback:
             self.alb = self.alb_water * np.ones(len(self.lats))
@@ -511,7 +519,7 @@ class Model():
         ### STYLES
         rc('animation', html='html5')
         rc('lines', linewidth=2, color='b', markersize=10)
-        rc('axes', titlesize=20, labelsize=16, xmargin=0.05, ymargin=0.05, 
+        rc('axes', titlesize=20, labelsize=16, xmargin=0.0, ymargin=0.0, 
                 linewidth=1.5)
         rc('axes.spines', top=False, right=False)
         rc('xtick', labelsize=13)
@@ -522,20 +530,22 @@ class Model():
 
         ### INITIAL DISTRIBUTIONS
         print('\nPlotting Initial Dists')
-        fig, ax = plt.subplots(1, figsize=(12,5))
+        fig, ax = plt.subplots(1, figsize=(16,10))
         
         # radiaiton dist
         SW = self.S * (1 - self.init_alb)
         LW = self.L(self.init_temp)
-        ax.plot([-90, 90], [0, 0], 'k--', lw=2)
-        ax.plot(self.lats, SW, 'r', lw=2, label='SW (with albedo)', alpha=0.5)
-        ax.plot(self.lats, LW, 'g', lw=2, label='LW (init)', alpha=0.5)
-        ax.plot(self.lats, SW - LW, 'b', lw=2, label='SW - LW', alpha=1.0)
+        ax.plot([-1, 1], [0, 0], 'k--', lw=2)
+        ax.plot(self.sin_lats, SW, 'r', lw=2, label='SW (with albedo)', alpha=0.5)
+        ax.plot(self.sin_lats, LW, 'g', lw=2, label='LW (init)', alpha=0.5)
+        ax.plot(self.sin_lats, SW - LW, 'b', lw=2, label='SW - LW', alpha=1.0)
         
         ax.set_title('SW/LW Radiation (init)')
         ax.set_xlabel('Lat')
         ax.set_ylabel('W/m$^2$')
         ax.legend(loc='upper right')
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
         
         plt.tight_layout()
         
@@ -549,13 +559,14 @@ class Model():
 
         print('Mean T: {:.2f} K'.format(np.mean(self.T_array[-1,:])))
 
-        f, ax = plt.subplots(1, figsize=(12,5))
-        ax.plot(self.lats, self.T_array[-1, :], 'k')
+        f, ax = plt.subplots(1, figsize=(16,10))
+        ax.plot(self.sin_lats, self.T_array[-1, :], 'k')
         ax.set_title("Final Temperature Distribution")
-        ax.set_xlabel('Latitude (degrees)')
+        ax.set_xlabel('Lat')
         ax.set_ylabel('T (K)')
         ax.grid(c='k', ls='--', lw=1, alpha=0.4)
-        ax.set_xticks([-90, -60, -30, 0, 30, 60, 90])
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
         
         plt.tight_layout()
         
@@ -567,7 +578,7 @@ class Model():
         
         ### FIND ITCZ
         print('\nPlotting EFE')
-        E_f = self.E_array[-1, :] / 1000
+        E_f = self.E_array[-1, :] 
         
         spl = UnivariateSpline(self.lats, E_f, k=4, s=0)
         roots = spl.derivative().roots()
@@ -582,18 +593,19 @@ class Model():
         print("Root found = {:.16f} (of {})".format(closest_root, len(roots)))
         print("ITCZ = {:.5f}".format(closest_root*0.64))
         
-        f, ax = plt.subplots(1, figsize=(12,5))
-        ax.plot(self.lats, E_f, 'c', label='Final Energy Distribution', lw=4)
-        ax.plot(self.lats, spl(self.lats), 'k--', label='Spline Interpolant')
-        min_max = [E_f.min(), E_f.max()]
+        f, ax = plt.subplots(1, figsize=(16, 10))
+        ax.plot(self.sin_lats, E_f / 1000, 'c', label='Final Energy Distribution', lw=4)
+        ax.plot(self.sin_lats, spl(self.lats) / 1000, 'k--', label='Spline Interpolant')
+        min_max = [E_f.min()/1000, E_f.max()/1000]
         ax.plot([efe_lat, efe_lat], min_max, 'm')
         ax.plot([closest_root, closest_root], min_max, 'r')
         ax.text(efe_lat+5, np.average(min_max), "EFE $\\approx$ {:.2f}$^\\circ$".format(closest_root), size=16)
         ax.set_title("Final Energy Distribution")
         ax.legend(fontsize=14, loc="upper left")
-        ax.set_xlabel('Latitude (degrees)')
+        ax.set_xlabel('Lat')
         ax.set_ylabel('E (kJ / kg)')
-        ax.set_xticks([-90, -60, -30, 0, 30, 60, 90])
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
         
         plt.tight_layout()
         
@@ -611,15 +623,16 @@ class Model():
         LW_f = self.L(T_f)
         print('(SW - LW) at EFE: {:.2f} W/m^2'.format(SW_f[max_index] - LW_f[max_index]))
 
-        f, ax = plt.subplots(1, figsize=(12, 5))
-        ax.plot(self.lats, SW_f, 'r', label='S(1-$\\alpha$)')
-        ax.plot(self.lats, LW_f, 'b', label='OLR')
-        ax.plot(self.lats, SW_f - LW_f, 'g', label='Net')
-        ax.set_xticks([-90, -60, -30, 0, 30, 60, 90])
+        f, ax = plt.subplots(1, figsize=(16, 10))
+        ax.plot(self.sin_lats, SW_f, 'r', label='$S(1-\\alpha)$')
+        ax.plot(self.sin_lats, LW_f, 'b', label='OLR')
+        ax.plot(self.sin_lats, SW_f - LW_f, 'g', label='Net')
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
         ax.grid()
         ax.legend(loc='upper left')
         ax.set_title("Final Radiation Distributions")
-        ax.set_xlabel("Latitude (degrees)")
+        ax.set_xlabel("Lat")
         ax.set_ylabel("W/m$^2$")
         
         plt.tight_layout()
@@ -629,10 +642,30 @@ class Model():
         print('{} created.'.format(fname))
         plt.close()
         
+        ### FINAL FLUX DIST
+        print('\nPlotting Final Flux Dist')
+
+        f, ax = plt.subplots(1, figsize=(16, 10))
+        # ax.plot(self.sin_lats, SW_f - LW_f, 'r', label='NEI = $S(1-\\alpha) - L$')
+        ax.plot(self.sin_lats, - ps / g * D / Re * np.gradient(E_f, self.dlat), 'b', label='Energy Flux $F = -p_s \\cdot D / (g \\cdot a) \\cdot dE/d\\phi$')
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
+        ax.grid()
+        ax.legend(loc='upper left')
+        ax.set_title("Final Flux Distribution")
+        ax.set_xlabel("Lat")
+        ax.set_ylabel("W / m$^2$")
+        
+        plt.tight_layout()
+        
+        fname = 'final_flux_dist.png'
+        plt.savefig(fname, dpi=120)
+        print('{} created.'.format(fname))
+        plt.close()
         
         ### LW vs. T
         print('\nPlotting LW vs. T')
-        f, ax = plt.subplots(1, figsize=(8, 5))
+        f, ax = plt.subplots(1, figsize=(16, 10))
         ax.set_title("Relationship Between T$_s$ and OLR")
         ax.set_xlabel("T$_s$ (K)")
         ax.set_ylabel("OLR (W/m$^2$)")
@@ -651,7 +684,7 @@ class Model():
         
         ax.plot(x_data, y_data, 'co', ms=2, label='data points: "{}"'.format(self.olr_type))
         ax.plot(xvals, f(xvals, *popt), 'k--', label='linear fit')
-        ax.text(np.min(xvals), np.mean(yvals), s='A = {:.2f},\nB = {:.2f}'.format(popt[0], popt[1]), size=14)
+        ax.text(np.min(xvals) + 0.1 * (np.max(xvals)-np.min(xvals)), np.mean(yvals), s='A = {:.2f},\nB = {:.2f}'.format(popt[0], popt[1]), size=16)
         ax.legend()
         
         plt.tight_layout()
