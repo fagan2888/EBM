@@ -2,9 +2,9 @@
 
 from DEBM import Model
 
-model = Model(dlat=, dtmax_multiple=, max_iters=, tol=)
+model = Model(dlat=, dtmax_multiple=, max_sim_years=, tol=)
 
-model.initial_temperature(initial_condition=, triangle_low=, triangle_high=)
+model.initial_temperature(initial_condition=, low=, high=)
 
 model.albedo(albedo_feedback=, alb_ice=, alb_water=)
 
@@ -12,7 +12,7 @@ model.insolation(insolation_type=, perturb_center=, perturb_spread=, perturb_int
 
 model.outgoing_longwave(olr_type=, A=, B=, emissivity=, RH_vert_profile=, RH_lat_profile=, gaussian_spread1=, gaussian_spread2=, scale_efe=)
 
-model.solve(numerical_method=, nPlot=, nPrint=)
+model.solve(numerical_method=, frames=)
 
 model.save_data()
 

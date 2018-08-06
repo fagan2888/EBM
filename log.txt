@@ -296,3 +296,31 @@ sim115: 60, 9.89, 5,  -0.8620308748135537
 sim116: 60, 9.89, 10, -1.6511469892765396
 sim117: 60, 9.89, 15, -2.3702073861341288
 sim118: 60, 9.89, 18, -2.7707160026373625
+
+---
+# 8-6
+---
+After looking at SW - LW integral, we realized that my cartesian coordinates solution 
+is not exactly the same as if you solve the diffusion equation in spherical
+coordinate (btw, Earth is spherical. Go figure). So the new code solves the adjusted
+PDE with a method from Brian Rose 
+(https://climlab.readthedocs.io/en/latest/api/climlab.dynamics.Diffusion.html).
+
+New method of calculating error: 
+  |dT/dt| = max( |Ti - Ti-1| ) / time btwn i and i-1
+
+# Accuracy experiments with new error calculation and integration scheme
+# (all using M = 18 tropical perturbation, planck OLR, implicit scheme)
+dlat | dtmax_mult | tol   | EFE
+0.5  | 1.0        | 1E-10 | -5.78
+0.5  | 1.0        | 1E-9  | -5.78
+0.5  | 1.0        | 1E-8  | -5.78 
+0.5  | 1.0        | 1E-7  | -5.77  ==> tol = 1E-7 is too small
+0.5  | 0.5        | 1E-8  | -5.78
+0.5  | 1.5        | 1E-8  | -5.78
+0.5  | 2.0        | 1E-8  | -5.77  ==> dtmax_mult = 2.0 is too large
+1.0  | 1.5        | 1E-8  | -5.77  ==> dlat = 1.0 is too large
+0.25 | 1.5        | 1E-8  | -5.78  ==> dlat = 0.25 is not necessary
+
+Conclusion: dlat = 0.5, dtmax_mult = 1.5, tol = 1E-8 give fastest results while
+    remaining accurate.

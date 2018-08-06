@@ -4,23 +4,22 @@ sim_dir=~/my-scratch/EBM_sims/
 # sim_dir=~/Research2018/EBM_files/EBM_sims/
 
 dlat=0.5
-dtmax_multiple=1.0
-max_iters=1e5
-tol=0.001
+dtmax_multiple=1.5
+max_sim_years=5
+tol=1e-8
 
-initial_condition=triangle
-triangle_low=270
-triangle_high=305
+initial_condition=legendre
+low=270
+high=305
 
 albedo_feedback=False
 alb_ice=None
 alb_water=None
 
-numerical_method=crank
-nPlot=100
-nPrint=500
+numerical_method=implicit
+frames=100
 
-fname="efe.log"
+fname="itcz.log"
 
 if [ "$1" == "-p" ]; then
 	# SINGLE CONTROL SIMULATION
@@ -68,11 +67,11 @@ if [ "$1" == "-p" ]; then
 	# echo "Copying template files."
 	sed -e 's/dlat=/dlat='$dlat'/g' \
 	    -e 's/dtmax_multiple=/dtmax_multiple='$dtmax_multiple'/g' \
-	    -e 's/max_iters=/max_iters='$max_iters'/g' \
+	    -e 's/max_sim_years=/max_sim_years='$max_sim_years'/g' \
 	    -e 's/tol=/tol='$tol'/g' \
 	    -e 's/initial_condition=/initial_condition="'$initial_condition'"/g' \
-	    -e 's/triangle_low=/triangle_low='$triangle_low'/g' \
-	    -e 's/triangle_high=/triangle_high='$triangle_high'/g' \
+	    -e 's/low=/low='$low'/g' \
+	    -e 's/high=/high='$high'/g' \
 	    -e 's/albedo_feedback=/albedo_feedback='$albedo_feedback'/g' \
 	    -e 's/alb_ice=/alb_ice='$alb_ice'/g' \
 	    -e 's/alb_water=/alb_water='$alb_water'/g' \
@@ -90,8 +89,7 @@ if [ "$1" == "-p" ]; then
 	    -e 's/gaussian_spread2=/gaussian_spread2='$gaussian_spread2'/g' \
 	    -e 's/scale_efe=/scale_efe='$scale_efe'/g' \
 	    -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
-	    -e 's/nPlot=/nPlot='$nPlot'/g' \
-	    -e 's/nPrint=/nPrint='$nPrint'/g' \
+	    -e 's/frames=/framse='$frames'/g' \
 	    -e 's/fname=/fname="'$fname'"/g' \
 	    ${EBM_PATH}/simulation.py > simulation.py
 	
@@ -157,11 +155,11 @@ elif [ "$1" == "-s" ]; then
 	        # echo "Copying template files."
 	        sed -e 's/dlat=/dlat='$dlat'/g' \
 	            -e 's/dtmax_multiple=/dtmax_multiple='$dtmax_multiple'/g' \
-	            -e 's/max_iters=/max_iters='$max_iters'/g' \
+	            -e 's/max_sim_years=/max_sim_years='$max_sim_years'/g' \
 	            -e 's/tol=/tol='$tol'/g' \
 	            -e 's/initial_condition=/initial_condition="'$initial_condition'"/g' \
-	            -e 's/triangle_low=/triangle_low='$triangle_low'/g' \
-	            -e 's/triangle_high=/triangle_high='$triangle_high'/g' \
+	            -e 's/low=/low='$low'/g' \
+	            -e 's/high=/high='$high'/g' \
 	            -e 's/albedo_feedback=/albedo_feedback='$albedo_feedback'/g' \
 	            -e 's/alb_ice=/alb_ice='$alb_ice'/g' \
 	            -e 's/alb_water=/alb_water='$alb_water'/g' \
@@ -179,8 +177,7 @@ elif [ "$1" == "-s" ]; then
 	            -e 's/gaussian_spread2=/gaussian_spread2='$gaussian_spread2'/g' \
 	            -e 's/scale_efe=/scale_efe='$scale_efe'/g' \
 	            -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
-	            -e 's/nPlot=/nPlot='$nPlot'/g' \
-	            -e 's/nPrint=/nPrint='$nPrint'/g' \
+	            -e 's/frames=/framse='$frames'/g' \
 	            -e 's/fname=/fname="'$fname'"/g' \
 	            ${EBM_PATH}/simulation.py > simulation.py
 	        

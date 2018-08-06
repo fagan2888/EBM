@@ -11,7 +11,7 @@ show = 'T'
 print('\nCreating Animation of {}'.format(show))
 
 # set up the figure, the axis, and the plot element we want to animate
-fig, ax = plt.subplots(1, figsize=(9,5))
+fig, ax = plt.subplots(1, figsize=(16, 10))
 
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])

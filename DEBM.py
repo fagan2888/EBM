@@ -14,7 +14,7 @@
 ################################################################################
 import numpy as np
 import climt
-from scipy.integrate import quadrature
+from scipy.integrate import quadrature, trapz
 from scipy.interpolate import RectBivariateSpline
 from time import clock
 import matplotlib.pyplot as plt
@@ -44,12 +44,17 @@ class Model():
     
     EBM_PATH = os.environ['EBM_PATH']
     
-    def __init__(self, dlat=0.5, dtmax_multiple=1.0, max_iters=1e5, tol=0.001):
+    def __init__(self, dlat=0.5, dtmax_multiple=1.0, max_sim_years=2, tol=0.001):
         self.dlat            = dlat
         self.dy              = np.pi*Re*dlat/180
         self.dtmax           = 0.5 * self.dy**2 / D
         self.dt              = dtmax_multiple * self.dtmax
-        self.max_iters       = max_iters
+        self.max_sim_years   = max_sim_years
+        self.secs_in_min     = 60 
+        self.secs_in_hour    = 60  * self.secs_in_min 
+        self.secs_in_day     = 24  * self.secs_in_hour 
+        self.secs_in_year    = 365 * self.secs_in_day 
+        self.max_iters       = int(self.max_sim_years * self.secs_in_year / self.dt)
         self.tol             = tol
         self.lats            = np.linspace(-90 + dlat/2, 90 - dlat/2, int(180/dlat) + 1)
         self.lats_bounds     = np.linspace(-90, 90, int(180/dlat) + 2)
@@ -104,7 +109,7 @@ class Model():
         self.initial_condition = initial_condition
         if initial_condition == 'triangle':
             # self.init_temp = high - (high - low) / 90 * np.abs(self.lats)
-            self.init_temp = high - (high - low) / np.abs(self.sin_lats)
+            self.init_temp = high - (high - low) * np.abs(self.sin_lats)
         elif initial_condition == 'legendre':
             self.init_temp = 2/3*high + 1/3*low - 2/3 * (high-low) * 1/2 * (3 * self.sin_lats**2 - 1)
 
@@ -382,31 +387,33 @@ class Model():
             self.alb[np.where(T <= 273.16)] = self.alb_ice    
 
 
-    def solve(self, numerical_method, nPlot, nPrint):
+    def _print_progress(self, frame, error):
+        ''' Print the progress of the integration '''
+        if frame == 0:
+            print('frame = {:5d}'.format(0))
+        else:
+            print('frame = {:5d}; |dT/dt| = {:.2E}'.format(frame, error))
+
+    def solve(self, numerical_method, frames):
         self.numerical_method = numerical_method
-        self.nPlot = nPlot
-        frames = int(self.max_iters / nPlot)
         if numerical_method == 'implicit':
-            K = D * self.dt / self.dy**2 
+            K  = D * self.dt / self.dy**2
             c1 = K * np.ones(self.lats.shape)
             c2 = K * self.cos_lats_bounds
 
-            J = self.cos_lats_bounds.size - 1
-            weight1 = self.cos_lats_bounds
-            weight2 = self.cos_lats
+            J         = self.cos_lats_bounds.size - 1
+            weight1   = self.cos_lats_bounds
+            weight2   = self.cos_lats
             weightedK = weight1 * K
-            Ka1 = weightedK[0:J] / weight2
-            Ka3 = weightedK[1:J+1] / weight2
-            Ka2 = np.insert(Ka1[1:J], 0, 0) + np.append(Ka3[0:J-1], 0)
-            A = (np.diag(1 + Ka2, k=0) +
-                 np.diag(-Ka3[0:J-1], k=1) +
-                 np.diag(-Ka1[1:J], k=-1))
-
-            # A[0, 0] = 1; A[0, 1] = -1
-            # A[-1, -2] = 1; A[-1, -1] = -1
+            Ka1       = weightedK[0:J] / weight2
+            Ka3       = weightedK[1:J+1] / weight2
+            Ka2       = np.insert(Ka1[1:J], 0, 0) + np.append(Ka3[0:J-1], 0)
+            A         = (np.diag(1 + Ka2, k=0) +
+                        np.diag(-Ka3[0:J-1], k=1) +
+                        np.diag(-Ka1[1:J], k=-1))
 
             self.C = np.linalg.inv(A)
-        if numerical_method == 'semi-implicit':
+        elif numerical_method == 'semi-implicit':
             alpha = 0.5
             
             r = D * self.dt / self.dy**2
@@ -434,12 +441,12 @@ class Model():
             Ainv = np.linalg.inv(A)
             self.C = np.dot(Ainv, B)
         print('\nModel Params:')
-        print("dtmax:      {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax/60/60/24))
-        print("dt:         {:.2f} s / {:.4f} days = {:.2f} * dtmax".format(self.dt, self.dt/60/60/24, self.dt/self.dtmax))
-        print("dlat:       {:.2f} degrees".format(self.dlat))
-        print("tolerance:  {}".format(self.tol))
-        print("nPlot:      {}".format(nPlot))
-        print("frames:     {}\n".format(frames))
+        print("dtmax:            {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax / self.secs_in_day))
+        print("dt:               {:.2f} s / {:.4f} days = {:.2f} * dtmax".format(self.dt, self.dt / self.secs_in_day, self.dt / self.dtmax))
+        print("max_sim_years:    {} years = {:.0f} iterations".format(self.max_sim_years, self.max_iters))
+        print("dlat:             {:.2f} degrees".format(self.dlat))
+        print("tolerance:        |dT/dt| < {:.2E}".format(self.tol))
+        print("frames:           {}\n".format(frames))
         
         print('Insolation Type:   {}'.format(self.insolation_type))
         if self.insolation_type == 'perturbation':
@@ -465,45 +472,40 @@ class Model():
         self.T    = self.init_temp
         self.E    = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
         self.alb  = self.init_alb
-        
-        t0          = clock()
-        iter_count  = 0
-        frame_count = 0
-        error       = -1
-        while iter_count < self.max_iters:
-            if iter_count % nPrint == 0: 
-                if iter_count == 0:
-                    print('{:8d}/{:.0f} iterations.'.format(iter_count, self.max_iters))
-                else:
-                    print('{:8d}/{:.0f} iterations. dT/dt: {:.5f}'.format(iter_count, self.max_iters, error/self.dt))
-            if iter_count % nPlot == 0:
-                T_array[frame_count, :]    = self.T
-                E_array[frame_count, :]    = self.E
-                L_array[frame_count, :]    = self.L(self.T)
-                alb_array[frame_count, :]  = self.alb
-                if self.olr_type in ['full_wvf', 'full_no_wvf']:
-                    q_array[frame_count, :, :] = self.state['specific_humidity'].values[0, :, :]
 
-                error = np.sum(np.abs(T_array[frame_count, :] - T_array[frame_count-1, :]))
-                if error/self.dt < self.tol:
-                    frame_count += 1
-                    T_array      = T_array[:frame_count, :]
-                    E_array      = E_array[:frame_count, :]
-                    alb_array    = alb_array[:frame_count, :]
-                    L_array      = L_array[:frame_count, :]
-                    if self.olr_type in ['full_wvf', 'full_no_wvf']:
-                        q_array      = q_array[:frame_count, :]
-                    print('{:8d}/{:.0f} iterations. dT/dt: {:.5f}'.format(iter_count, self.max_iters, error/self.dt))
-                    print('Equilibrium reached in {} iterations ({:.1f} days).'.format(iter_count, iter_count * self.dt/60/60/24))
-                    break
-                else:
-                    frame_count += 1
-            self.take_step()
-            iter_count += 1
+        t0          = clock()
+        its_per_frame = int(self.max_iters / (frames - 1))
+        for frame in range(frames):
+            T_array[frame, :]    = self.T
+            E_array[frame, :]    = self.E
+            L_array[frame, :]    = self.L(self.T)
+            alb_array[frame, :]  = self.alb
+            if self.olr_type in ['full_wvf', 'full_no_wvf']:
+                q_array[frame, :, :] = self.state['specific_humidity'].values[0, :, :]
+
+            error = np.max(np.abs(T_array[frame, :] - T_array[frame-1, :])) / (self.dt * its_per_frame)
+
+            self._print_progress(frame, error)
+
+            if error < self.tol:
+                T_array   = T_array[:frame+1, :]
+                E_array   = E_array[:frame+1, :]
+                alb_array = alb_array[:frame+1, :]
+                L_array   = L_array[:frame+1, :]
+                if self.olr_type in ['full_wvf', 'full_no_wvf']:
+                    q_array      = q_array[:frame+1, :]
+                print('Equilibrium reached in {:8.5f} days ({} iterations).'.format(frame * its_per_frame * self.dt / self.secs_in_day, frame * its_per_frame))
+                break
+
+            for i in range(its_per_frame):
+                # print('{}/{}'.format(i, its_per_frame))
+                self.take_step()
         tf = clock()
+
         if T_array.shape[0] == frames:
-            print('Failed to reach equilibrium. dT/dt: {:.5f}'.format(np.max(np.abs(T_array[-1, :] - T_array[-2, :]))/self.dt))
-        print('\nTime: {:.10f} seconds/iteration\n'.format((tf-t0)/iter_count))
+            print('Failed to reach equilibrium. |dT/dt| = {:4.16f}'.format(np.max(np.abs(T_array[-1, :] - T_array[-2, :])) / self.dt))
+        print('\nEfficiency: \n{:10.10f} seconds/iteration\n{:10.10f} seconds/sim day\n'.format((tf-t0) / (frame * its_per_frame), (tf-t0) / (frame * its_per_frame) / self.dt * self.secs_in_day))
+
         self.T_array   = T_array
         self.E_array   = E_array
         self.alb_array = alb_array
@@ -538,7 +540,7 @@ class Model():
         closest_root = roots[min_error_index]
 
         with open(fname, 'a') as f:
-            data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, closest_root)
+            data = '{:2d}, {:2.2f}, {:2d}, {:2.16f} {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, closest_root, 0.64 * closest_root)
             f.write(data + '\n')
             print('Logged "{}" in "{}"'.format(data, fname))
 
@@ -546,7 +548,7 @@ class Model():
         ### STYLES
         rc('animation', html='html5')
         rc('lines', linewidth=2, color='b', markersize=10)
-        rc('axes', titlesize=20, labelsize=16, xmargin=0.0, ymargin=0.0, 
+        rc('axes', titlesize=20, labelsize=16, xmargin=0.01, ymargin=0.01, 
                 linewidth=1.5)
         rc('axes.spines', top=False, right=False)
         rc('xtick', labelsize=13)
@@ -649,7 +651,7 @@ class Model():
         SW_f = self.S * (1 - alb_f)
         LW_f = self.L(T_f)
         print('(SW - LW) at EFE: {:.2f} W/m^2'.format(SW_f[max_index] - LW_f[max_index]))
-        print('Integral of (SW - LW): {:.5f} W'.format(np.sum( (SW_f - LW_f) * Re**2 * self.cos_lats * self.dlat )))
+        print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * trapz( (SW_f - LW_f) * Re**2 * self.cos_lats, dx=self.dlat )))
 
         f, ax = plt.subplots(1, figsize=(16, 10))
         ax.plot(self.sin_lats, SW_f, 'r', label='$S(1-\\alpha)$')
@@ -758,7 +760,7 @@ class Model():
         # def animate(i):
         #     if i%100 == 0: 
         #         print("{}/{} frames".format(i, len(array)))
-        #     ax.set_title('EBM t = {:.0f} days'.format((i+1)*self.nPlot*self.dt/60/60/24))
+        #     ax.set_title('EBM t = {:.0f} days'.format((i+1)*self.plot_freq*self.dt/60/60/24))
         #     graph = array[i, :]
         #     line.set_data(self.lats, graph)
         #     m = graph.min()
