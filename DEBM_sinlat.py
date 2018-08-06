@@ -44,21 +44,20 @@ class Model():
     
     EBM_PATH = os.environ['EBM_PATH']
     
-    def __init__(self, dlat=0.5, dtmax_multiple=1.0, max_iters=1e5, tol=0.001):
-        self.dlat            = dlat
-        self.dy              = np.pi*Re*dlat/180
-        self.dtmax           = 0.5 * self.dy**2 / D
-        self.dt              = dtmax_multiple * self.dtmax
-        self.max_iters       = max_iters
-        self.tol             = tol
-        self.lats            = np.linspace(-90 + dlat/2, 90 - dlat/2, int(180/dlat) + 1)
-        self.lats_bounds     = np.linspace(-90, 90, int(180/dlat) + 2)
-        self.cos_lats        = np.cos(np.deg2rad(self.lats))
-        self.cos_lats_bounds = np.cos(np.deg2rad(self.lats_bounds))
-        self.sin_lats        = np.sin(np.deg2rad(self.lats))
-        self.T_dataset       = np.arange(100, 400, 1e-3)
-        self.q_dataset       = self.humidsat(self.T_dataset, ps/100)[1]
-        self.E_dataset       = cp*self.T_dataset + RH*self.q_dataset*Lv
+    def __init__(self, grid_pts=100, dtmax_multiple=1.0, max_iters=1e5, tol=0.001):
+        self.grid_pts   = grid_pts
+        self.dx         = 2 / self.grid_pts
+        self.dtmax      = 0.5 * self.dx**2 / D
+        # self.dtmax      = 0.5 * self.dx**2 / (D / Re**2)
+        self.dt         = dtmax_multiple * self.dtmax
+        self.max_iters  = max_iters
+        self.tol        = tol
+        self.sin_lats   = np.linspace(-0.99999, 0.99999, self.grid_pts)
+        self.lats       = np.arcsin(self.sin_lats)
+        self.cos_lats   = np.cos(self.lats)
+        self.T_dataset  = np.arange(100, 400, 1e-3)
+        self.q_dataset  = self.humidsat(self.T_dataset, ps/100)[1]
+        self.E_dataset  = cp*self.T_dataset + RH*self.q_dataset*Lv
 
 
     def humidsat(self, t, p):
@@ -100,13 +99,11 @@ class Model():
         return esat, qsat, rsat
 
 
-    def initial_temperature(self, initial_condition, low=None, high=None):
+    def initial_temperature(self, initial_condition, triangle_low=None,
+            triangle_high=None):
         self.initial_condition = initial_condition
         if initial_condition == 'triangle':
-            # self.init_temp = high - (high - low) / 90 * np.abs(self.lats)
-            self.init_temp = high - (high - low) / np.abs(self.sin_lats)
-        elif initial_condition == 'legendre':
-            self.init_temp = 2/3*high + 1/3*low - 2/3 * (high-low) * 1/2 * (3 * self.sin_lats**2 - 1)
+            self.init_temp = triangle_high - (triangle_high - triangle_low) * np.abs(self.sin_lats)
 
 
     def insolation(self, insolation_type, perturb_center=None, 
@@ -124,7 +121,7 @@ class Model():
             s_approx = lambda y: 1 - 5/8*p2(cosB)*p2(y) - 9/64*p4(cosB)*p4(y) - 65/1024*p6(cosB)*p6(y)
             get_S = lambda lat: Q * s_approx(np.sin(np.deg2rad(lat)))
         elif insolation_type == 'annual_mean_clark':
-            get_S = lambda lat: S0*np.cos(np.deg2rad(lat))/np.pi
+            self.S = S0 * self.cos_lats / np.pi
         elif insolation_type == 'perturbation':
             self.perturb_center = perturb_center
             self.perturb_spread = perturb_spread
@@ -151,22 +148,20 @@ class Model():
                     ss[i] = s
                 return ss
             
-        self.S = get_S(self.lats)
-
 
     def albedo(self, albedo_feedback=False, alb_ice=None, alb_water=None):
         self.albedo_feedback = albedo_feedback
         self.alb_ice = alb_ice
         self.alb_water = alb_water
         if albedo_feedback == True:
-            self.init_alb = alb_water * np.ones(len(self.lats))
+            self.init_alb = alb_water * np.ones(self.grid_pts)
             self.init_alb[np.where(init_temp <= 273.16)] = alb_ice
         else:
         # From Clark:
         #   self.init_alb = 0.2725 * np.ones(len(lats))
         # Using the below calculation from KiehlTrenberth1997
         # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342
-            self.init_alb = (40 / 342) * np.ones(len(self.lats))
+            self.init_alb = (40 / 342) * np.ones(self.grid_pts)
 
         self.alb = self.init_alb
 
@@ -360,18 +355,24 @@ class Model():
 
 
     def take_step(self):
-        # if self.numerical_method == 'explicit':
+        # if self.numerical_method == 'euler_for':
         #     self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
-        # elif self.numerical_method == 'implicit':
+        # elif self.numerical_method == 'euler_back':
         #     self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
         #     self.Estar = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
-        # elif self.numerical_method == 'semi-implicit':
+        # elif self.numerical_method == 'crank':
         #     self.E = np.dot(self.C, self.E) + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T))
-        if self.numerical_method == 'explicit':
-            self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ) + self.dt * D / self.cos_lats * np.gradient( (np.gradient(self.E, self.dy) * self.cos_lats), self.dy)
-        elif self.numerical_method == 'implicit':
-            self.E = np.dot(self.C, self.E) + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) )
+
+        # if self.numerical_method == 'euler_for':
+        #     self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ) + self.dt * D / Re**2 / self.cos_lats * np.gradient( (np.gradient(self.E, self.dlat) * self.cos_lats), self.dlat)
+        # elif self.numerical_method == 'euler_back':
+        #     self.E = np.dot(self.C, self.E) + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) )
     
+        if self.numerical_method == 'euler_for':
+            # self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ) + self.dt * D / Re**2 * ( (np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1)) / self.dx**2 * (1 - self.sin_lats**2) - np.gradient(self.E, self.dx) * 2*self.sin_lats)
+            self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ) + self.dt * D * np.gradient (np.gradient(self.E * (1 - self.sin_lats**2), self.dx), self.dx)
+
+
         # insulated boundaries
         self.E[0] = self.E[1]; self.E[-1] = self.E[-2]
 
@@ -386,27 +387,31 @@ class Model():
         self.numerical_method = numerical_method
         self.nPlot = nPlot
         frames = int(self.max_iters / nPlot)
-        if numerical_method == 'implicit':
-            K = D * self.dt / self.dy**2 
-            c1 = K * np.ones(self.lats.shape)
-            c2 = K * self.cos_lats_bounds
+        if numerical_method == 'euler_back':
+            K = ps * D / g / Re**2
+            c1 = K * self.dt / self.dlat**2 * np.ones(self.lats.shape)
+            c2 = - K * self.sin_lats / self.cos_lats * self.dt / self.dlat
 
-            J = self.cos_lats_bounds.size - 1
-            weight1 = self.cos_lats_bounds
-            weight2 = self.cos_lats
-            weightedK = weight1 * K
-            Ka1 = weightedK[0:J] / weight2
-            Ka3 = weightedK[1:J+1] / weight2
-            Ka2 = np.insert(Ka1[1:J], 0, 0) + np.append(Ka3[0:J-1], 0)
-            A = (np.diag(1 + Ka2, k=0) +
-                 np.diag(-Ka3[0:J-1], k=1) +
-                 np.diag(-Ka1[1:J], k=-1))
+            A = np.zeros((len(self.lats), len(self.lats)))
+            B = np.zeros((len(self.lats), len(self.lats)))
+
+            rng = np.arange(len(self.lats)-1)
+
+            np.fill_diagonal(A, 1)
+
+            np.fill_diagonal(B, 1 + 2*c1 + c2)
+            B[rng, rng+1] = -c1[:-1] - c2[:-1]
+            B[rng+1, rng] = c1[1:]
 
             # A[0, 0] = 1; A[0, 1] = -1
             # A[-1, -2] = 1; A[-1, -1] = -1
+            
+            # B[0, 0] = 1; B[0, 1] = -1
+            # B[-1, -2] = 1; B[-1, -1] = -1
 
-            self.C = np.linalg.inv(A)
-        if numerical_method == 'semi-implicit':
+            Binv = np.linalg.inv(B)
+            self.C = np.dot(Binv, A)
+        if numerical_method == 'crank':
             alpha = 0.5
             
             r = D * self.dt / self.dy**2
@@ -436,8 +441,8 @@ class Model():
         print('\nModel Params:')
         print("dtmax:      {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax/60/60/24))
         print("dt:         {:.2f} s / {:.4f} days = {:.2f} * dtmax".format(self.dt, self.dt/60/60/24, self.dt/self.dtmax))
-        print("dlat:       {:.2f} degrees".format(self.dlat))
-        print("tolerance:  {}".format(self.tol))
+        print("dx:         {:.2f} degrees".format(self.dx))
+        print("tolerance:  {}".format(self.tol * self.dt))
         print("nPlot:      {}".format(nPlot))
         print("frames:     {}\n".format(frames))
         
@@ -455,12 +460,12 @@ class Model():
             print('\tRH Latitudinal Profile: {}'.format(self.RH_lat_profile))
         print('Numerical Method:  {}\n'.format(self.numerical_method))
         
-        T_array   = np.zeros((frames, self.lats.shape[0]))
-        E_array   = np.zeros((frames, self.lats.shape[0]))
-        alb_array = np.zeros((frames, self.lats.shape[0]))
-        L_array   = np.zeros((frames, self.lats.shape[0]))
+        T_array   = np.zeros((frames, self.grid_pts))
+        E_array   = np.zeros((frames, self.grid_pts))
+        alb_array = np.zeros((frames, self.grid_pts))
+        L_array   = np.zeros((frames, self.grid_pts))
         if self.olr_type in ['full_wvf', 'full_no_wvf']:
-            q_array   = np.zeros((frames, self.lats.shape[0], self.nLevels))
+            q_array   = np.zeros((frames, self.grid_pts, self.nLevels))
         
         self.T    = self.init_temp
         self.E    = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
@@ -473,9 +478,9 @@ class Model():
         while iter_count < self.max_iters:
             if iter_count % nPrint == 0: 
                 if iter_count == 0:
-                    print('{:8d}/{:.0f} iterations.'.format(iter_count, self.max_iters))
+                    print('{:5d}/{:.0f} iterations.'.format(iter_count, self.max_iters))
                 else:
-                    print('{:8d}/{:.0f} iterations. dT/dt: {:.5f}'.format(iter_count, self.max_iters, error/self.dt))
+                    print('{:5d}/{:.0f} iterations. Last error: {:.16f}'.format(iter_count, self.max_iters, error))
             if iter_count % nPlot == 0:
                 T_array[frame_count, :]    = self.T
                 E_array[frame_count, :]    = self.E
@@ -485,7 +490,7 @@ class Model():
                     q_array[frame_count, :, :] = self.state['specific_humidity'].values[0, :, :]
 
                 error = np.sum(np.abs(T_array[frame_count, :] - T_array[frame_count-1, :]))
-                if error/self.dt < self.tol:
+                if error < self.tol * self.dt:
                     frame_count += 1
                     T_array      = T_array[:frame_count, :]
                     E_array      = E_array[:frame_count, :]
@@ -493,7 +498,7 @@ class Model():
                     L_array      = L_array[:frame_count, :]
                     if self.olr_type in ['full_wvf', 'full_no_wvf']:
                         q_array      = q_array[:frame_count, :]
-                    print('{:8d}/{:.0f} iterations. dT/dt: {:.5f}'.format(iter_count, self.max_iters, error/self.dt))
+                    print('{:5d}/{:.0f} iterations. Last error: {:.16f}'.format(iter_count, self.max_iters, error))
                     print('Equilibrium reached in {} iterations ({:.1f} days).'.format(iter_count, iter_count * self.dt/60/60/24))
                     break
                 else:
@@ -502,7 +507,7 @@ class Model():
             iter_count += 1
         tf = clock()
         if T_array.shape[0] == frames:
-            print('Failed to reach equilibrium. dT/dt: {:.5f}'.format(np.max(np.abs(T_array[-1, :] - T_array[-2, :]))/self.dt))
+            print('Failed to reach equilibrium. Final error: {:.16f} K'.format(np.max(np.abs(T_array[-1, :] - T_array[-2, :]))))
         print('\nTime: {:.10f} seconds/iteration\n'.format((tf-t0)/iter_count))
         self.T_array   = T_array
         self.E_array   = E_array
@@ -649,7 +654,6 @@ class Model():
         SW_f = self.S * (1 - alb_f)
         LW_f = self.L(T_f)
         print('(SW - LW) at EFE: {:.2f} W/m^2'.format(SW_f[max_index] - LW_f[max_index]))
-        print('Integral of (SW - LW): {:.5f} W'.format(np.sum( (SW_f - LW_f) * Re**2 * self.cos_lats * self.dlat )))
 
         f, ax = plt.subplots(1, figsize=(16, 10))
         ax.plot(self.sin_lats, SW_f, 'r', label='$S(1-\\alpha)$')
@@ -675,14 +679,14 @@ class Model():
 
         f, ax = plt.subplots(1, figsize=(16, 10))
         # ax.plot(self.sin_lats, SW_f - LW_f, 'r', label='NEI = $S(1-\\alpha) - L$')
-        ax.plot(self.sin_lats, - 10**-15 * ps / g * D * 2 * np.pi * Re * self.cos_lats * np.gradient(E_f, self.dy), 'b', label='Energy Flux')
+        ax.plot(self.sin_lats, - ps / g * D / Re * np.gradient(E_f, self.dx), 'b', label='Energy Flux $F = -p_s \\cdot D / (g \\cdot a) \\cdot dE/d\\phi$')
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
         ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
         ax.grid()
         ax.legend(loc='upper left')
         ax.set_title("Final Flux Distribution")
         ax.set_xlabel("Lat")
-        ax.set_ylabel("PW")
+        ax.set_ylabel("W / m$^2$")
         
         plt.tight_layout()
         
