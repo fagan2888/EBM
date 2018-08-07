@@ -365,13 +365,6 @@ class Model():
 
 
     def take_step(self):
-        # if self.numerical_method == 'explicit':
-        #     self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
-        # elif self.numerical_method == 'implicit':
-        #     self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
-        #     self.Estar = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T)) + self.dt * D/dy**2 * ( np.roll(self.E, 1) - 2*self.E + np.roll(self.E,-1) )
-        # elif self.numerical_method == 'semi-implicit':
-        #     self.E = np.dot(self.C, self.E) + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T))
         if self.numerical_method == 'explicit':
             self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ) + self.dt * D / self.cos_lats * np.gradient( (np.gradient(self.E, self.dy) * self.cos_lats), self.dy)
         elif self.numerical_method == 'implicit':
@@ -626,8 +619,8 @@ class Model():
         ax.plot(self.sin_lats, E_f / 1000, 'c', label='Final Energy Distribution', lw=4)
         ax.plot(self.sin_lats, spl(self.lats) / 1000, 'k--', label='Spline Interpolant')
         min_max = [E_f.min()/1000, E_f.max()/1000]
-        ax.plot([efe_lat, efe_lat], min_max, 'm')
-        ax.plot([closest_root, closest_root], min_max, 'r')
+        ax.plot([np.sin(np.deg2rad(efe_lat)), np.sin(np.deg2rad(efe_lat))], min_max, 'm')
+        ax.plot([np.sin(np.deg2rad(closest_root)), np.sin(np.deg2rad(closest_root))], min_max, 'r')
         ax.text(efe_lat+5, np.average(min_max), "EFE $\\approx$ {:.2f}$^\\circ$".format(closest_root), size=16)
         ax.set_title("Final Energy Distribution")
         ax.legend(fontsize=14, loc="upper left")
@@ -651,7 +644,7 @@ class Model():
         SW_f = self.S * (1 - alb_f)
         LW_f = self.L(T_f)
         print('(SW - LW) at EFE: {:.2f} W/m^2'.format(SW_f[max_index] - LW_f[max_index]))
-        print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * trapz( (SW_f - LW_f) * Re**2 * self.cos_lats, dx=self.dlat )))
+        print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * trapz( (SW_f - LW_f) * 2 * np.pi * Re**2 * self.cos_lats, dx=np.deg2rad(self.dlat) )))
 
         f, ax = plt.subplots(1, figsize=(16, 10))
         ax.plot(self.sin_lats, SW_f, 'r', label='$S(1-\\alpha)$')
@@ -700,20 +693,19 @@ class Model():
         ax.set_xlabel("T$_s$ (K)")
         ax.set_ylabel("OLR (W/m$^2$)")
         
-        def f(t, a, b):
-            return a + b*t
+        func = lambda t, a, b: a + b*t
         
         x_data = self.T_array.flatten()
         y_data = self.L_array.flatten()
         
-        popt, pcov = curve_fit(f, x_data, y_data)
+        popt, pcov = curve_fit(func, x_data, y_data)
         print('A: {:.2f} W/m2, B: {:.2f} W/m2/K'.format(popt[0], popt[1]))
         
         xvals = np.linspace(np.min(x_data), np.max(x_data), 1000)
-        yvals = f(xvals, *popt)
+        yvals = func(xvals, *popt)
         
         ax.plot(x_data, y_data, 'co', ms=2, label='data points: "{}"'.format(self.olr_type))
-        ax.plot(xvals, f(xvals, *popt), 'k--', label='linear fit')
+        ax.plot(xvals, func(xvals, *popt), 'k--', label='linear fit')
         ax.text(np.min(xvals) + 0.1 * (np.max(xvals)-np.min(xvals)), np.mean(yvals), s='A = {:.2f},\nB = {:.2f}'.format(popt[0], popt[1]), size=16)
         ax.legend()
         
@@ -723,56 +715,6 @@ class Model():
         plt.savefig(fname, dpi=120)
         print('{} created.'.format(fname))
         plt.close()
-        
-        # ### ANIMATION
-        # show = 'T'
-        # # show = 'E'
-        # # show = 'alb'
-        # # show = 'L'
-        # print('\nCreating Animation of {}'.format(show))
-        
-        # # set up the figure, the axis, and the plot element we want to animate
-        # fig, ax = plt.subplots(1, figsize=(9,5))
-        
-        # ax.set_xticks([-90, -60, -30, 0, 30, 60, 90])
-        # ax.set_xlabel('Latitude (degrees)')
-        # if show == 'T':
-        #     array = self.T_array
-        #     ax.set_ylabel('T (K)')
-        # elif show == 'E':
-        #     array = self.E_array
-        #     ax.set_ylabel("W/m$^2$")
-        # elif show == 'alb':
-        #     array = self.alb_array
-        #     ax.set_ylabel("$\\alpha$")
-        # elif show == 'L':
-        #     array = self.L_array
-        #     ax.set_ylabel("W/m$^2$")
-        # ax.set_title('EBM t =  0 days')
-        # plt.tight_layout(pad=3)
-        
-        # line, = ax.plot(self.lats, array[0, :], 'b')
-        
-        # def init():
-        #     line.set_data(self.lats, array[0, :])
-        #     return (line,)
-        
-        # def animate(i):
-        #     if i%100 == 0: 
-        #         print("{}/{} frames".format(i, len(array)))
-        #     ax.set_title('EBM t = {:.0f} days'.format((i+1)*self.plot_freq*self.dt/60/60/24))
-        #     graph = array[i, :]
-        #     line.set_data(self.lats, graph)
-        #     m = graph.min()
-        #     M = graph.max()
-        #     ax.set_ylim([m - 0.01*np.abs(m), M + 0.01*np.abs(M)])
-        #     return line,
-        
-        # anim = animation.FuncAnimation(fig, animate, init_func=init, frames=len(array), interval=int(8000/len(array)), blit=True)
-        
-        # fname = '{}_anim.mp4'.format(show)
-        # anim.save(fname)
-        # print('{} created.'.format(fname))
         
         #if self.olr_type in ['full_wvf', 'full_no_wvf']:
         #    ### VERTICAL AIR TEMP

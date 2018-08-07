@@ -2,7 +2,19 @@
 
 import numpy as np 
 import matplotlib.pyplot as plt
-from matplotlib import animation
+from matplotlib import animation, rc
+
+### STYLES
+rc('animation', html='html5')
+rc('lines', linewidth=2, color='b', markersize=10)
+rc('axes', titlesize=20, labelsize=16, xmargin=0.01, ymargin=0.01, 
+        linewidth=1.5)
+rc('axes.spines', top=False, right=False)
+rc('xtick', labelsize=13)
+rc('xtick.major', size=5, width=1.5)
+rc('ytick', labelsize=13)
+rc('ytick.major', size=5, width=1.5)
+rc('legend', fontsize=14)
 
 show = 'T'
 # show = 'E'
