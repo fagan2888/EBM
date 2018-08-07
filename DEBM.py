@@ -46,8 +46,9 @@ class Model():
     
     def __init__(self, dlat=0.5, dtmax_multiple=1.0, max_sim_years=2, tol=0.001):
         self.dlat            = dlat
-        self.dy              = np.pi*Re*dlat/180
-        self.dtmax           = 0.5 * self.dy**2 / D
+        self.dlat_rad        = np.deg2rad(dlat)
+        # self.dy              = Re * self.dlat_rad
+        self.dtmax           = 0.5 * self.dlat_rad**2 / (D / Re**2)
         self.dt              = dtmax_multiple * self.dtmax
         self.max_sim_years   = max_sim_years
         self.secs_in_min     = 60 
@@ -178,7 +179,7 @@ class Model():
 
     def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, 
             RH_vert_profile=None, RH_lat_profile=None, gaussian_spread1=None, 
-			gaussian_spread2=None, scale_efe=False):
+			gaussian_spread2=None, scale_efe=False, constant_spec_hum=False):
         self.olr_type = olr_type
         if olr_type == 'planck':
             ''' PLANCK RADIATION '''
@@ -329,6 +330,12 @@ class Model():
                         self.state['air_pressure'].values[0, :, :])
                 self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self.humidsat(air_temp, 
                         self.state['air_pressure'].values[0, :, :] / 100)[1]
+                if constant_spec_hum == True:
+                    for i in range(self.nLevels):
+                        # get area weighted mean of specific_humidity and set all lats on this level to that val
+                        qvals = self.state['specific_humidity'].values[0, :, i]
+                        q_const = trapz( qvals * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / (4 * np.pi * Re**2)
+                        self.state['specific_humidity'].values[0, :, i] = q_const
        
             def L(T):
                 ''' 
@@ -366,7 +373,7 @@ class Model():
 
     def take_step(self):
         if self.numerical_method == 'explicit':
-            self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ) + self.dt * D / self.cos_lats * np.gradient( (np.gradient(self.E, self.dy) * self.cos_lats), self.dy)
+            self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ) + self.dt * D / Re**2 / self.cos_lats * np.gradient( (np.gradient(self.E, self.dlat_rad) * self.cos_lats), self.dlat_rad)
         elif self.numerical_method == 'implicit':
             self.E = np.dot(self.C, self.E) + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) )
     
@@ -390,7 +397,7 @@ class Model():
     def solve(self, numerical_method, frames):
         self.numerical_method = numerical_method
         if numerical_method == 'implicit':
-            K  = D * self.dt / self.dy**2
+            K  = D / Re**2 * self.dt / self.dlat_rad**2
             c1 = K * np.ones(self.lats.shape)
             c2 = K * self.cos_lats_bounds
 
@@ -406,33 +413,34 @@ class Model():
                         np.diag(-Ka1[1:J], k=-1))
 
             self.C = np.linalg.inv(A)
-        elif numerical_method == 'semi-implicit':
-            alpha = 0.5
+        #elif numerical_method == 'semi-implicit':
+        #    alpha = 0.5
             
-            r = D * self.dt / self.dy**2
+        #    r = D * self.dt / self.dy**2
             
-            A = np.zeros((len(self.lats), len(self.lats)))
-            B = np.zeros((len(self.lats), len(self.lats)))
+        #    A = np.zeros((len(self.lats), len(self.lats)))
+        #    B = np.zeros((len(self.lats), len(self.lats)))
             
-            rng = np.arange(len(self.lats)-1)
+        #    rng = np.arange(len(self.lats)-1)
             
-            np.fill_diagonal(A, 2 + 2*r)
-            A[rng, rng+1] = -r   
-            A[rng+1, rng] = -r   
+        #    np.fill_diagonal(A, 2 + 2*r)
+        #    A[rng, rng+1] = -r   
+        #    A[rng+1, rng] = -r   
             
-            np.fill_diagonal(B, 2 - 2*r) 
-            B[rng, rng+1] = r   
-            B[rng+1, rng] = r   
+        #    np.fill_diagonal(B, 2 - 2*r) 
+        #    B[rng, rng+1] = r   
+        #    B[rng+1, rng] = r   
             
-            #insulated boundaries
-            A[0, 0] = 1; A[0, 1] = -1
-            A[-1, -2] = 1; A[-1, -1] = -1
+        #    #insulated boundaries
+        #    A[0, 0] = 1; A[0, 1] = -1
+        #    A[-1, -2] = 1; A[-1, -1] = -1
             
-            B[0, 0] = 1; B[0, 1] = -1
-            B[-1, -2] = 1; B[-1, -1] = -1
+        #    B[0, 0] = 1; B[0, 1] = -1
+        #    B[-1, -2] = 1; B[-1, -1] = -1
             
-            Ainv = np.linalg.inv(A)
-            self.C = np.dot(Ainv, B)
+        #    Ainv = np.linalg.inv(A)
+        #    self.C = np.dot(Ainv, B)
+
         print('\nModel Params:')
         print("dtmax:            {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax / self.secs_in_day))
         print("dt:               {:.2f} s / {:.4f} days = {:.2f} * dtmax".format(self.dt, self.dt / self.secs_in_day, self.dt / self.dtmax))
@@ -496,7 +504,7 @@ class Model():
         tf = clock()
 
         if T_array.shape[0] == frames:
-            print('Failed to reach equilibrium. |dT/dt| = {:4.16f}'.format(np.max(np.abs(T_array[-1, :] - T_array[-2, :])) / self.dt))
+            print('Failed to reach equilibrium in {:8.5f} days ({} iterations). |dT/dt| = {:4.16f}'.format(frame * its_per_frame * self.dt / self.secs_in_day, frame * its_per_frame, np.max(np.abs(T_array[-1, :] - T_array[-2, :])) / self.dt))
         print('\nEfficiency: \n{:10.10f} seconds/iteration\n{:10.10f} seconds/sim day\n'.format((tf-t0) / (frame * its_per_frame), (tf-t0) / (frame * its_per_frame) / self.dt * self.secs_in_day))
 
         self.T_array   = T_array
@@ -533,7 +541,7 @@ class Model():
         closest_root = roots[min_error_index]
 
         with open(fname, 'a') as f:
-            data = '{:2d}, {:2.2f}, {:2d}, {:2.16f} {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, closest_root, 0.64 * closest_root)
+            data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}, {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, closest_root, 0.64 * closest_root)
             f.write(data + '\n')
             print('Logged "{}" in "{}"'.format(data, fname))
 
@@ -571,7 +579,7 @@ class Model():
         
         plt.tight_layout()
         
-        fname = 'init_rad_dists.png'
+        fname = 'init_radiation.png'
         plt.savefig(fname, dpi=120)
         print('{} created.'.format(fname))
         plt.close()
@@ -592,7 +600,7 @@ class Model():
         
         plt.tight_layout()
         
-        fname = 'final_temp_dists.png'
+        fname = 'final_temp.png'
         plt.savefig(fname, dpi=120)
         print('{} created.'.format(fname))
         plt.close()
@@ -660,28 +668,37 @@ class Model():
         
         plt.tight_layout()
         
-        fname = 'final_rad_dist.png'
+        fname = 'final_radiation.png'
         plt.savefig(fname, dpi=120)
         print('{} created.'.format(fname))
         plt.close()
         
-        ### FINAL FLUX DIST
-        print('\nPlotting Final Flux Dist')
+        ### FLUXES
+        print('\nPlotting Fluxes')
+
+        flux_total = 10**-15 *  (2 * np.pi * Re * self.cos_lats) * (- ps / g * D / Re) * np.gradient(E_f, self.dlat_rad)
+
+        emissivity = 0.6
+        L_planck = emissivity * sig * T_f**4
+        L_const = trapz( L_planck * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / (4 * np.pi * Re**2)
+        flux_planck = np.zeros( L_planck.shape )
+        for i in range(L_planck.shape[0]):
+            flux_planck[i] = 10**-15 * trapz( (L_planck[:i+1] - L_const) * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad)
 
         f, ax = plt.subplots(1, figsize=(16, 10))
-        # ax.plot(self.sin_lats, SW_f - LW_f, 'r', label='NEI = $S(1-\\alpha) - L$')
-        ax.plot(self.sin_lats, - 10**-15 * ps / g * D * 2 * np.pi * Re * self.cos_lats * np.gradient(E_f, self.dy), 'b', label='Energy Flux')
+        ax.plot(self.sin_lats, flux_planck, 'b', label='Planck')
+        ax.plot(self.sin_lats, flux_total, 'k', label='Total')
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
         ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
         ax.grid()
         ax.legend(loc='upper left')
-        ax.set_title("Final Flux Distribution")
+        ax.set_title("Flux Distributions")
         ax.set_xlabel("Lat")
         ax.set_ylabel("PW")
         
         plt.tight_layout()
         
-        fname = 'final_flux_dist.png'
+        fname = 'fluxes.png'
         plt.savefig(fname, dpi=120)
         print('{} created.'.format(fname))
         plt.close()

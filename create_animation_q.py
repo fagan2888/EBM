@@ -11,7 +11,7 @@ print('\nCreating Animation of {}'.format(show))
 fig, ax = plt.subplots(1, figsize=(9,5))
 
 ax.set_xticks([-90, -60, -30, 0, 30, 60, 90])
-ax.set_xlabel('Latitude (degrees)')
+ax.set_xlabel('Lat')
 array = np.load('q_array.npz')['arr_0']
 ax.set_ylabel("q (g / g)")
 ax.set_title('EBM frame = 0')

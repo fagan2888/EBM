@@ -311,16 +311,46 @@ New method of calculating error:
 
 # Accuracy experiments with new error calculation and integration scheme
 # (all using M = 18 tropical perturbation, planck OLR, implicit scheme)
-dlat | dtmax_mult | tol   | EFE
+dlat | dtmax_mult | tol   | ITCZ
 0.5  | 1.0        | 1E-10 | -5.78
 0.5  | 1.0        | 1E-9  | -5.78
 0.5  | 1.0        | 1E-8  | -5.78 
 0.5  | 1.0        | 1E-7  | -5.77  ==> tol = 1E-7 is too small
 0.5  | 0.5        | 1E-8  | -5.78
-0.5  | 1.5        | 1E-8  | -5.78
+0.5  | 1.5        | 1E-8  | -5.78  ***
 0.5  | 2.0        | 1E-8  | -5.77  ==> dtmax_mult = 2.0 is too large
 1.0  | 1.5        | 1E-8  | -5.77  ==> dlat = 1.0 is too large
 0.25 | 1.5        | 1E-8  | -5.78  ==> dlat = 0.25 is not necessary
 
 Conclusion: dlat = 0.5, dtmax_mult = 1.5, tol = 1E-8 give fastest results while
     remaining accurate.
+
+---
+# 8-7
+---
+# Looking at planck feedback forcing and water vapor feedback forcing
+sim103 | annual_mean_clark | full_wvf    | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim104 | annual_mean_clark | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim105 | annual_mean_clark | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 | constant_spec_hum=True
+
+# Testing sensitivities (note, dtmax_mult = 10.0 and tol = 1E-7)
+# full_wvf
+L0  S     M   EFE                  ITCZ
+15, 4.94, 18, -8.9222023431231428, -5.7102094995988111
+15, 4.94, 15, -7.8151183831679960, -5.0016757652275174
+15, 4.94, 10, -5.5927186602160139, -3.5793399425382488
+15, 4.94,  5, -3.0709810908189650, -1.9654278981241375
+60, 9.89, 18, -3.0793976194162953, -1.9708144764264290
+60, 9.89, 15, -2.6207891845080660, -1.6773050780851622
+60, 9.89, 10, -1.9152314381793913, -1.2257481204348104
+60, 9.89,  5, -1.0021850723920951, -0.6413984463309409
+# full_no_wvf
+L0  S     M   EFE                  ITCZ
+15, 4.94, 18, -5.4880324620232797, -3.5123407756948990
+15, 4.94, 15, -4.7134997268545584, -3.0166398251869175
+15, 4.94, 10, -3.3345732838137963, -2.1341269016408297
+15, 4.94,  5, -1.7929847803388312, -1.1475102594168520
+60, 9.89, 18, -1.1243505107295861, -0.7195843268669352
+60, 9.89, 15, -0.9475412883755877, -0.6064264245603761
+60, 9.89, 10, -0.6444894591439709, -0.4124732538521414
+60, 9.89,  5, -0.3291728417761017, -0.2106706187367051
