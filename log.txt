@@ -332,6 +332,7 @@ Conclusion: dlat = 0.5, dtmax_mult = 1.5, tol = 1E-8 give fastest results while
 sim103 | annual_mean_clark | full_wvf    | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
 sim104 | annual_mean_clark | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
 sim105 | annual_mean_clark | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 | constant_spec_hum=True
+    ---> sim105 gives /data/L_array_constant_q_steps_mid_level_gaussian5_n361.npz
 
 # Testing sensitivities (note, dtmax_mult = 10.0 and tol = 1E-7)
 # full_wvf
@@ -354,3 +355,8 @@ L0  S     M   EFE                  ITCZ
 60, 9.89, 15, -0.9475412883755877, -0.6064264245603761
 60, 9.89, 10, -0.6444894591439709, -0.4124732538521414
 60, 9.89,  5, -0.3291728417761017, -0.2106706187367051
+
+---
+# 8-8
+---
+
