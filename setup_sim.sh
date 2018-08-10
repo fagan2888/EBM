@@ -19,7 +19,8 @@ alb_water=None
 numerical_method=implicit
 frames=100
 
-fname="itcz.log"
+fname_efe=itcz.log
+fname_feedbacks=feedbacks.log
 
 if [ "$1" == "-p" ]; then
 	# SINGLE CONTROL SIMULATION
@@ -52,6 +53,8 @@ if [ "$1" == "-p" ]; then
 	gaussian_spread2=45
 	scale_efe=True
 	# scale_efe=False
+	# constant_spec_hum=True
+	constant_spec_hum=False
 	
 	
 	i=0
@@ -88,9 +91,11 @@ if [ "$1" == "-p" ]; then
 	    -e 's/gaussian_spread1=/gaussian_spread1='$gaussian_spread1'/g' \
 	    -e 's/gaussian_spread2=/gaussian_spread2='$gaussian_spread2'/g' \
 	    -e 's/scale_efe=/scale_efe='$scale_efe'/g' \
+	    -e 's/constant_spec_hum=/constant_spec_hum='$constant_spec_hum'/g' \
 	    -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
-	    -e 's/frames=/framse='$frames'/g' \
-	    -e 's/fname=/fname="'$fname'"/g' \
+	    -e 's/frames=/frames='$frames'/g' \
+	    -e 's/fname_efe=/fname_efe="'$fname_efe'"/g' \
+	    -e 's/fname_feedbacks=/fname_feedbacks="'$fname_feedbacks'"/g' \
 	    ${EBM_PATH}/simulation.py > simulation.py
 	
 	sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job
@@ -133,6 +138,8 @@ elif [ "$1" == "-s" ]; then
 	scale_efe=None
 	# scale_efe=True
 	# scale_efe=False
+	# constant_spec_hum=True
+	constant_spec_hum=False
 	
 	insolation_type=perturbation
 	for perturb_center in 15 60; do
@@ -176,9 +183,11 @@ elif [ "$1" == "-s" ]; then
 	            -e 's/gaussian_spread1=/gaussian_spread1='$gaussian_spread1'/g' \
 	            -e 's/gaussian_spread2=/gaussian_spread2='$gaussian_spread2'/g' \
 	            -e 's/scale_efe=/scale_efe='$scale_efe'/g' \
+	    		-e 's/constant_spec_hum=/constant_spec_hum='$constant_spec_hum'/g' \
 	            -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
-	            -e 's/frames=/framse='$frames'/g' \
-	            -e 's/fname=/fname="'$fname'"/g' \
+	            -e 's/frames=/frames='$frames'/g' \
+	            -e 's/fname_efe=/fname_efe="'$fname_efe'"/g' \
+	            -e 's/fname_feedbacks=/fname_feedbacks="'$fname_feedbacks'"/g' \
 	            ${EBM_PATH}/simulation.py > simulation.py
 	        
 	        sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job
@@ -188,8 +197,8 @@ elif [ "$1" == "-s" ]; then
 	        sbatch run_EBM.job
 	        
 	        # echo "Logging simulation."
-	        # log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | RH_vert_profile=$RH_vert_profile | RH_lat_profile=$RH_lat_profile | gaussian_spread1=$gaussian_spread1 |"
-	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | A=$A | B=$B |"
+	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | RH_vert_profile=$RH_vert_profile | RH_lat_profile=$RH_lat_profile | gaussian_spread1=$gaussian_spread1 |"
+	        # log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | A=$A | B=$B |"
 	        echo "Adding line to log.txt: $log"
 	        echo $log >> ${EBM_PATH}/log.txt 
 	        
@@ -241,11 +250,11 @@ elif [ "$1" == "-amc" ]; then
 	# echo "Copying template files."
 	sed -e 's/dlat=/dlat='$dlat'/g' \
 	    -e 's/dtmax_multiple=/dtmax_multiple='$dtmax_multiple'/g' \
-	    -e 's/max_iters=/max_iters='$max_iters'/g' \
+	    -e 's/max_sim_years=/max_sim_years='$max_sim_years'/g' \
 	    -e 's/tol=/tol='$tol'/g' \
 	    -e 's/initial_condition=/initial_condition="'$initial_condition'"/g' \
-	    -e 's/triangle_low=/triangle_low='$triangle_low'/g' \
-	    -e 's/triangle_high=/triangle_high='$triangle_high'/g' \
+	    -e 's/low=/low='$low'/g' \
+	    -e 's/high=/high='$high'/g' \
 	    -e 's/albedo_feedback=/albedo_feedback='$albedo_feedback'/g' \
 	    -e 's/alb_ice=/alb_ice='$alb_ice'/g' \
 	    -e 's/alb_water=/alb_water='$alb_water'/g' \
@@ -262,10 +271,11 @@ elif [ "$1" == "-amc" ]; then
 	    -e 's/gaussian_spread1=/gaussian_spread1='$gaussian_spread1'/g' \
 	    -e 's/gaussian_spread2=/gaussian_spread2='$gaussian_spread2'/g' \
 	    -e 's/scale_efe=/scale_efe='$scale_efe'/g' \
+	    -e 's/constant_spec_hum=/constant_spec_hum='$constant_spec_hum'/g' \
 	    -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
-	    -e 's/nPlot=/nPlot='$nPlot'/g' \
-	    -e 's/nPrint=/nPrint='$nPrint'/g' \
-	    -e 's/model.log_efe/# model.log_efe/g' \
+	    -e 's/frames=/frames='$frames'/g' \
+	    -e 's/fname_efe=/fname_efe="'$fname_efe'"/g' \
+	    -e 's/fname_feedbacks=/fname_feedbacks="'$fname_feedbacks'"/g' \
 	    ${EBM_PATH}/simulation.py > simulation.py
 	
 	sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job

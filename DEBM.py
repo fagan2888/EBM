@@ -550,15 +550,15 @@ class Model():
         self.ITCZ = 0.64 * self.EFE 
         self.ITCZ_rad = np.deg2rad(self.ITCZ)
 
-    def log_efe(self, fname):
+    def log_efe(self, fname_efe):
         self.plot_efe = True
 
         self._calculate_efe()
 
-        with open(fname, 'a') as f:
+        with open(fname_efe, 'a') as f:
             data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}, {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, self.EFE, self.ITCZ)
             f.write(data + '\n')
-            print('Logged "{}" in "{}"'.format(data, fname))
+        print('Logged "{}" in "{}"'.format(data, fname_efe))
 
 
     def _calculate_shift(self, F, integral_NEI, fluxes=[]):
@@ -630,7 +630,7 @@ class Model():
 
 
 
-    def log_feedbacks(self, fname):
+    def log_feedbacks(self, fname_feedbacks):
         self.plot_fluxes = True
 
         self._calculate_feedbacks()
@@ -647,7 +647,7 @@ class Model():
         
         F = UnivariateSpline(self.lats_rad, self.flux_total, k=4, s=0)
         
-        with open(fname, 'a') as f:
+        with open(fname_feedbacks, 'a') as f:
             f.write('Integral S - L from SP to EQ: {:2.2f} PW/m\n'.format(10**-15 * integral_NEI))
             f.write('F(0):                         {:2.2f} PW/m\n'.format(10**-15 * F(0)))
             
@@ -671,7 +671,7 @@ class Model():
             f.write('wv_fb2:                {:2.2f} deg\n'.format(wv_fb2))
             f.write('planck_fb + wv_fb1:    {:2.2f} deg\n'.format(planck_and_wv_fb1))
             f.write('planck_fb + wv_fb2:    {:2.2f} deg\n'.format(planck_and_wv_fb2))
-        print('Logged data into {}'.format(fname))
+        print('Logged data into {}'.format(fname_feedbacks))
 
 
     def save_plots(self):
