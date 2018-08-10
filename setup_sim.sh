@@ -114,30 +114,28 @@ elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS
 	
 	# olr_type=full_wvf
-	# olr_type=full_no_wvf
-	olr_type=linear
-	# A=None
+	olr_type=full_no_wvf
+	# olr_type=linear
+	A=None
 	# A=-452.68
-	A=-448.73
-	# B=None
+	B=None
 	# B=2.51
-	B=2.5
 	emissivity=None
-	RH_vert_profile=None
+	# RH_vert_profile=None
 	# RH_vert_profile=zero_top
-	# RH_vert_profile=steps
-	RH_lat_profile=None
+	RH_vert_profile=steps
+	# RH_lat_profile=None
 	# RH_lat_profile=constant
 	# RH_lat_profile=gaussian
-	# RH_lat_profile=mid_level_gaussian
+	RH_lat_profile=mid_level_gaussian
 	# RH_lat_profile=mid_and_upper_level_gaussian
-	gaussian_spread1=None
-	# gaussian_spread1=5
+	# gaussian_spread1=None
+	gaussian_spread1=5
 	gaussian_spread2=None
 	# gaussian_spread2=45
-	scale_efe=None
+	# scale_efe=None
 	# scale_efe=True
-	# scale_efe=False
+	scale_efe=False
 	# constant_spec_hum=True
 	constant_spec_hum=False
 	

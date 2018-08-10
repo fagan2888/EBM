@@ -261,9 +261,9 @@ sim101 | annual_mean_clark | full_wvf | RH_vert_profile=steps | RH_lat_profile=m
 sim102 | annual_mean_clark | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian |
 
 # The fitted A, B
-sim103 | perturbation | lat0=15 | M=5  | linear | A=-452.68 | B=2.51 |
-sim104 | perturbation | lat0=15 | M=10 | linear | A=-452.68 | B=2.51 |
-sim105 | perturbation | lat0=15 | M=15 | linear | A=-452.68 | B=2.51 |
+sim103 | perturbation | lat0=15 | M=5  | linear | A=-452.68 | B=2.51 | accidentally overwritten :(  
+sim104 | perturbation | lat0=15 | M=10 | linear | A=-452.68 | B=2.51 | accidentally overwritten :(
+sim105 | perturbation | lat0=15 | M=15 | linear | A=-452.68 | B=2.51 | accidentally overwritten :(
 sim106 | perturbation | lat0=15 | M=18 | linear | A=-452.68 | B=2.51 |
 sim107 | perturbation | lat0=60 | M=5  | linear | A=-452.68 | B=2.51 |
 sim108 | perturbation | lat0=60 | M=10 | linear | A=-452.68 | B=2.51 |
@@ -462,3 +462,129 @@ Shift planck_fb: -2.05E+00 deg
 Shift wv_fb1:    -2.70E+00 deg
 Shift wv_fb2:    -1.41E+01 deg
 
+---
+# 8-10
+---
+# Redo of feedback sims (this time on savio with init condiation Legendre and high res in time)
+sim119 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim120 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim121 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim122 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim123 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim124 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim125 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim126 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+
+## Tropics
+# M = 5
+Integral S - L from SP to EQ: 0.99 PW/m
+F(0):                         0.96 PW/m
+EFE approx with NEI:  -3.17 deg
+EFE approx with F(0): -3.06 deg
+
+true EFE:              -3.09 deg
+no_fb:                 -3.70 deg
+planck_fb:             -2.53 deg
+wv_fb1:                -3.30 deg
+wv_fb2:                -3.73 deg
+planck_fb + wv_fb1:    -1.80 deg
+planck_fb + wv_fb2:    -2.52 deg
+
+# M = 10
+Integral S - L from SP to EQ: 1.86 PW/m
+F(0):                         1.83 PW/m
+EFE approx with NEI:  -5.65 deg
+EFE approx with F(0): -5.57 deg
+
+true EFE:              -5.77 deg
+no_fb:                 -6.94 deg
+planck_fb:             -4.63 deg
+wv_fb1:                -5.98 deg
+wv_fb2:                -7.07 deg
+planck_fb + wv_fb1:    -3.16 deg
+planck_fb + wv_fb2:    -4.67 deg
+
+# M = 15
+Integral S - L from SP to EQ: 2.60 PW/m
+F(0):                         2.58 PW/m
+EFE approx with NEI:  -7.66 deg
+EFE approx with F(0): -7.59 deg
+
+true EFE:              -7.92 deg
+no_fb:                 -10.01 deg
+planck_fb:             -6.47 deg
+wv_fb1:                -8.22 deg
+wv_fb2:                -10.44 deg
+planck_fb + wv_fb1:    -4.10 deg
+planck_fb + wv_fb2:    -6.66 deg
+
+# M = 18
+Integral S - L from SP to EQ: 3.03 PW/m
+F(0):                         3.01 PW/m
+EFE approx with NEI:  -8.78 deg
+EFE approx with F(0): -8.71 deg
+
+true EFE:              -9.06 deg
+no_fb:                 -11.79 deg
+planck_fb:             -7.47 deg
+wv_fb1:                -9.44 deg
+wv_fb2:                -12.43 deg
+planck_fb + wv_fb1:    -4.57 deg
+planck_fb + wv_fb2:    -7.79 deg
+
+## Extratropics
+# M = 5
+Integral S - L from SP to EQ: 0.34 PW/m
+F(0):                         0.31 PW/m
+EFE approx with NEI:  -1.15 deg
+EFE approx with F(0): -1.04 deg
+
+true EFE:              -1.04 deg
+no_fb:                 -3.86 deg
+planck_fb:             -0.74 deg
+wv_fb1:                -1.23 deg
+wv_fb2:                -4.42 deg
+planck_fb + wv_fb1:    1.71 deg
+planck_fb + wv_fb2:    -1.01 deg
+
+# M = 10
+Integral S - L from SP to EQ: 0.64 PW/m
+F(0):                         0.61 PW/m
+EFE approx with NEI:  -2.08 deg
+EFE approx with F(0): -1.98 deg
+
+true EFE:              -1.99 deg
+no_fb:                 -7.46 deg
+planck_fb:             -1.38 deg
+wv_fb1:                -2.15 deg
+wv_fb2:                -8.50 deg
+planck_fb + wv_fb1:    3.11 deg
+planck_fb + wv_fb2:    -1.83 deg
+
+# M = 15
+Integral S - L from SP to EQ: 0.91 PW/m
+F(0):                         0.88 PW/m
+EFE approx with NEI:  -2.92 deg
+EFE approx with F(0): -2.84 deg
+
+true EFE:              -2.86 deg
+no_fb:                 -10.94 deg
+planck_fb:             -2.00 deg
+wv_fb1:                -3.01 deg
+wv_fb2:                -12.45 deg
+planck_fb + wv_fb1:    4.19 deg
+planck_fb + wv_fb2:    -2.61 deg
+
+# M = 18
+Integral S - L from SP to EQ: 1.06 PW/m
+F(0):                         1.03 PW/m
+EFE approx with NEI:  -3.38 deg
+EFE approx with F(0): -3.29 deg
+
+true EFE:              -3.33 deg
+no_fb:                 -12.99 deg
+planck_fb:             -2.38 deg
+wv_fb1:                -3.48 deg
+wv_fb2:                -14.79 deg
+planck_fb + wv_fb1:    4.73 deg
+planck_fb + wv_fb2:    -3.07 deg
