@@ -1,0 +1,24 @@
+Integral S - L from SP to EQ: 1.84 PW/m
+F(0):                         1.86 PW/m
+EFE approx with NEI:  -5.53 deg
+EFE approx with F(0): -5.60 deg
+
+true EFE:              -5.82 deg
+no_fb:                 -6.92 deg
+planck_fb:             -4.57 deg
+wv_fb1:                -5.71 deg
+wv_fb2:                -7.08 deg
+planck_fb + wv_fb1:    -2.95 deg
+planck_fb + wv_fb2:    -4.62 deg
+Integral S - L from SP to EQ: 2.14 PW/m
+F(0):                         1.81 PW/m
+EFE approx with NEI:  -6.45 deg
+EFE approx with F(0): -5.44 deg
+
+true EFE:              -5.59 deg
+no_fb:                 -7.71 deg
+planck_fb:             -5.17 deg
+wv_fb1:                -7.45 deg
+wv_fb2:                -7.93 deg
+planck_fb + wv_fb1:    -3.97 deg
+planck_fb + wv_fb2:    -5.26 deg

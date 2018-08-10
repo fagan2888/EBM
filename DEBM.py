@@ -58,19 +58,22 @@ class Model():
         self.max_iters       = int(self.max_sim_years * self.secs_in_year / self.dt)
         self.tol             = tol
         self.lats            = np.linspace(-90 + dlat/2, 90 - dlat/2, int(180/dlat) + 1)
+        self.lats_rad        = np.deg2rad(self.lats)
         self.lats_bounds     = np.linspace(-90, 90, int(180/dlat) + 2)
         self.cos_lats        = np.cos(np.deg2rad(self.lats))
         self.cos_lats_bounds = np.cos(np.deg2rad(self.lats_bounds))
         self.sin_lats        = np.sin(np.deg2rad(self.lats))
         self.T_dataset       = np.arange(100, 400, 1e-3)
-        self.q_dataset       = self.humidsat(self.T_dataset, ps/100)[1]
+        self.q_dataset       = self._humidsat(self.T_dataset, ps/100)[1]
         self.E_dataset       = cp*self.T_dataset + RH*self.q_dataset*Lv
+        self.plot_fluxes     = False
+        self.plot_efe        = False
 
 
-    def humidsat(self, t, p):
+    def _humidsat(self, t, p):
         """
         FROM BOOS:
-        % function [esat,qsat,rsat]=humidsat(t,p)
+        % function [esat,qsat,rsat]=_humidsat(t,p)
         %  computes saturation vapor pressure (esat), saturation specific humidity (qsat),
         %  and saturation mixing ratio (rsat) given inputs temperature (t) in K and
         %  pressure (p) in hPa.
@@ -113,6 +116,8 @@ class Model():
             self.init_temp = high - (high - low) * np.abs(self.sin_lats)
         elif initial_condition == 'legendre':
             self.init_temp = 2/3*high + 1/3*low - 2/3 * (high-low) * 1/2 * (3 * self.sin_lats**2 - 1)
+        elif initial_condition == 'load_data':
+            self.init_temp = np.load('T_array.npz')['arr_0'][-1, :]
 
 
     def insolation(self, insolation_type, perturb_center=None, 
@@ -216,7 +221,7 @@ class Model():
         #         for i in range(len(self.lats)):
         #             # We flip the output since, as self.stated above, it comes out sorted, and we want high pressure first.
         #             T_atmos[i, :] = np.flip(interpolated_moist_adiabat_f(pressures, T[i]), axis=0)
-        #         esat_bl = humidsat(T_atmos[:, bl_indx], pressures[bl_indx] / 100)[0]
+        #         esat_bl = _humidsat(T_atmos[:, bl_indx], pressures[bl_indx] / 100)[0]
         #         optical_depth = 0.622 * k * RH * esat_bl / g
         #         emis = 0.3 + 0.7 * (1 - np.exp(-optical_depth))
         #         return emis * sig * T_atmos[:, up_indx]**4 + (1 - emis) * sig * T**4
@@ -328,7 +333,7 @@ class Model():
                         pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
                 air_temp = interpolated_moist_adiabat.ev(Tgrid_control, 
                         self.state['air_pressure'].values[0, :, :])
-                self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self.humidsat(air_temp, 
+                self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(air_temp, 
                         self.state['air_pressure'].values[0, :, :] / 100)[1]
                 if constant_spec_hum == True:
                     for i in range(self.nLevels):
@@ -343,7 +348,7 @@ class Model():
                 Outputs OLR given T_surf.
                 Assumes moist adiabat structure, uses full blown radiation code from CliMT.
                 Sets temp profile with interpolation of moist adiabat calculations from MetPy.
-                Sets specific hum profile by assuming constant RH and using humidsat function from Boos
+                Sets specific hum profile by assuming constant RH and using _humidsat function from Boos
                 '''
                 # Set surface state
                 self.state['surface_temperature'].values[:] = T
@@ -359,7 +364,7 @@ class Model():
                         E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
                         lat0 = self.lats[np.argmax(E)] 
                         self.RH_dist = shift_dist(self.RH_dist, lat0)
-                    self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self.humidsat(self.state['air_temperature'].values[0, :, :], 
+                    self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(self.state['air_temperature'].values[0, :, :], 
                             self.state['air_pressure'].values[0, :, :] / 100)[1]
                 # CliMT takes over here, this is where the slowdown occurs
                 tendencies, diagnostics = radiation(self.state)
@@ -524,7 +529,7 @@ class Model():
             np.savez('q_array.npz', self.q_array)
 
 
-    def log_efe(self, fname):
+    def _calculate_efe(self):
         # Get data and final dist
         E_f = self.E_array[-1, :]
         
@@ -540,10 +545,134 @@ class Model():
         min_error_index = np.argmin( np.abs(roots - efe_lat) )
         closest_root = roots[min_error_index]
 
+        self.EFE = closest_root
+        self.EFE_rad = np.deg2rad(self.EFE)
+        self.ITCZ = 0.64 * self.EFE 
+        self.ITCZ_rad = np.deg2rad(self.ITCZ)
+
+    def log_efe(self, fname):
+        self.plot_efe = True
+
+        self._calculate_efe()
+
         with open(fname, 'a') as f:
-            data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}, {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, closest_root, 0.64 * closest_root)
+            data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}, {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, self.EFE, self.ITCZ)
             f.write(data + '\n')
             print('Logged "{}" in "{}"'.format(data, fname))
+
+
+    def _calculate_shift(self, F, integral_NEI, fluxes=[]):
+        # # Idea: F(lat = 0) = F(EFE) + shift * dF(EFE)/dlat * Re
+        # # But F(EFE) = 0 so shift = F(lat = 0) / dF(EFE)/dlat / Re
+        # # Do spline interp and diff to get denom
+        # spl  = UnivariateSpline(self.lats, 10**-15 * flux, k=4, s=0)
+        # center = self.EFE
+        # EQ = 0 
+        # shift  = -(spl(EQ) - spl(center)) / spl.derivative()(center)
+        # print(shift)
+        # return shift
+        if len(fluxes) == 0:
+            shift = - integral_NEI / F.derivative()(self.EFE_rad)
+        else:
+            numerator = integral_NEI
+            denominator = -F.derivative()(self.EFE_rad)
+            for flux in fluxes:
+                spl = UnivariateSpline(self.lats_rad, flux, k=4, s=0)
+                numerator -= spl(self.EFE_rad)
+                denominator -= spl.derivative()(self.EFE_rad)
+            shift = numerator / denominator
+        return np.rad2deg(shift)
+
+
+    def _calculate_feedbacks(self):
+        """
+        Calculate fluxes due to different feedbacks.
+        """
+        E_f = self.E_array[-1, :]
+        L_f = self.L_array[-1, :]
+        T_f = self.T_array[-1, :]
+
+        # Total
+        self.flux_total = (2 * np.pi * Re * self.cos_lats) * (- ps / g * D / Re) * np.gradient(E_f, self.dlat_rad)
+        
+        # Planck
+        emissivity = 0.6
+        L_planck = emissivity * sig * T_f**4
+        
+        L_avg = trapz( L_planck * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / trapz( 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad)
+        
+        self.flux_planck = np.zeros( L_planck.shape )
+        for i in range(L_planck.shape[0]):
+            self.flux_planck[i] = trapz( (L_planck[:i+1] - L_avg) * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad)
+        
+        # Water Vapor 1 --- use L from other simulation with constant q per vertical level
+        L_f = self.L_array[-1, :] 
+        L_f_const_q = np.load(self.EBM_PATH + '/data/L_array_constant_q_steps_mid_level_gaussian5_n361.npz')['arr_0'][-1, :]
+        
+        L_avg = trapz( (L_f - L_f_const_q) * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / trapz( 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad)
+        
+        self.flux_wv1 = np.zeros( L_f.shape )
+        for i in range(L_f.shape[0]):
+            self.flux_wv1[i] = trapz( ( (L_f[:i+1] - L_f_const_q[:i+1]) - L_avg) * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad)
+
+        if self.olr_type == 'full_wvf':
+            # Water Vapor 2 --- use L from current T_f and no q
+            self.RH_dist[:, :] = 0.0
+            L_f_zero_q = self.L(T_f)
+            
+            np.savez('L_f_zero_q.npz', L_f_zero_q)
+
+            L_avg = trapz( (L_f - L_f_zero_q) * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / trapz( 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad)
+            
+            self.flux_wv2 = np.zeros( L_f.shape )
+            for i in range(L_f.shape[0]):
+                self.flux_wv2[i] = trapz( ( (L_f[:i+1] - L_f_zero_q[:i+1]) - L_avg) * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad)
+
+
+
+    def log_feedbacks(self, fname):
+        self.plot_fluxes = True
+
+        self._calculate_feedbacks()
+
+        L_f = self.L_array[-1, :] 
+        S_f = self.S * (1 - self.alb_array[-1, :])
+            
+        L_avg = trapz( L_f * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / trapz( 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad)
+
+        I = self.lats.shape[0]//2 + 1
+        integral_NEI = trapz( (S_f[:I] - L_f[:I]) * 2 * np.pi * Re**2 * self.cos_lats[:I], dx=self.dlat_rad )
+        
+        # integral_L = trapz( (L_f[:I] - L_avg) * 2 * np.pi * Re**2 * cos_lats[:I], dx=dlat_rad )
+        
+        F = UnivariateSpline(self.lats_rad, self.flux_total, k=4, s=0)
+        
+        with open(fname, 'a') as f:
+            f.write('Integral S - L from SP to EQ: {:2.2f} PW/m\n'.format(10**-15 * integral_NEI))
+            f.write('F(0):                         {:2.2f} PW/m\n'.format(10**-15 * F(0)))
+            
+            f.write('EFE approx with NEI:  {:2.2f} deg\n'.format( np.rad2deg(- integral_NEI / F.derivative()(self.EFE_rad)) ))
+            f.write('EFE approx with F(0): {:2.2f} deg\n'.format( np.rad2deg(- F(0) / F.derivative()(self.EFE_rad))) )
+            
+            integral_NEI = trapz( (S_f[:I] - L_avg) * 2 * np.pi * Re**2 * self.cos_lats[:I], dx=self.dlat_rad )
+            
+            no_fb     = self._calculate_shift(F, integral_NEI)
+            planck_fb = self._calculate_shift(F, integral_NEI, [self.flux_planck])
+            wv_fb1    = self._calculate_shift(F, integral_NEI, [self.flux_wv1])
+            wv_fb2    = self._calculate_shift(F, integral_NEI, [self.flux_wv2])
+            planck_and_wv_fb1 = self._calculate_shift(F, integral_NEI, [self.flux_planck, self.flux_wv1])
+            planck_and_wv_fb2 = self._calculate_shift(F, integral_NEI, [self.flux_planck, self.flux_wv2])
+
+            f.write('\n')
+            f.write('true EFE:              {:2.2f} deg\n'.format(self.EFE))
+            f.write('no_fb:                 {:2.2f} deg\n'.format(no_fb))
+            f.write('planck_fb:             {:2.2f} deg\n'.format(planck_fb))
+            f.write('wv_fb1:                {:2.2f} deg\n'.format(wv_fb1))
+            f.write('wv_fb2:                {:2.2f} deg\n'.format(wv_fb2))
+            f.write('planck_fb + wv_fb1:    {:2.2f} deg\n'.format(planck_and_wv_fb1))
+            f.write('planck_fb + wv_fb2:    {:2.2f} deg\n'.format(planck_and_wv_fb2))
+        print('Logged data into {}'.format(fname))
+
 
     def save_plots(self):
         ### STYLES
@@ -580,7 +709,7 @@ class Model():
         plt.tight_layout()
         
         fname = 'init_radiation.png'
-        plt.savefig(fname, dpi=120)
+        plt.savefig(fname, dpi=80)
         print('{} created.'.format(fname))
         plt.close()
         
@@ -601,48 +730,37 @@ class Model():
         plt.tight_layout()
         
         fname = 'final_temp.png'
-        plt.savefig(fname, dpi=120)
+        plt.savefig(fname, dpi=80)
         print('{} created.'.format(fname))
         plt.close()
         
         
-        ### FIND ITCZ
-        print('\nPlotting EFE')
-        E_f = self.E_array[-1, :] 
-        
-        spl = UnivariateSpline(self.lats, E_f, k=4, s=0)
-        roots = spl.derivative().roots()
-        
-        max_index = np.argmax(E_f)
-        efe_lat = self.lats[max_index]
-        
-        min_error_index = np.argmin( np.abs(roots - efe_lat) )
-        closest_root = roots[min_error_index]
-        
-        print("Approximate EFE lat = {:.1f}".format(efe_lat))
-        print("Root found = {:.16f} (of {})".format(closest_root, len(roots)))
-        print("ITCZ = {:.5f}".format(closest_root*0.64))
-        
-        f, ax = plt.subplots(1, figsize=(16, 10))
-        ax.plot(self.sin_lats, E_f / 1000, 'c', label='Final Energy Distribution', lw=4)
-        ax.plot(self.sin_lats, spl(self.lats) / 1000, 'k--', label='Spline Interpolant')
-        min_max = [E_f.min()/1000, E_f.max()/1000]
-        ax.plot([np.sin(np.deg2rad(efe_lat)), np.sin(np.deg2rad(efe_lat))], min_max, 'm')
-        ax.plot([np.sin(np.deg2rad(closest_root)), np.sin(np.deg2rad(closest_root))], min_max, 'r')
-        ax.text(efe_lat+5, np.average(min_max), "EFE $\\approx$ {:.2f}$^\\circ$".format(closest_root), size=16)
-        ax.set_title("Final Energy Distribution")
-        ax.legend(fontsize=14, loc="upper left")
-        ax.set_xlabel('Lat')
-        ax.set_ylabel('E (kJ / kg)')
-        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
-        
-        plt.tight_layout()
-        
-        fname = 'efe.png'
-        plt.savefig(fname, dpi=120)
-        print('{} created.'.format(fname))
-        plt.close()
+        if self.plot_efe:
+            ### FIND ITCZ
+            print('\nPlotting EFE')
+            
+            self._calculate_efe()
+            E_f = self.E_array[-1, :]
+            print("EFE = {:.5f}; ITCZ = {:.5f}".format(self.EFE, self.ITCZ))
+            
+            f, ax = plt.subplots(1, figsize=(16, 10))
+            ax.plot(self.sin_lats, E_f / 1000, 'c', label='Final Energy Distribution', lw=4)
+            min_max = [E_f.min()/1000, E_f.max()/1000]
+            ax.plot([np.sin(np.deg2rad(self.EFE)), np.sin(np.deg2rad(self.EFE))], ax.get_ylim(), 'r')
+            ax.text(np.sin(np.deg2rad(self.EFE)) + 0.1, np.average(min_max), "EFE $\\approx$ {:.2f}$^\\circ$".format(self.EFE), size=16)
+            ax.set_title("Final Energy Distribution")
+            ax.legend(fontsize=14, loc="upper left")
+            ax.set_xlabel('Lat')
+            ax.set_ylabel('E (kJ / kg)')
+            ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+            ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
+            
+            plt.tight_layout()
+            
+            fname = 'efe.png'
+            plt.savefig(fname, dpi=80)
+            print('{} created.'.format(fname))
+            plt.close()
         
         ### FINAL RADIATION DIST
         print('\nPlotting Final Radiation Dist')
@@ -651,7 +769,6 @@ class Model():
         alb_f = self.alb_array[-1, :]
         SW_f = self.S * (1 - alb_f)
         LW_f = self.L(T_f)
-        print('(SW - LW) at EFE: {:.2f} W/m^2'.format(SW_f[max_index] - LW_f[max_index]))
         print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * trapz( (SW_f - LW_f) * 2 * np.pi * Re**2 * self.cos_lats, dx=np.deg2rad(self.dlat) )))
 
         f, ax = plt.subplots(1, figsize=(16, 10))
@@ -669,39 +786,35 @@ class Model():
         plt.tight_layout()
         
         fname = 'final_radiation.png'
-        plt.savefig(fname, dpi=120)
+        plt.savefig(fname, dpi=80)
         print('{} created.'.format(fname))
         plt.close()
         
-        ### FLUXES
-        print('\nPlotting Fluxes')
+        if self.plot_fluxes:
+            ### FLUXES
+            print('\nPlotting Fluxes')
 
-        flux_total = 10**-15 *  (2 * np.pi * Re * self.cos_lats) * (- ps / g * D / Re) * np.gradient(E_f, self.dlat_rad)
-
-        emissivity = 0.6
-        L_planck = emissivity * sig * T_f**4
-        L_const = trapz( L_planck * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / (4 * np.pi * Re**2)
-        flux_planck = np.zeros( L_planck.shape )
-        for i in range(L_planck.shape[0]):
-            flux_planck[i] = 10**-15 * trapz( (L_planck[:i+1] - L_const) * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad)
-
-        f, ax = plt.subplots(1, figsize=(16, 10))
-        ax.plot(self.sin_lats, flux_planck, 'b', label='Planck')
-        ax.plot(self.sin_lats, flux_total, 'k', label='Total')
-        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
-        ax.grid()
-        ax.legend(loc='upper left')
-        ax.set_title("Flux Distributions")
-        ax.set_xlabel("Lat")
-        ax.set_ylabel("PW")
-        
-        plt.tight_layout()
-        
-        fname = 'fluxes.png'
-        plt.savefig(fname, dpi=120)
-        print('{} created.'.format(fname))
-        plt.close()
+            f, ax = plt.subplots(1, figsize=(16, 10))
+            ax.plot(self.sin_lats, 10**-15 * self.flux_planck, 'r', label='Planck')
+            ax.plot(self.sin_lats, 10**-15 * self.flux_wv1, 'b', label='Water Vapor (const q, separate sim)')
+            if self.olr_type == 'full_wvf':
+                ax.plot(self.sin_lats, 10**-15 * self.flux_wv2, 'm', label='Water Vapor (zeroed q)')
+            ax.plot(self.sin_lats, 10**-15 * self.flux_total, 'k', label='$K\\nabla E$')
+            ax.plot(np.sin(np.deg2rad(self.EFE)), 0,  'ro', label='EFE')
+            ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+            ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
+            ax.grid()
+            ax.legend(loc='upper left')
+            ax.set_title("Flux Distributions")
+            ax.set_xlabel("Lat")
+            ax.set_ylabel("PW")
+            
+            plt.tight_layout()
+            
+            fname = 'fluxes.png'
+            plt.savefig(fname, dpi=80)
+            print('{} created.'.format(fname))
+            plt.close()
         
         ### LW vs. T
         print('\nPlotting LW vs. T')
@@ -729,7 +842,7 @@ class Model():
         plt.tight_layout()
         
         fname = 'OLR_vs_T_fit_{}.png'.format(self.olr_type)
-        plt.savefig(fname, dpi=120)
+        plt.savefig(fname, dpi=80)
         print('{} created.'.format(fname))
         plt.close()
         
