@@ -530,6 +530,10 @@ class Model():
 
 
     def _calculate_efe(self):
+        """
+        EFE = latitude of max of E
+        """
+        print('Calculating EFE...')
         # Get data and final dist
         E_f = self.E_array[-1, :]
         
@@ -550,7 +554,11 @@ class Model():
         self.ITCZ = 0.64 * self.EFE 
         self.ITCZ_rad = np.deg2rad(self.ITCZ)
 
+
     def log_efe(self, fname_efe):
+        """
+        Write EFE data to a file
+        """
         self.plot_efe = True
 
         self._calculate_efe()
@@ -561,33 +569,43 @@ class Model():
         print('Logged "{}" in "{}"'.format(data, fname_efe))
 
 
-    def _calculate_shift(self, F, integral_NEI, fluxes=[]):
-        # # Idea: F(lat = 0) = F(EFE) + shift * dF(EFE)/dlat * Re
-        # # But F(EFE) = 0 so shift = F(lat = 0) / dF(EFE)/dlat / Re
-        # # Do spline interp and diff to get denom
-        # spl  = UnivariateSpline(self.lats, 10**-15 * flux, k=4, s=0)
-        # center = self.EFE
-        # EQ = 0 
-        # shift  = -(spl(EQ) - spl(center)) / spl.derivative()(center)
-        # print(shift)
-        # return shift
-        if len(fluxes) == 0:
-            shift = - integral_NEI / F.derivative()(self.EFE_rad)
-        else:
-            numerator = integral_NEI
-            denominator = -F.derivative()(self.EFE_rad)
-            for flux in fluxes:
-                spl = UnivariateSpline(self.lats_rad, flux, k=4, s=0)
-                numerator -= spl(self.EFE_rad)
-                denominator -= spl.derivative()(self.EFE_rad)
-            shift = numerator / denominator
+    def _calculate_shift(self, fluxes=[]):
+        """
+        Calculate dphi_i for given feedback flux
+        dphi_i = (integral_SLbar + F_i) / -(dF_nf + dF_i)
+        """
+        numerator   = self.integral_SLbar
+        spl         = UnivariateSpline(self.lats_rad, self.flux_no_fb, k=4, s=0)
+        denominator = -spl.derivative()(self.EFE_rad)
+        for flux in fluxes:
+            spl          = UnivariateSpline(self.lats_rad, flux, k=4, s=0)
+            # numerator   += spl(self.EFE_rad)
+            numerator   += spl(0)
+            denominator -= spl.derivative()(self.EFE_rad)
+        shift = numerator / denominator
         return np.rad2deg(shift)
 
 
-    def _calculate_feedbacks(self):
+    def _calculate_feedback_flux(self, L_flux):
         """
-        Calculate fluxes due to different feedbacks.
+        Perform integral calculation to get F_i = - integral of L - L_i
         """
+        area = trapz( 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad )
+        L_flux_bar = 1 / area * trapz( L_flux * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad ) 
+        flux = np.zeros( L_flux.shape )
+        for i in range( L_flux.shape[0] ):
+            flux[i] = - trapz( (L_flux[:i+1] - L_flux_bar) * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad )
+        return flux
+
+
+    def log_feedbacks(self, fname_feedbacks):
+        """
+        Calculate each feedback flux and log data on the shifts
+        """
+        print('\nCalculating feedbacks...')
+
+        self.plot_fluxes = True
+
         E_f = self.E_array[-1, :]
         L_f = self.L_array[-1, :]
         T_f = self.T_array[-1, :]
@@ -598,80 +616,57 @@ class Model():
         # Planck
         emissivity = 0.6
         L_planck = emissivity * sig * T_f**4
+        self.flux_planck = self._calculate_feedback_flux(L_planck)
         
-        L_avg = trapz( L_planck * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / trapz( 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad)
-        
-        self.flux_planck = np.zeros( L_planck.shape )
-        for i in range(L_planck.shape[0]):
-            self.flux_planck[i] = trapz( (L_planck[:i+1] - L_avg) * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad)
-        
-        # Water Vapor 1 --- use L from other simulation with constant q per vertical level
+        # Water Vapor anom --- use L from other simulation with constant q per vertical level
         L_f = self.L_array[-1, :] 
         L_f_const_q = np.load(self.EBM_PATH + '/data/L_array_constant_q_steps_mid_level_gaussian5_n361.npz')['arr_0'][-1, :]
-        
-        L_avg = trapz( (L_f - L_f_const_q) * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / trapz( 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad)
-        
-        self.flux_wv1 = np.zeros( L_f.shape )
-        for i in range(L_f.shape[0]):
-            self.flux_wv1[i] = trapz( ( (L_f[:i+1] - L_f_const_q[:i+1]) - L_avg) * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad)
+        self.flux_wv_anom = self._calculate_feedback_flux(L_f - L_f_const_q)
 
         if self.olr_type == 'full_wvf':
-            # Water Vapor 2 --- use L from current T_f and no q
+            # Water Vapor --- use L from current T_f and no q
             self.RH_dist[:, :] = 0.0
             L_f_zero_q = self.L(T_f)
-            
             np.savez('L_f_zero_q.npz', L_f_zero_q)
+            self.flux_wv = self._calculate_feedback_flux(L_f - L_f_zero_q)
 
-            L_avg = trapz( (L_f - L_f_zero_q) * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / trapz( 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad)
-            
-            self.flux_wv2 = np.zeros( L_f.shape )
-            for i in range(L_f.shape[0]):
-                self.flux_wv2[i] = trapz( ( (L_f[:i+1] - L_f_zero_q[:i+1]) - L_avg) * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad)
+        # No feedbacks
+        self.flux_no_fb = self.flux_total - self.flux_planck - self.flux_wv
 
-
-
-    def log_feedbacks(self, fname_feedbacks):
-        self.plot_fluxes = True
-
-        self._calculate_feedbacks()
-
-        L_f = self.L_array[-1, :] 
         S_f = self.S * (1 - self.alb_array[-1, :])
             
-        L_avg = trapz( L_f * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / trapz( 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad)
+        area = trapz( 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad )
+        L_bar = 1 / area * trapz( L_f * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad )  
 
         I = self.lats.shape[0]//2 + 1
-        integral_NEI = trapz( (S_f[:I] - L_f[:I]) * 2 * np.pi * Re**2 * self.cos_lats[:I], dx=self.dlat_rad )
+        integral_SL = trapz( (S_f[:I] - L_f[:I]) * 2 * np.pi * Re**2 * self.cos_lats[:I], dx=self.dlat_rad )
         
-        # integral_L = trapz( (L_f[:I] - L_avg) * 2 * np.pi * Re**2 * cos_lats[:I], dx=dlat_rad )
+        print('Integral S - L from SP to EQ: {:2.2f} PW/m'.format(10**-15 * integral_SL))
+        print('F(0):                         {:2.2f} PW/m'.format(10**-15 * self.flux_total[I-1]))
         
-        F = UnivariateSpline(self.lats_rad, self.flux_total, k=4, s=0)
+        self.integral_SLbar = trapz( (S_f[:I] - L_bar) * 2 * np.pi * Re**2 * self.cos_lats[:I], dx=self.dlat_rad )
         
         with open(fname_feedbacks, 'a') as f:
-            f.write('Integral S - L from SP to EQ: {:2.2f} PW/m\n'.format(10**-15 * integral_NEI))
-            f.write('F(0):                         {:2.2f} PW/m\n'.format(10**-15 * F(0)))
-            
-            f.write('EFE approx with NEI:  {:2.2f} deg\n'.format( np.rad2deg(- integral_NEI / F.derivative()(self.EFE_rad)) ))
-            f.write('EFE approx with F(0): {:2.2f} deg\n'.format( np.rad2deg(- F(0) / F.derivative()(self.EFE_rad))) )
-            
-            integral_NEI = trapz( (S_f[:I] - L_avg) * 2 * np.pi * Re**2 * self.cos_lats[:I], dx=self.dlat_rad )
-            
-            no_fb     = self._calculate_shift(F, integral_NEI)
-            planck_fb = self._calculate_shift(F, integral_NEI, [self.flux_planck])
-            wv_fb1    = self._calculate_shift(F, integral_NEI, [self.flux_wv1])
-            wv_fb2    = self._calculate_shift(F, integral_NEI, [self.flux_wv2])
-            planck_and_wv_fb1 = self._calculate_shift(F, integral_NEI, [self.flux_planck, self.flux_wv1])
-            planck_and_wv_fb2 = self._calculate_shift(F, integral_NEI, [self.flux_planck, self.flux_wv2])
+            f.write('EFE, no_fb, planck, wv, wv_anom, planck+wv, planck+wv_anom\n')
 
-            f.write('\n')
-            f.write('true EFE:              {:2.2f} deg\n'.format(self.EFE))
-            f.write('no_fb:                 {:2.2f} deg\n'.format(no_fb))
-            f.write('planck_fb:             {:2.2f} deg\n'.format(planck_fb))
-            f.write('wv_fb1:                {:2.2f} deg\n'.format(wv_fb1))
-            f.write('wv_fb2:                {:2.2f} deg\n'.format(wv_fb2))
-            f.write('planck_fb + wv_fb1:    {:2.2f} deg\n'.format(planck_and_wv_fb1))
-            f.write('planck_fb + wv_fb2:    {:2.2f} deg\n'.format(planck_and_wv_fb2))
-        print('Logged data into {}'.format(fname_feedbacks))
+            shift_no_fb              = self._calculate_shift([])
+            shift_planck             = self._calculate_shift([self.flux_planck])
+            if self.olr_type == 'full_wvf':
+                shift_wv             = self._calculate_shift([self.flux_wv])
+            else:
+                shift_wv             = 0
+            shift_wv_anom            = self._calculate_shift([self.flux_wv_anom])
+            if self.olr_type == 'full_wvf':
+                shift_planck_and_wv  = self._calculate_shift([self.flux_planck, self.flux_wv])
+            else:
+                shift_planck_and_wv  = 0
+            shift_planck_and_wv_anom = self._calculate_shift([self.flux_planck, self.flux_wv_anom])
+
+            data = '{:2.2f}, {:2.2f}, {:2.2f}, {:2.2f}, {:2.2f}, {:2.2f}, {:2.2f}'.format(
+                    self.EFE, shift_no_fb, shift_planck, shift_wv, shift_wv_anom,
+                    shift_planck_and_wv, shift_planck_and_wv_anom)
+            f.write(data + '\n')
+        print('Logged {} into {}'.format(data, fname_feedbacks))
 
 
     def save_plots(self):
@@ -795,12 +790,13 @@ class Model():
             print('\nPlotting Fluxes')
 
             f, ax = plt.subplots(1, figsize=(16, 10))
-            ax.plot(self.sin_lats, 10**-15 * self.flux_planck, 'r', label='Planck')
-            ax.plot(self.sin_lats, 10**-15 * self.flux_wv1, 'b', label='Water Vapor (const q, separate sim)')
+            ax.plot(self.sin_lats, 10**-15 * self.flux_planck, 'r', label='Planck Feedback')
+            ax.plot(self.sin_lats, 10**-15 * self.flux_wv_anom, 'b', label='Anomalous Water Vapor Feedback (separate sim)')
             if self.olr_type == 'full_wvf':
-                ax.plot(self.sin_lats, 10**-15 * self.flux_wv2, 'm', label='Water Vapor (zeroed q)')
+                ax.plot(self.sin_lats, 10**-15 * self.flux_wv, 'm', label='Total Water Vapor Feedback')
+            ax.plot(self.sin_lats, 10**-15 * self.flux_no_fb, 'g', label='$F_{nf}$')
             ax.plot(self.sin_lats, 10**-15 * self.flux_total, 'k', label='$K\\nabla E$')
-            ax.plot(np.sin(np.deg2rad(self.EFE)), 0,  'ro', label='EFE')
+            ax.plot(np.sin(self.EFE_rad), 0,  'ko', label='EFE')
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
             ax.grid()

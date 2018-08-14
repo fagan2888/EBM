@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm *\.png
-rm *\.mp4
-rm *_array.npz
-rm itcz.log
+rm -i *\.png
+rm -i *\.mp4
+rm -i *_array.npz
+rm -i itcz.log
