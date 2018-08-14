@@ -3,8 +3,8 @@
 from DEBM import Model
 
 # model = Model(dlat=0.5, dtmax_multiple=0.1, max_sim_years=5, tol=1e-10)
-model = Model(dlat=0.5, dtmax_multiple=1.50, max_sim_years=5, tol=1e-8)
-# model = Model(dlat=0.5, dtmax_multiple=10.0, max_sim_years=5, tol=1e-7)
+# model = Model(dlat=0.5, dtmax_multiple=1.50, max_sim_years=5, tol=1e-8)
+model = Model(dlat=0.5, dtmax_multiple=5.0, max_sim_years=5, tol=1e-7)
 
 model.initial_temperature(initial_condition='load_data', low=None, high=None)
 # model.initial_temperature(initial_condition='legendre', low=270, high=305)
@@ -20,12 +20,12 @@ model.outgoing_longwave(olr_type='full_wvf', A=271.8, B=0.0, emissivity=0.6,
         gaussian_spread2=None, scale_efe=False, constant_spec_hum=False)
 
 # model.solve(numerical_method='explicit', frames=100)
-model.solve(numerical_method='implicit', frames=250)
+model.solve(numerical_method='implicit', frames=2500)
+# model.solve(numerical_method='implicit', frames=250)
 
 model.save_data()
 
-if model.insolation_type == 'perturbation':
-    model.log_efe(fname_efe='itcz.log')
+model.log_efe(fname_efe='itcz.log')
 
 model.log_feedbacks(fname_feedbacks='feedbacks.log')
 
