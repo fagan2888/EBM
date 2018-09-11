@@ -12,6 +12,7 @@ model.initial_temperature(initial_condition='load_data', low=None, high=None)
 model.albedo(albedo_feedback=False, alb_ice=None, alb_water=None)
 
 
+# model.insolation(insolation_type='annual_mean_clark', perturb_center=15, 
 model.insolation(insolation_type='perturbation', perturb_center=15, 
         perturb_spread=4.94, perturb_intensity=10)
         
