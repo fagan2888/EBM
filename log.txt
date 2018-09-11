@@ -604,4 +604,7 @@ L0=60; M=18 | -3.33    | -12.99 | -2.38  | -14.79 | -3.07
 ---
 # 9-11
 ---
+# Ran full control simulation on savio, saved control_fluxes.npz in 'data/'
+sim127 | annual_mean_clark | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian |
+
 

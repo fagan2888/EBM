@@ -219,8 +219,8 @@ elif [ "$1" == "-amc" ]; then
 	# perturb_intensity=15
 	# perturb_intensity=18
 	
-	# olr_type=full_wvf
-	olr_type=full_no_wvf
+	olr_type=full_wvf
+	# olr_type=full_no_wvf
 	A=None
 	B=None
 	emissivity=None
@@ -234,6 +234,8 @@ elif [ "$1" == "-amc" ]; then
 	gaussian_spread2=45
 	# scale_efe=True
 	scale_efe=False
+    # constant_spec_hum=True
+    constant_spec_hum=False
 	
 	i=0
 	while [ -d ${sim_dir}sim$i ];
