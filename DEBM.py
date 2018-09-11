@@ -593,7 +593,10 @@ class Model():
         if i == -1:
             return trapz( f * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad ) 
         else:
-            return trapz( f[:i+1] * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad ) 
+            if isinstance(f, np.ndarray):
+                return trapz( f[:i+1] * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad ) 
+            else:
+                return trapz( f * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad ) 
 
     # def _calculate_shift(self, fluxes=[]):
         # """
@@ -615,16 +618,16 @@ class Model():
         """
         Calculate dphi using control values
         """
-        ctl_data        = np.load('control_data.npz')
+        ctl_data        = np.load(self.EBM_PATH + '/data/control_data.npz')
         S_ctl           = ctl_data['S']
         L_bar_ctl       = ctl_data['L_bar']
-        flux_total_ctl  = 10**-15 * ctl_data['flux_total']
-        flux_planck_ctl = 10**-15 * ctl_data['flux_planck']
-        flux_wv_ctl     = 10**-15 * ctl_data['flux_wv']
-        flux_no_fb_ctl  = 10**-15 * ctl_data['flux_no_fb']
+        flux_total_ctl  = ctl_data['flux_total']
+        flux_planck_ctl = ctl_data['flux_planck']
+        flux_wv_ctl     = ctl_data['flux_wv']
+        flux_no_fb_ctl  = ctl_data['flux_no_fb']
 
-        S = self.S * (1 - self.alb_array[-1, :])
-        dS = S - S_ctl
+        dS = self.S_f - S_ctl
+        dL_bar = self.L_bar - L_bar_ctl
 
         I_equator = self.lats.shape[0]//2 
 
@@ -632,8 +635,49 @@ class Model():
         dflux_wv = self.flux_wv - flux_wv_ctl 
         dflux_no_fb = self.flux_no_fb - flux_no_fb_ctl 
 
-        # 1
-        numerator = self._integrate_lat(S_ctl - L_bar_ctl, I_equator) + self._integrate_lat(dS, I_equator) + flux_planck_ctl[I_equator] + flux_wv_ctl[I_equator] + dflux_planck[I_equator] + dflux_wv[I_equator]
+        # Method 1: Do the basic Taylor approx
+        numerator = self.flux_total[I_equator]
+        denominator = 0
+
+        spl = UnivariateSpline(self.lats_rad, self.flux_total, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE_rad)
+
+        shift = np.rad2deg(numerator / denominator)
+        print('No feedbacks used: {:2.2f}'.format(shift))
+        print('\tNum / Denom = {}/{}'.format(numerator, denominator))
+
+        # Method 2: No control used
+        numerator = 10**-15 * self._integrate_lat(self.S_f - self.L_bar, I_equator) + self.flux_planck[I_equator] + self.flux_wv[I_equator]
+        denominator = 0 
+
+        spl = UnivariateSpline(self.lats_rad, self.flux_no_fb, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE_rad)
+        spl = UnivariateSpline(self.lats_rad, self.flux_planck, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE_rad)
+        spl = UnivariateSpline(self.lats_rad, self.flux_wv, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE_rad)
+
+        shift = np.rad2deg(numerator / denominator)
+        print('No control used: {:2.2f}'.format(shift))
+        print('\tNum / Denom = {}/{}'.format(numerator, denominator))
+
+        # Method 3: Simplify some terms theoretically in big ratio
+        numerator = flux_total_ctl[I_equator] + 10**-15 * self._integrate_lat(dS - dL_bar, I_equator) + dflux_planck[I_equator] + dflux_wv[I_equator]
+        denominator = 0 
+
+        spl = UnivariateSpline(self.lats_rad, flux_total_ctl, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE_rad)
+        spl = UnivariateSpline(self.lats_rad, dflux_planck, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE_rad)
+        spl = UnivariateSpline(self.lats_rad, dflux_wv, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE_rad)
+
+        shift = np.rad2deg(numerator / denominator)
+        print('Simplified ratio: {:2.2f}'.format(shift))
+        print('\tNum / Denom = {}/{}'.format(numerator, denominator))
+
+        # Method 4: Keep all terms in the ratio
+        numerator = 10**-15 * self._integrate_lat(S_ctl - L_bar_ctl, I_equator) + 10**-15 * self._integrate_lat(dS - dL_bar, I_equator) + flux_planck_ctl[I_equator] + flux_wv_ctl[I_equator] + dflux_planck[I_equator] + dflux_wv[I_equator]
         denominator = 0
 
         spl = UnivariateSpline(self.lats_rad, flux_no_fb_ctl, k=4, s=0)
@@ -651,34 +695,8 @@ class Model():
         denominator -= spl.derivative()(self.EFE_rad)
 
         shift = np.rad2deg(numerator / denominator)
-        print(shift)
-
-        # 2
-        numerator = flux_total_ctl[I_equator] + self._integrate_lat(dS, I_equator) + dflux_planck[I_equator] + dflux_wv[I_equator]
-        denominator = 0 
-
-        spl = UnivariateSpline(self.lats_rad, flux_total_ctl, k=4, s=0)
-        denominator -= spl.derivative()(self.EFE_rad)
-        spl = UnivariateSpline(self.lats_rad, dflux_planck, k=4, s=0)
-        denominator -= spl.derivative()(self.EFE_rad)
-        spl = UnivariateSpline(self.lats_rad, dflux_wv, k=4, s=0)
-        denominator -= spl.derivative()(self.EFE_rad)
-
-        shift = np.rad2deg(numerator / denominator)
-        print(shift)
-
-        # 3
-        numerator = self.flux_total[I_equator]
-        denominator = 0
-        spl = UnivariateSpline(self.lats_rad, self.flux_total, k=4, s=0)
-        denominator -= spl.derivative()(self.EFE_rad)
-        shift = np.rad2deg(numerator / denominator)
-        print(shift)
-
-        # comparisons
-        print(self._integrate_lat(S_ctl - L_bar_ctl, I_equator) + flux_planck_ctl[I_equator] + flux_wv_ctl[I_equator])
-        print(flux_total_ctl[I_equator])
-        
+        print('Full ratio: {:2.2f}'.format(shift))
+        print('\tNum / Denom = {}/{}'.format(numerator, denominator))
 
         # plt.figure(figsize=(16,10))
 
@@ -733,6 +751,10 @@ class Model():
         L_f = self.L_array[-1, :]
         T_f = self.T_array[-1, :]
 
+        self.S_f = self.S * (1 - self.alb_array[-1, :])
+        area = self._integrate_lat(1)
+        self.L_bar = 1 / area * self._integrate_lat(L_f)
+
         # Total
         self.flux_total = 10**-15 * (2 * np.pi * Re * self.cos_lats) * (- ps / g * D / Re) * np.gradient(E_f, self.dlat_rad)
 
@@ -760,10 +782,7 @@ class Model():
         self.flux_no_fb = self.flux_total - self.flux_all_fb
 
         if self.insolation_type == 'annual_mean_clark' and self.olr_type == 'full_wvf':
-            S_f = self.S * (1 - self.alb_array[-1, :])
-            area = self._integrate_lat(1)
-            L_bar = 1 / area * self._integrate_lat(L_f)
-            np.savez('control_data.npz', S=S_f, L_bar=L_bar, flux_total=self.flux_total,
+            np.savez('control_data.npz', S=self.S_f, L_bar=self.L_bar, flux_total=self.flux_total,
                 flux_planck=self.flux_planck, flux_wv=self.flux_wv, flux_no_fb=self.flux_no_fb)
 
         self._calculate_shift()

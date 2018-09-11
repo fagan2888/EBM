@@ -30,4 +30,4 @@ model.log_efe(fname_efe='itcz.log')
 
 model.log_feedbacks(fname_feedbacks='feedbacks.log')
 
-model.save_plots()
+# model.save_plots()
