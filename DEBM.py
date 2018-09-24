@@ -217,8 +217,8 @@ class Model():
         
             # Use CliMT radiation scheme along with MetPy's moist adiabat calculator
             self.nLevels = 30
-            radiation = climt.RRTMGLongwave(cloud_overlap_method='clear_only')
-            self.state = climt.get_default_state([radiation], x={}, 
+            self.radiation = climt.RRTMGLongwave(cloud_overlap_method='clear_only')
+            self.state = climt.get_default_state([self.radiation], x={}, 
                             y={'label' : 'latitude', 'values': self.lats, 'units' : 'degress N'},
                             mid_levels={'label' : 'mid_levels', 'values': np.arange(self.nLevels), 'units' : ''},
                             interface_levels={'label' : 'interface_levels', 'values': np.arange(self.nLevels + 1), 'units' : ''}
@@ -323,6 +323,8 @@ class Model():
                         qvals = self.state['specific_humidity'].values[0, :, i]
                         q_const = trapz( qvals * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / (4 * np.pi * Re**2)
                         self.state['specific_humidity'].values[0, :, i] = q_const
+
+            self.pressures = pressures
        
             def L(T):
                 """ 
@@ -336,7 +338,7 @@ class Model():
                 self.state['surface_temperature'].values[:] = T
                 # Create a 2D array of the T vals and pass to interpolated_moist_adiabat
                 #   note: shape of 'air_temperature' is (lons, lats, press) 
-                Tgrid = np.repeat(T, pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
+                Tgrid = np.repeat(T, self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
                 self.state['air_temperature'].values[0, :, :] = interpolated_moist_adiabat.ev(Tgrid, 
                         self.state['air_pressure'].values[0, :, :])
                 # Set specific hum assuming constant RH
@@ -349,7 +351,7 @@ class Model():
                     self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(self.state['air_temperature'].values[0, :, :], 
                             self.state['air_pressure'].values[0, :, :] / 100)[1]
                 # CliMT takes over here, this is where the slowdown occurs
-                tendencies, diagnostics = radiation(self.state)
+                tendencies, diagnostics = self.radiation(self.state)
                 return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
         else:
             os.sys.exit('Invalid keyword for olr_type: {}'.format(self.olr_type))
@@ -714,9 +716,12 @@ class Model():
         area = self._integrate_lat(1)
         self.L_bar = 1 / area * self._integrate_lat(L_f)
 
-        ###
-        # ctl_data = np.load(self.EBM_PATH + '/data/control_data.npz')
-        ###
+        ctl_data = np.load(self.EBM_PATH + '/data/control_data.npz')
+        ctl_state_temp = ctl_data['ctl_state_temp']
+        pert_state_temp = np.copy(self.state['air_temperature'].values[:, :, :])
+        ctl_state_q = self.RH_dist * self._humidsat(ctl_state_temp[0, :, :],  
+                self.state['air_pressure'].values[0, :, :] / 100)[1]
+        pert_state_q = np.copy(self.state['specific_humidity'].values[:, :, :])
 
         # Total
         self.flux_total = 10**-15 * (2 * np.pi * Re * self.cos_lats) * (- ps / g * D / Re) * np.gradient(E_f, self.dlat_rad)
@@ -734,12 +739,43 @@ class Model():
         L_f_const_q = np.load(self.EBM_PATH + '/data/L_array_constant_q_steps_mid_level_gaussian5_n361.npz')['arr_0'][-1, :]
         self.flux_wv_anom = self._calculate_feedback_flux(L_f - L_f_const_q)
 
-        if self.olr_type == 'full_wvf':
-            # Water Vapor --- use L from current T_f and no q
-            self.RH_dist[:, :] = 0.0
-            L_f_zero_q = self.L(T_f)
-            np.savez('L_f_zero_q.npz', L_f_zero_q)
-            self.flux_wv = self._calculate_feedback_flux(L_f - L_f_zero_q)
+        # Water Vapor --- use L from current T_f and no q
+        RH_copy = self.RH_dist[:, :] 
+        self.RH_dist[:, :] = 0.0
+        L_f_zero_q = self.L(T_f)
+        np.savez('L_f_zero_q.npz', L_f_zero_q)
+        self.flux_wv = self._calculate_feedback_flux(L_f - L_f_zero_q)
+        self.RH_dist[:, :] = RH_copy
+        
+        # Lapse Rate
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
+
+        # n = 31
+        # j = 150
+        # T1 = self.state['air_temperature'].values[0, j, :n]
+        # T2 = ctl_state_temp[0, j, :n]
+        # plt.plot(T1, self.pressures[:n], 'r')
+        # plt.plot(T2, self.pressures[:n], 'b')
+        # plt.plot(T2 + (T1[0] - T2[0]), self.pressures[:n], 'k')
+        # plt.gca().invert_yaxis()
+        # plt.show()
+
+        self.state['air_temperature'].values[0, :, :] =  ctl_state_temp + Tgrid_diff
+
+        # n = 31
+        # j = 150
+        # T1 = pert_state_temp[0, j, :n]
+        # T2 = ctl_state_temp[0, j, :n]
+        # T3 = self.state['air_temperature'].values[0, j, :n]
+        # plt.plot(T1, self.pressures[:n], 'r')
+        # plt.plot(T2, self.pressures[:n], 'b')
+        # plt.plot(T3, self.pressures[:n], 'k')
+        # plt.gca().invert_yaxis()
+        # plt.show()
+
+        tendencies, diagnostics = self.radiation(self.state)
+        L_pert_shifted_T = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
+        self.flux_lr = self._calculate_feedback_flux(L_f - L_pert_shifted_T)
 
         # No feedbacks
         self.flux_no_fb = self.flux_total - self.flux_all_fb
@@ -902,6 +938,7 @@ class Model():
             # ax.plot(self.sin_lats, self.flux_planck + self.flux_wv, 'c--', label='Planck + Total WV')
             ax.plot(self.sin_lats, self.flux_no_fb + self.flux_all_fb, 'c', label='No FB + All FB')
             ax.plot(self.sin_lats, self.flux_no_fb + self.flux_wv + self.flux_planck, 'c--', label='No FB + (Planck + Total WV)')
+            ax.plot(self.sin_lats, self.flux_lr, 'y', label='Lapse Rate')
             ax.plot(self.sin_lats, self.flux_total, 'k', label='Total Energy Flux')
             ax.plot(np.sin(self.EFE_rad), 0,  'ko', label='EFE')
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))

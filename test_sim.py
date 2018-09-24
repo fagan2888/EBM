@@ -6,15 +6,15 @@ from DEBM import Model
 # model = Model(dlat=0.5, dtmax_multiple=1.50, max_sim_years=5, tol=1e-8)
 model = Model(dlat=0.5, dtmax_multiple=5.0, max_sim_years=5, tol=1e-7)
 
-# model.initial_temperature(initial_condition='load_data', low=None, high=None)
-model.initial_temperature(initial_condition='legendre', low=270, high=305)
+model.initial_temperature(initial_condition='load_data', low=None, high=None)
+# model.initial_temperature(initial_condition='legendre', low=270, high=305)
 
-# model.albedo(albedo_feedback=False, alb_ice=None, alb_water=None)
-model.albedo(albedo_feedback=True, alb_ice=0.4, alb_water=0.1)
+model.albedo(albedo_feedback=False, alb_ice=None, alb_water=None)
+# model.albedo(albedo_feedback=True, alb_ice=0.4, alb_water=0.1)
 
 
-model.insolation(insolation_type='annual_mean_clark', perturb_center=15, 
-# model.insolation(insolation_type='perturbation', perturb_center=15, 
+# model.insolation(insolation_type='annual_mean_clark', perturb_center=15, 
+model.insolation(insolation_type='perturbation', perturb_center=15, 
         perturb_spread=4.94, perturb_intensity=10)
         
 model.outgoing_longwave(olr_type='full_wvf', A=271.8, B=0.0, emissivity=0.6, 
@@ -27,8 +27,8 @@ model.solve(numerical_method='implicit', frames=1000)
 
 model.save_data()
 
-# model.log_efe(fname_efe='itcz.log')
+model.log_efe(fname_efe='itcz.log')
 
-# model.log_feedbacks(fname_feedbacks='feedbacks.log')
+model.log_feedbacks(fname_feedbacks='feedbacks.log')
 
 model.save_plots()
