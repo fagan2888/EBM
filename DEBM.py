@@ -6,7 +6,7 @@
 #   it to test how different processes affect atmospheric 
 #   sensitivity.
 #
-# Henry G. Peterson with Bill Boos -- summer 2018
+# Henry G. Peterson with Bill Boos, 2018
 ################################################################################
 
 ################################################################################
@@ -185,12 +185,12 @@ class Model():
         self.alb_water = alb_water
         if albedo_feedback == True:
             self.init_alb = alb_water * np.ones(len(self.lats))
-            self.init_alb[np.where(init_temp <= 273.16)] = alb_ice
+            self.init_alb[np.where(self.init_temp <= 273.16)] = alb_ice
         else:
         # From Clark:
         #   self.init_alb = 0.2725 * np.ones(len(lats))
         # Using the below calculation from KiehlTrenberth1997
-        # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342
+        # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
             self.init_alb = (40 / 342) * np.ones(len(self.lats))
 
         self.alb = self.init_alb
@@ -201,47 +201,15 @@ class Model():
 			gaussian_spread2=None, scale_efe=False, constant_spec_hum=False):
         self.olr_type = olr_type
         if olr_type == 'planck':
-            ''' PLANCK RADIATION '''
+            """ PLANCK RADIATION """
             L = lambda T: emissivity * sig * T**4 
         elif olr_type == 'linear':
-            ''' LINEAR FIT '''
+            """ LINEAR FIT """
             self.A = A
             self.B = B
             L = lambda T: self.A + self.B * T
-        # elif olr_type == 'shell_somerville':
-        #     ''' OLR SCHEME FROM SHELL/SOMERVILLE 2004 '''
-        #     # Create the 2d interpolation function: gives function T_moist(p, T_surf)
-        #     moist_data = np.load('data/moist_adiabat_data.npz')
-        #     pressures  = moist_data['pressures']
-        #     Tsample    = moist_data['Tsample']
-        #     Tdata      = moist_data['Tdata']
-        #     RH_vert    = moist_data['RH_vert']
-        #     interpolated_moist_adiabat_f = interp2d(pressures, Tsample, Tdata)
-            
-        #     boundary_layer = 650    #hPa -- from H_middle = 3.6 km
-        #     top_layer      = 500    #hPa -- from H_top    = 5.6 km
-        #     k = 0.03                #m2/kg
-        #     up_indx = 0
-        #     while pressures[up_indx] / 100 > top_layer:
-        #         up_indx += 1
-        #     bl_indx = 0
-        #     while pressures[bl_indx] / 100 > boundary_layer:
-        #         bl_indx += 1
-        #     T_atmos = np.zeros( (self.lats.shape[0], pressures.shape[0]))
-        
-        #     def L(T):
-        #         # Unfortunately, SciPy's 'interp2d' function returns sorted arrays.
-        #         # This forces us to do a for loop over lats.
-        #         for i in range(len(self.lats)):
-        #             # We flip the output since, as self.stated above, it comes out sorted, and we want high pressure first.
-        #             T_atmos[i, :] = np.flip(interpolated_moist_adiabat_f(pressures, T[i]), axis=0)
-        #         esat_bl = _humidsat(T_atmos[:, bl_indx], pressures[bl_indx] / 100)[0]
-        #         optical_depth = 0.622 * k * RH * esat_bl / g
-        #         emis = 0.3 + 0.7 * (1 - np.exp(-optical_depth))
-        #         return emis * sig * T_atmos[:, up_indx]**4 + (1 - emis) * sig * T**4
-            
         elif olr_type in ['full_wvf', 'full_no_wvf']:
-            ''' FULL BLOWN '''
+            """ FULL BLOWN """
             if olr_type == 'full_wvf':
                 water_vapor_feedback = True
             else:
@@ -357,13 +325,13 @@ class Model():
                         self.state['specific_humidity'].values[0, :, i] = q_const
        
             def L(T):
-                ''' 
+                """ 
                 OLR function.
                 Outputs OLR given T_surf.
                 Assumes moist adiabat structure, uses full blown radiation code from CliMT.
                 Sets temp profile with interpolation of moist adiabat calculations from MetPy.
                 Sets specific hum profile by assuming constant RH and using _humidsat function from Boos
-                '''
+                """
                 # Set surface state
                 self.state['surface_temperature'].values[:] = T
                 # Create a 2D array of the T vals and pass to interpolated_moist_adiabat
@@ -403,15 +371,16 @@ class Model():
 
         if self.albedo_feedback:
             self.alb = self.alb_water * np.ones(len(self.lats))
-            self.alb[np.where(T <= 273.16)] = self.alb_ice    
+            self.alb[np.where(self.T <= 273.16)] = self.alb_ice    
 
 
     def _print_progress(self, frame, error):
-        ''' Print the progress of the integration '''
+        """ Print the progress of the integration """
+        T_avg = np.mean(self.T)
         if frame == 0:
-            print('frame = {:5d}'.format(0))
+            print('frame = {:5d}; T_avg = {:3.1f}'.format(0, T_avg))
         else:
-            print('frame = {:5d}; |dT/dt| = {:.2E}'.format(frame, error))
+            print('frame = {:5d}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, T_avg, error))
 
     def solve(self, numerical_method, frames):
         self.numerical_method = numerical_method
@@ -598,21 +567,6 @@ class Model():
             else:
                 return trapz( f * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad ) 
 
-    # def _calculate_shift(self, fluxes=[]):
-        # """
-        # Calculate dphi_i for given feedback flux
-        # dphi_i = (integral_SLbar + F_i) / -(dF_nf + dF_i)
-        # """
-        # numerator   = self.integral_SLbar
-        # spl         = UnivariateSpline(self.lats_rad, self.flux_no_fb, k=4, s=0)
-        # denominator = -spl.derivative()(self.EFE_rad)
-        # for flux in fluxes:
-        #     spl          = UnivariateSpline(self.lats_rad, flux, k=4, s=0)
-        #     # numerator   += spl(self.EFE_rad)
-        #     numerator   += spl(0)
-        #     denominator -= spl.derivative()(self.EFE_rad)
-        # shift = numerator / denominator
-        # return np.rad2deg(shift)
 
     def _calculate_shift(self):
         """
@@ -743,6 +697,10 @@ class Model():
         """
         Calculate each feedback flux and log data on the shifts
         """
+        if self.insolation_type != 'perturbation':
+            print('Calculating EFE...')
+            self._calculate_efe()
+
         print('\nCalculating feedbacks...')
 
         self.plot_fluxes = True
@@ -751,9 +709,14 @@ class Model():
         L_f = self.L_array[-1, :]
         T_f = self.T_array[-1, :]
 
+
         self.S_f = self.S * (1 - self.alb_array[-1, :])
         area = self._integrate_lat(1)
         self.L_bar = 1 / area * self._integrate_lat(L_f)
+
+        ###
+        # ctl_data = np.load(self.EBM_PATH + '/data/control_data.npz')
+        ###
 
         # Total
         self.flux_total = 10**-15 * (2 * np.pi * Re * self.cos_lats) * (- ps / g * D / Re) * np.gradient(E_f, self.dlat_rad)
@@ -780,10 +743,10 @@ class Model():
 
         # No feedbacks
         self.flux_no_fb = self.flux_total - self.flux_all_fb
+        # self.flux_no_fb = self.flux_total - (self.flux_wv + self.flux_planck)
 
         if self.insolation_type == 'annual_mean_clark' and self.olr_type == 'full_wvf':
-            np.savez('control_data.npz', S=self.S_f, L_bar=self.L_bar, flux_total=self.flux_total,
-                flux_planck=self.flux_planck, flux_wv=self.flux_wv, flux_no_fb=self.flux_no_fb)
+            np.savez('control_data.npz', S=self.S_f, L_bar=self.L_bar, flux_total=self.flux_total, flux_planck=self.flux_planck, flux_wv=self.flux_wv, flux_no_fb=self.flux_no_fb, ctl_state_temp=self.state['air_temperature'].values[:, :, :])
 
         self._calculate_shift()
         # I = self.lats.shape[0]//2 + 1
@@ -930,13 +893,15 @@ class Model():
 
             f, ax = plt.subplots(1, figsize=(16, 10))
             ax.plot(self.sin_lats, self.flux_planck, 'r', label='Planck Feedback')
-            ax.plot(self.sin_lats, self.flux_wv_anom, 'b', label='Anomalous Water Vapor Feedback (separate sim)')
+            # ax.plot(self.sin_lats, self.flux_wv_anom, 'b', label='Anomalous Water Vapor Feedback (separate sim)')
             if self.olr_type == 'full_wvf':
                 ax.plot(self.sin_lats, self.flux_wv, 'm', label='Total Water Vapor Feedback')
             # ax.plot(self.sin_lats, self.flux_no_fb, 'g', label='Flux Without Feedbacks')
             # ax.plot(self.sin_lats, self.flux_total - self.flux_planck - self.flux_wv, 'g--', label='Flux Without Planck and WV')
             # ax.plot(self.sin_lats, self.flux_all_fb, 'c', label='All LW Feedbacks')
             # ax.plot(self.sin_lats, self.flux_planck + self.flux_wv, 'c--', label='Planck + Total WV')
+            ax.plot(self.sin_lats, self.flux_no_fb + self.flux_all_fb, 'c', label='No FB + All FB')
+            ax.plot(self.sin_lats, self.flux_no_fb + self.flux_wv + self.flux_planck, 'c--', label='No FB + (Planck + Total WV)')
             ax.plot(self.sin_lats, self.flux_total, 'k', label='Total Energy Flux')
             ax.plot(np.sin(self.EFE_rad), 0,  'ko', label='EFE')
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
