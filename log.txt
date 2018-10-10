@@ -626,3 +626,20 @@ Full ratio: -6.70
 ---
 # Redid sim127 to save full air_temperature from state variable
 # This will allow for calculation of lapse rate feedback and adjustments to how we calculate other feedbacks.
+
+---
+# 10-2
+---
+# Ran full perturbation simulation on PC to see how accurate the taylor expansion is 
+sim128 | perturbation | lat0=15 | M=10 | full_wvf | 
+
+# Output:
+Calculating EFE...
+Logged "15, 4.94, 10, -5.7718429104500277, -3.6939794626880178" in "itcz.log"
+
+Calculating feedbacks...
+Simple Taylor Shift: -5.57
+	Num / Denom = 1.8305489454818156/-18.819695412113372
+Shift with Feedbacks: -5.97
+	Num / Denom = 1.4425129461601305/-13.855172188236882
+

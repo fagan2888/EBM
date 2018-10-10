@@ -34,8 +34,8 @@ if [ "$1" == "-p" ]; then
 	# perturb_spread=9.89
 	# perturb_intensity=None
 	# perturb_intensity=5
-	# perturb_intensity=10
-	perturb_intensity=15
+	perturb_intensity=10
+	# perturb_intensity=15
 	# perturb_intensity=18
 	
 	olr_type=full_wvf
@@ -51,8 +51,8 @@ if [ "$1" == "-p" ]; then
 	RH_lat_profile=mid_and_upper_level_gaussian
 	gaussian_spread1=10
 	gaussian_spread2=45
-	scale_efe=True
-	# scale_efe=False
+	# scale_efe=True
+	scale_efe=False
 	# constant_spec_hum=True
 	constant_spec_hum=False
 	
