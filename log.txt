@@ -643,3 +643,12 @@ Simple Taylor Shift: -5.57
 Shift with Feedbacks: -5.97
 	Num / Denom = 1.4425129461601305/-13.855172188236882
 
+---
+#10-18
+---
+# Ran full albedo anomaly on PC to see if it can equilibrate
+sim129 | annual_mean_clark | full_wvf | albedo_feedback | alb_ice=0.3 | alb_water=0.1
+
+# Results: 
+Equilibration 610 days
+Mean T: 291.17 K
