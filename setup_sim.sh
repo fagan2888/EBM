@@ -12,9 +12,10 @@ initial_condition=legendre
 low=270
 high=305
 
-albedo_feedback=False
-alb_ice=None
-alb_water=None
+albedo_feedback=True
+# albedo_feedback=False
+alb_ice=0.3
+alb_water=0.1
 
 numerical_method=implicit
 frames=100
@@ -113,8 +114,8 @@ if [ "$1" == "-p" ]; then
 elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS
 	
-	# olr_type=full_wvf
-	olr_type=full_no_wvf
+	olr_type=full_wvf
+	# olr_type=full_no_wvf
 	# olr_type=linear
 	A=None
 	# A=-452.68

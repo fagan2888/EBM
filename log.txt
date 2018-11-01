@@ -644,7 +644,7 @@ Shift with Feedbacks: -5.97
 	Num / Denom = 1.4425129461601305/-13.855172188236882
 
 ---
-#10-18
+# 10-18
 ---
 # Ran full albedo anomaly on PC to see if it can equilibrate
 sim129 | annual_mean_clark | full_wvf | albedo_feedback | alb_ice=0.3 | alb_water=0.1
@@ -652,3 +652,26 @@ sim129 | annual_mean_clark | full_wvf | albedo_feedback | alb_ice=0.3 | alb_wate
 # Results: 
 Equilibration 610 days
 Mean T: 291.17 K
+
+---
+# 10-31
+---
+# Created control simulation `data/control_data_alb_feedback.npz`, ran sensitivity experiments on savio
+sim131 | perturbation | lat0=15 | M=5  | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim132 | perturbation | lat0=15 | M=10 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim133 | perturbation | lat0=15 | M=15 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim134 | perturbation | lat0=15 | M=18 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim135 | perturbation | lat0=60 | M=5  | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim136 | perturbation | lat0=60 | M=10 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim137 | perturbation | lat0=60 | M=15 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim138 | perturbation | lat0=60 | M=18 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+
+# Results: 
+15, 4.94,  5, -3.0840001935213621, -1.9737601238536717
+15, 4.94, 10, -5.6283912352728755, -3.6021703905746403
+15, 4.94, 15, -7.9009987009684810, -5.0566391686198280
+15, 4.94, 18, -9.0403596384103686, -5.7858301685826357
+60, 9.89,  5, -1.2605174718629029, -0.8067311819922578
+60, 9.89, 10, -2.1231961807054560, -1.3588455556514918
+60, 9.89, 15, -3.0036368393509232, -1.9223275771845909
+60, 9.89, 18, -3.4641624364306924, -2.2170639593156434
