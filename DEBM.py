@@ -575,22 +575,26 @@ class Model():
         """
         Calculate dphi using control values
         """
-        ctl_data        = np.load(self.EBM_PATH + '/data/control_data.npz')
+        if self.albedo_feedback:
+            ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
+        else:
+            ctl_data = np.load(self.EBM_PATH + '/data/control_data.npz')
         S_ctl           = ctl_data['S']
         L_bar_ctl       = ctl_data['L_bar']
         flux_total_ctl  = ctl_data['flux_total']
-        flux_planck_ctl = ctl_data['flux_planck']
-        flux_wv_ctl     = ctl_data['flux_wv']
-        flux_no_fb_ctl  = ctl_data['flux_no_fb']
+        # flux_planck_ctl = ctl_data['flux_planck']
+        # flux_wv_ctl     = ctl_data['flux_wv']
+        # flux_no_fb_ctl  = ctl_data['flux_no_fb']
 
         dS = self.S_f - S_ctl
+        self.delta_S = - self._calculate_feedback_flux(dS)
         dL_bar = self.L_bar - L_bar_ctl
 
         I_equator = self.lats.shape[0]//2 
 
-        self.dflux_planck1 = self.flux_planck1 - flux_planck_ctl 
-        self.dflux_wv1 = self.flux_wv1 - flux_wv_ctl 
-        dflux_no_fb = self.flux_no_fb - flux_no_fb_ctl 
+        # self.dflux_planck1 = self.flux_planck1 - flux_planck_ctl 
+        # self.dflux_wv1 = self.flux_wv1 - flux_wv_ctl 
+        # dflux_no_fb = self.flux_no_fb - flux_no_fb_ctl 
 
         # Method 1: Do the basic Taylor approx
         numerator = self.flux_total[I_equator]
@@ -655,7 +659,10 @@ class Model():
         self.L_bar = 1 / area * self._integrate_lat(L_f)
 
         # Get CTL data
-        ctl_data = np.load(self.EBM_PATH + '/data/control_data.npz')
+        if self.albedo_feedback:
+            ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
+        else:
+            ctl_data = np.load(self.EBM_PATH + '/data/control_data.npz')
 
         ctl_state_temp = ctl_data['ctl_state_temp']
         pert_state_temp = np.copy(self.state['air_temperature'].values[:, :, :])
@@ -719,8 +726,8 @@ class Model():
         # No feedbacks
         self.flux_no_fb = self.flux_total - self.flux_all_fb
 
-        if self.insolation_type == 'annual_mean_clark' and self.olr_type == 'full_wvf':
-            np.savez('control_data.npz', S=self.S_f, L_bar=self.L_bar, flux_total=self.flux_total, flux_planck=self.flux_planck, flux_wv=self.flux_wv, flux_no_fb=self.flux_no_fb, ctl_state_temp=self.state['air_temperature'].values[:, :, :])
+        # if self.insolation_type == 'annual_mean_clark' and self.olr_type == 'full_wvf':
+        #     np.savez('control_data.npz', S=self.S_f, L_bar=self.L_bar, flux_total=self.flux_total, ctl_state_temp=self.state['air_temperature'].values[:, :, :])
 
         self._calculate_shift()
         # I = self.lats.shape[0]//2 + 1
@@ -868,18 +875,18 @@ class Model():
             f, ax = plt.subplots(1, figsize=(16, 10))
             # ax.plot(self.sin_lats, self.flux_total, 'k', label='Total')
             ax.plot(self.sin_lats, self.delta_flux_total, 'k', label='Total: $F_p - F_{ctl}$')
-            # ax.plot(self.sin_lats, self.dflux_planck1, 'r--', label='$\\sigma T^4_p - \\sigma T^4_{ctl}$')
             ax.plot(self.sin_lats, self.delta_flux_planck,  'r', label='Planck: $L_p - L$; $T_s$ from $ctl$')
-            # ax.plot(self.sin_lats, self.dflux_wv1, 'm--', label='$L_{wv,p} - L_{nowv,p} - (L_{wv, ctl} - L_{nowv, ctl})$')
             ax.plot(self.sin_lats, self.delta_flux_wv, 'm', label='WV: $L_p - L$; $q$ from $ctl$')
             ax.plot(self.sin_lats, self.delta_flux_lr, 'y', label='LR: $L_p - L$; $LR$ from $ctl$')
+            ax.plot(self.sin_lats, self.delta_S, 'c', label='$\\delta S$')
+            ax.plot(self.sin_lats, self.delta_S + self.delta_flux_planck + self.delta_flux_wv + self.delta_flux_lr, 'k--', label='$\\delta S + \\sum F_i$')
             # ax.plot(self.sin_lats, self.flux_no_fb, 'g', label='Flux Without Feedbacks')
             # ax.plot(self.sin_lats, self.flux_total - self.flux_planck - self.flux_wv, 'g--', label='Flux Without Planck and WV')
             # ax.plot(self.sin_lats, self.flux_all_fb, 'c', label='All LW Feedbacks')
             # ax.plot(self.sin_lats, self.flux_planck + self.flux_wv, 'c--', label='Planck + Total WV')
             # ax.plot(self.sin_lats, self.flux_no_fb + self.flux_all_fb, 'c', label='No FB + All FB')
             # ax.plot(self.sin_lats, self.flux_no_fb + self.flux_wv + self.flux_planck, 'c--', label='No FB + (Planck + Total WV)')
-            ax.plot(np.sin(self.EFE_rad), 0,  'ko', label='EFE')
+            ax.plot(np.sin(self.EFE_rad), 0,  'Xr', label='EFE')
 
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
