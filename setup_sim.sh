@@ -14,7 +14,8 @@ high=305
 
 albedo_feedback=True
 # albedo_feedback=False
-alb_ice=0.3
+# alb_ice=0.3
+alb_ice=0.5
 alb_water=0.1
 
 numerical_method=implicit
@@ -196,8 +197,7 @@ elif [ "$1" == "-s" ]; then
 	        sbatch run_EBM.job
 	        
 	        # echo "Logging simulation."
-	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | RH_vert_profile=$RH_vert_profile | RH_lat_profile=$RH_lat_profile | gaussian_spread1=$gaussian_spread1 |"
-	        # log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | A=$A | B=$B |"
+	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | albedo_feedback=$albedo_feedback | alb_ice=$alb_ice | alb_water=$alb_water |"
 	        echo "Adding line to log.txt: $log"
 	        echo $log >> ${EBM_PATH}/log.txt 
 	        
