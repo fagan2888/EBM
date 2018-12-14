@@ -57,28 +57,39 @@ class EnergyBalanceModel():
     EBM_PATH = os.environ['EBM_PATH']
     
     def __init__(self, N_pts=100, dtmax_multiple=1.0, max_sim_years=2, tol=0.001):
+        # Setup grid
         self.N_pts = N_pts
         self.dx = 2 / (N_grid_pts - 1)
         self.sin_lats = np.linspace(-1.0 + self.dx/2, 1.0 - self.dx/2, int(2/self.dx) + 1)
-        self.lats = np.rad2deg(np.arcsin(self.sin_lats))
-        self.lats_rad = np.deg2rad(self.lats)
-        self.cos_lats = np.cos(self.lats_rad)
-        self.dtmax = 0.5 * self.dx**2 / (D / Re**2)
-        # self.dtmax1          = 0.5 * np.min(np.abs(self.cos_lats)) * self.dx**2 / (D / Re**2)
-        # self.dtmax2          = self.dx / (np.max(np.abs(self.sin_lats)) * (D / Re))
-        # self.dtmax           = np.min([self.dtmax1, self.dtmax2])
-        # self.dtmax          = 0.5 * np.min(np.abs(self.cos_lats)) * self.dx**2 / (D / Re**2)
+        self.lats = np.arcsin(self.sin_lats)
+
+        # Calculate stable dt
+        diffusivity = D / Re**2 * np.cos(self.lats)**2
+        dtmax_diff = 0.5 * self.dx**2 / np.max(diffusivity)
+        velocity = D / Re**2 * np.sin(self.lats)
+        dtmax_cfl = self.dx / np.max(velocity)
+        self.dtmax = np.min(dtmax_diff, dtmax_cfl)
         self.dt              = dtmax_multiple * self.dtmax
+
+        # Create useful constants
         self.max_sim_years   = max_sim_years
         self.secs_in_min     = 60 
         self.secs_in_hour    = 60  * self.secs_in_min 
         self.secs_in_day     = 24  * self.secs_in_hour 
         self.secs_in_year    = 365 * self.secs_in_day 
+
+        # Cut off iterations
         self.max_iters       = int(self.max_sim_years * self.secs_in_year / self.dt)
+
+        # Tolerance for dT/dt
         self.tol             = tol
+
+        # Datasets for numpy search sorted
         self.T_dataset       = np.arange(100, 400, 1e-3)
         self.q_dataset       = self._humidsat(self.T_dataset, ps/100)[1]
         self.E_dataset       = cp*self.T_dataset + RH*self.q_dataset*Lv
+
+        # Boolean options
         self.plot_fluxes     = False
         self.plot_efe        = False
 
