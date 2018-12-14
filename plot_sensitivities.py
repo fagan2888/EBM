@@ -51,8 +51,8 @@ files = {
         # 'perturbed_efe_planck_linear.dat':                   ['Linear Planck OLR (Solden & Held)',         'firebrick'],
         # 'perturbed_efe_planck_linear_fit.dat':               ['Linear Planck OLR Fit',                     'lawngreen'],
 
-        'perturbed_efe_full_wvf_mid_level_gaussian5.dat':    ['CliMT Interactive WV (mid level gaussian)', 'red'],
-        'perturbed_efe_full_no_wvf_mid_level_gaussian5.dat': ['CliMT Prescribed WV (mid level gaussian)',  'blue'],
+        'perturbed_efe_full_wvf_mid_level_gaussian5.dat':    ['CliMT Interactive WV', 'red'],
+        'perturbed_efe_full_no_wvf_mid_level_gaussian5.dat': ['CliMT Prescribed WV',  'blue'],
 
         # 'perturbed_efe_full_wvf.dat':                        ['CliMT Interactive WV',                      'red'],
         # 'perturbed_efe_full_wvf_linear.dat':                 ['Linear Interactive WV (Solden & Held)',     'pink'],
@@ -61,6 +61,9 @@ files = {
         # 'perturbed_efe_full_no_wvf.dat':                     ['CliMT Prescribed WV',                       'green'],
         # 'perturbed_efe_full_no_wvf_linear.dat':              ['Linear Prescribed WV (Solden & Held)',      'black'],
         # 'perturbed_efe_full_no_wvf_linear_fit.dat':          ['Linear CliMT Prescribed WV Fit',            'purple']
+
+        'perturbed_efe_full_wvf_alb_feedback.dat': ['CliMT Interactive WV, Albedo Feedback 0.3',  'pink'],
+        'perturbed_efe_full_wvf_alb_feedback0.5.dat': ['CliMT Interactive WV, Albedo Feedback 0.5',  'cyan'],
         }
 color_dict = mcolors.CSS4_COLORS
 
