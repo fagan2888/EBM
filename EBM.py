@@ -63,8 +63,8 @@ class EnergyBalanceModel():
     def __init__(self, N_pts=100, dtmax_multiple=1.0, max_sim_years=2, tol=0.001):
         # Setup grid
         self.N_pts = N_pts
-        self.dx = 2 / (N_pts - 1)
-        self.sin_lats = np.linspace(-1.0 + self.dx/2, 1.0 - self.dx/2, int(2/self.dx) + 1)
+        self.dx = 2 / N_pts
+        self.sin_lats = np.linspace(-1.0 + self.dx/2, 1.0 - self.dx/2, N_pts)
         self.lats = np.arcsin(self.sin_lats)
 
         # Calculate stable dt
@@ -320,7 +320,7 @@ class EnergyBalanceModel():
         if self.numerical_method == 'explicit':
             self.E = self.E + self.dt * g/ps * ((1 - self.alb) * self.S - self.L(self.T)) + self.dt * D / Re**2 * (1 - self.sin_lats**2) / self.dx**2 * (np.roll(self.E, -1) - 2 * self.E + np.roll(self.E, 1)) - self.dt * D / Re**2 * self.sin_lats / self.dx * (np.roll(self.E, -1) - np.roll(self.E, 1)) 
         elif self.numerical_method == 'implicit':
-            self.E = np.dot(self.B, self.E)#+ self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ))
+            self.E = np.dot(self.B, self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ))
     
         # insulated boundaries
         self.E[0] = self.E[1]; self.E[-1] = self.E[-2]
@@ -342,6 +342,7 @@ class EnergyBalanceModel():
         else:
             print('frame = {:5d}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, T_avg, error))
 
+
     def solve(self, numerical_method, frames):
         """
         Loop through integration time steps.
@@ -350,16 +351,23 @@ class EnergyBalanceModel():
 
         if numerical_method == 'implicit':
             beta = D / Re**2 * self.dt * (1 - self.sin_lats**2) / self.dx**2
-            alpha = D / Re * self.dt * self.sin_lats / self.dx
+            alpha = D / Re**2 * self.dt * self.sin_lats / self.dx
 
             A = (np.diag(1 + 2 * beta, k=0) + np.diag(alpha[:-1] - beta[:-1], k=1) + np.diag(-beta[1:] - alpha[1:], k=-1))
+
             self.B = np.linalg.inv(A)
+
 
         print('\nModel Params:')
         print("dtmax:            {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax / self.secs_in_day))
         print("dt:               {:.2f} s / {:.4f} days = {:.2f} * dtmax".format(self.dt, self.dt / self.secs_in_day, self.dt / self.dtmax))
         print("max_sim_years:    {} years = {:.0f} iterations".format(self.max_sim_years, self.max_iters))
         print("dx:               {:.5f}".format(self.dx))
+        print("max dlat:         {:.5f}".format(np.rad2deg(np.max(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
+        print("min dlat:         {:.5f}".format(np.rad2deg(np.min(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
+        print("max dlat:         {:.5f}".format(np.rad2deg(np.max(np.abs(self.dx / np.cos(self.lats))))))
+        print("min dlat:         {:.5f}".format(np.rad2deg(np.min(np.abs(self.dx / np.cos(self.lats))))))
+        print(np.rad2deg(self.lats))
         print("tolerance:        |dT/dt| < {:.2E}".format(self.tol))
         print("frames:           {}\n".format(frames))
         

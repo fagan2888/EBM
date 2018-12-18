@@ -43,7 +43,7 @@ elif show == 'L':
 ax.set_title('EBM frame = 0')
 plt.tight_layout(pad=3)
 
-dx = 2 / (array.shape[1] - 1)
+dx = 2 / array.shape[1]
 sin_lats = np.linspace(-1.0 + dx/2, 1.0 - dx/2, array.shape[1])
 
 line, = ax.plot(sin_lats, array[0, :], 'b')
