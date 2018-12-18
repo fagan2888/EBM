@@ -698,3 +698,16 @@ sim146 | perturbation | lat0=60 | M=18 | full_wvf | albedo_feedback=True | alb_i
 60, 9.89, 10, -2.3995676571210098, -1.5357233005574464
 60, 9.89, 15, -3.0920394614862370, -1.9789052553511917
 60, 9.89, 18, -3.5641399500842343, -2.2810495680539100
+
+---
+#12-17
+---
+I have converted the model to $x = \sin \phi$ coordinates. It only works with an explicity step method so far. 
+Here I perform some convergence tests. 
+
+N_pts | tol  | dt  | Mean T | SW - LW
+--------------------------------------
+200   | 1E-8 | 0.5 | 306.95 | -0.45745
+300   | 1E-8 | 0.5 | 306.76 | -0.27276
+400   | 1E-8 | 0.5 | 306.66 | -0.17913
+500   | 1E-8 | 0.5 | 306.61 | -0.12237
