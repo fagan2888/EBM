@@ -700,7 +700,7 @@ sim146 | perturbation | lat0=60 | M=18 | full_wvf | albedo_feedback=True | alb_i
 60, 9.89, 18, -3.5641399500842343, -2.2810495680539100
 
 ---
-#12-17
+# 12-17
 ---
 I have converted the model to $x = \sin \phi$ coordinates. It only works with an explicity step method so far. 
 Here I perform some convergence tests. 
@@ -711,3 +711,53 @@ N_pts | tol  | dt  | Mean T | SW - LW
 300   | 1E-8 | 0.5 | 306.76 | -0.27276
 400   | 1E-8 | 0.5 | 306.66 | -0.17913
 500   | 1E-8 | 0.5 | 306.61 | -0.12237
+
+---
+# 12-18
+---
+Minor changes have been made that make the above table's numbers slightly different from what I would get now. 
+Mainly, I adjusted how N_pts works, so the array is a different size.
+
+The more important update for today is that I have implemented explicit, semi-implicit, and implicit schemes.
+All of them are set up in the `solve` method by creating the matrix `self.take_step_matrix`.
+
+# Convergence tests (planck radiation, implicit, M=0)
+sim139 | N_pts=300 | dtmax_multiple=0.5 | tol=1e-7 | T=306.18 | SW-LW=0.86135
+sim140 | N_pts=300 | dtmax_multiple=1.5 | tol=1e-7 | T=306.18 | SW-LW=0.86743
+sim141 | N_pts=300 | dtmax_multiple=5.0 | tol=1e-7 | T=306.17 | SW-LW=0.88300
+sim142 | N_pts=300 | dtmax_multiple=0.5 | tol=1e-8 | T=306.73 | SW-LW=-0.20994
+sim143 | N_pts=300 | dtmax_multiple=1.5 | tol=1e-8 | T=306.73 | SW-LW=-0.20487
+sim144 | N_pts=300 | dtmax_multiple=5.0 | tol=1e-8 | T=306.72 | SW-LW=-0.18860
+sim145 | N_pts=300 | dtmax_multiple=0.5 | tol=1e-9 | T=306.78 | SW-LW=-0.31554
+sim146 | N_pts=300 | dtmax_multiple=1.5 | tol=1e-9 | T=306.78 | SW-LW=-0.30940
+sim147 | N_pts=300 | dtmax_multiple=5.0 | tol=1e-9 | T=306.77 | SW-LW=-0.29295
+
+sim148 | N_pts=400 | dtmax_multiple=0.5 | tol=1e-7 | T=306.10 | SW-LW=0.92884
+sim149 | N_pts=400 | dtmax_multiple=1.5 | tol=1e-7 | T=306.10 | SW-LW=0.93177
+sim150 | N_pts=400 | dtmax_multiple=5.0 | tol=1e-7 | T=306.09 | SW-LW=0.94214
+sim151 | N_pts=400 | dtmax_multiple=0.5 | tol=1e-8 | T=306.64 | SW-LW=-0.13266
+sim152 | N_pts=400 | dtmax_multiple=1.5 | tol=1e-8 | T=306.64 | SW-LW=-0.12990
+## sim153 | N_pts=400 | dtmax_multiple=5.0 | tol=1e-8 | T=306.63 | SW-LW=-0.12032
+sim154 | N_pts=400 | dtmax_multiple=0.5 | tol=1e-9 | T=306.69 | SW-LW=-0.23531
+sim155 | N_pts=400 | dtmax_multiple=1.5 | tol=1e-9 | T=306.69 | SW-LW=-0.23381
+sim156 | N_pts=400 | dtmax_multiple=5.0 | tol=1e-9 | T=306.69 | SW-LW=-0.22441
+
+sim157 | N_pts=500 | dtmax_multiple=0.5 | tol=1e-7 | T=306.05 | SW-LW=0.97002
+sim158 | N_pts=500 | dtmax_multiple=1.5 | tol=1e-7 | T=306.05 | SW-LW=0.97160
+sim159 | N_pts=500 | dtmax_multiple=5.0 | tol=1e-7 | T=306.04 | SW-LW=0.97945
+sim160 | N_pts=500 | dtmax_multiple=0.5 | tol=1e-8 | T=306.59 | SW-LW=-0.08582
+sim161 | N_pts=500 | dtmax_multiple=1.5 | tol=1e-8 | T=306.59 | SW-LW=-0.08401
+## sim162 | N_pts=500 | dtmax_multiple=5.0 | tol=1e-8 | T=306.58 | SW-LW=-0.07760
+sim163 | N_pts=500 | dtmax_multiple=0.5 | tol=1e-9 | T=306.64 | SW-LW=-0.18880
+sim164 | N_pts=500 | dtmax_multiple=1.5 | tol=1e-9 | T=306.64 | SW-LW=-0.18704
+## sim165 | N_pts=500 | dtmax_multiple=5.0 | tol=1e-9 | T=306.64 | SW-LW=-0.18096
+
+==> Conclusions: 
+- tol=1e-8 seems to be the sweet spot
+- Best combo is tol=1e-8 dtmax_multiple=5.0, N_pts=500 for SW-LW.
+- if we take tol=1e-9, dtmax_multiple=0.5, N_pts=500 to be the "best", then t=306.64 is the goal.
+	- this is met with just tol=1e-8, dtmax_multiple=5.0, N_pts=400 and it has a reasonable SW-LW.
+	==> Choosing sim153 setup
+
+# Control simulation with full_wvf at sim153 setup, saving to 
+sim166 | lat0=15 | M=0 | full_wvf |

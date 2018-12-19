@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 ################################################################################
-# This file contains the class for a diffusive moist static energy balance 
-# model. 
+# This file contains the code of my Diffusive Energy Balance Model.
+#   It has customizable OLR, Insolation, Albedo, and more. We use
+#   it to test how different processes affect atmospheric 
+#   sensitivity.
 #
 # Henry G. Peterson with Bill Boos, 2018
 ################################################################################
@@ -52,50 +54,34 @@ sig = 5.67e-8  #J/s/m2/K4
 ################################################################################
 ### CLASS 
 ################################################################################
-class EnergyBalanceModel():
-    """
-    Diffusive moist static energy balance model
-    """
+class Model():
     
-    # This path must be set in your OS environment!
     EBM_PATH = os.environ['EBM_PATH']
     
-    def __init__(self, N_pts=100, dtmax_multiple=1.0, max_sim_years=2, tol=0.001):
-        # Setup grid
-        self.N_pts = N_pts
-        self.dx = 2 / N_pts
-        self.sin_lats = np.linspace(-1.0 + self.dx/2, 1.0 - self.dx/2, N_pts)
-        self.lats = np.arcsin(self.sin_lats)
-
-        # Calculate stable dt
-        diffusivity = D / Re**2 * np.cos(self.lats)**2
-        dtmax_diff = 0.5 * self.dx**2 / np.max(diffusivity)
-        velocity = D / Re**2 * np.sin(self.lats)
-        dtmax_cfl = self.dx / np.max(velocity)
-        self.dtmax = np.min([dtmax_diff, dtmax_cfl])
-        self.dt = dtmax_multiple * self.dtmax
-
-        # Create useful constants
-        self.max_sim_years = max_sim_years
-        self.secs_in_min = 60 
-        self.secs_in_hour = 60  * self.secs_in_min 
-        self.secs_in_day = 24  * self.secs_in_hour 
-        self.secs_in_year = 365 * self.secs_in_day 
-
-        # Cut off iterations
-        self.max_iters = int(self.max_sim_years * self.secs_in_year / self.dt)
-
-        # Tolerance for dT/dt
-        self.tol = tol
-
-        # Datasets for numpy search sorted
-        self.T_dataset = np.arange(100, 400, 1e-3)
-        self.q_dataset = self._humidsat(self.T_dataset, ps/100)[1]
-        self.E_dataset = cp*self.T_dataset + RH*self.q_dataset*Lv
-
-        # Boolean options
-        self.plot_fluxes = False
-        self.plot_efe = False
+    def __init__(self, dlat=0.5, dtmax_multiple=1.0, max_sim_years=2, tol=0.001):
+        self.dlat            = dlat
+        self.dlat_rad        = np.deg2rad(dlat)
+        # self.dy              = Re * self.dlat_rad
+        self.dtmax           = 0.5 * self.dlat_rad**2 / (D / Re**2)
+        self.dt              = dtmax_multiple * self.dtmax
+        self.max_sim_years   = max_sim_years
+        self.secs_in_min     = 60 
+        self.secs_in_hour    = 60  * self.secs_in_min 
+        self.secs_in_day     = 24  * self.secs_in_hour 
+        self.secs_in_year    = 365 * self.secs_in_day 
+        self.max_iters       = int(self.max_sim_years * self.secs_in_year / self.dt)
+        self.tol             = tol
+        self.lats            = np.linspace(-90 + dlat/2, 90 - dlat/2, int(180/dlat) + 1)
+        self.lats_rad        = np.deg2rad(self.lats)
+        self.lats_bounds     = np.linspace(-90, 90, int(180/dlat) + 2)
+        self.cos_lats        = np.cos(np.deg2rad(self.lats))
+        self.cos_lats_bounds = np.cos(np.deg2rad(self.lats_bounds))
+        self.sin_lats        = np.sin(np.deg2rad(self.lats))
+        self.T_dataset       = np.arange(100, 400, 1e-3)
+        self.q_dataset       = self._humidsat(self.T_dataset, ps/100)[1]
+        self.E_dataset       = cp*self.T_dataset + RH*self.q_dataset*Lv
+        self.plot_fluxes     = False
+        self.plot_efe        = False
 
 
     def _humidsat(self, t, p):
@@ -138,11 +124,9 @@ class EnergyBalanceModel():
 
 
     def initial_temperature(self, initial_condition, low=None, high=None):
-        """
-        Set the initial temperature distribution.
-        """
         self.initial_condition = initial_condition
         if initial_condition == 'triangle':
+            # self.init_temp = high - (high - low) / 90 * np.abs(self.lats)
             self.init_temp = high - (high - low) * np.abs(self.sin_lats)
         elif initial_condition == 'legendre':
             self.init_temp = 2/3*high + 1/3*low - 2/3 * (high-low) * 1/2 * (3 * self.sin_lats**2 - 1)
@@ -150,29 +134,52 @@ class EnergyBalanceModel():
             self.init_temp = np.load('T_array.npz')['arr_0'][-1, :]
 
 
-    def insolation(self, insolation_type, perturb_center=None, perturb_spread=None, perturb_intensity=None):
-        """
-        Set the incoming shortwave radiation.
-        """
+    def insolation(self, insolation_type, perturb_center=None, 
+            perturb_spread=None, perturb_intensity=None):
         self.insolation_type = insolation_type
-        if insolation_type == 'perturbation':
+        if insolation_type == 'annual_mean':
+            obliquity = np.deg2rad(23.4)
+            eccentricity = 0.0167
+            Q0 = S0/4
+            Q = Q0 / np.sqrt(1 - eccentricity**2)
+            p2 = lambda y: (3*y**2 - 1)/2
+            p4 = lambda y: (35*y**4 - 30*y**2 + 3)/8
+            p6 = lambda y: (231*y**6 - 315*y**4 + 105*y**2 - 5)/16
+            cosB = np.cos(obliquity)
+            s_approx = lambda y: 1 - 5/8*p2(cosB)*p2(y) - 9/64*p4(cosB)*p4(y) - 65/1024*p6(cosB)*p6(y)
+            get_S = lambda lat: Q * s_approx(np.sin(np.deg2rad(lat)))
+        elif insolation_type == 'annual_mean_clark':
+            get_S = lambda lat: S0*np.cos(np.deg2rad(lat))/np.pi
+        elif insolation_type == 'perturbation':
             self.perturb_center = perturb_center
             self.perturb_spread = perturb_spread
             self.perturb_intensity = perturb_intensity
-
-            S_control = S0 / np.pi * np.cos(self.lats)
-
+            get_S_control = lambda lat: S0*np.cos(np.deg2rad(lat))/np.pi
             func = lambda y: 0.5 * np.exp(-(y - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2)) * np.cos(y)
             perturb_normalizer, er = quadrature(func, -np.pi/2, np.pi/2, tol=1e-16, rtol=1e-16, maxiter=1000)
-
-            dS = -perturb_intensity/perturb_normalizer * np.exp(-(self.lats - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
-            self.S = S_control + dS
+            get_dS = lambda lat: - perturb_intensity/perturb_normalizer * np.exp(-(lat - perturb_center)**2 / (2*perturb_spread**2))
+            get_S = lambda lat: get_S_control(lat) + get_dS(lat)
+        elif insolation_type == 'summer_mean':
+            dec = np.deg2rad(23.45/2)
+            get_h0 = lambda lat: np.arccos( -np.tan(np.deg2rad(lat)) * np.tan(dec))
+            def get_S(lat_array):
+                ss = np.zeros(len(lat_array))
+                for i in range(len(lat_array)):
+                    lat = lat_array[i]
+                    if lat >= 90 - np.rad2deg(dec):
+                        h0 = np.pi
+                    elif lat <= -90 + np.rad2deg(dec):
+                        h0 = 0
+                    else:
+                        h0 = get_h0(lat)
+                    s = S0 / np.pi * (h0*np.sin(np.deg2rad(lat))*np.sin(dec) + np.cos(np.deg2rad(lat))*np.cos(dec)*np.sin(h0))
+                    ss[i] = s
+                return ss
+            
+        self.S = get_S(self.lats)
 
 
     def albedo(self, albedo_feedback=False, alb_ice=None, alb_water=None):
-        """
-        Set surface albedo.
-        """
         self.albedo_feedback = albedo_feedback
         self.alb_ice = alb_ice
         self.alb_water = alb_water
@@ -186,18 +193,12 @@ class EnergyBalanceModel():
         # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
             self.init_alb = (40 / 342) * np.ones(len(self.lats))
 
-        # if self.albedo_feedback:
-        #     self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
-        # else:
-        #     self.ctl_data = np.load(self.EBM_PATH + '/data/control_data.npz')
-
         self.alb = self.init_alb
 
 
-    def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, RH_vert_profile=None, RH_lat_profile=None, gaussian_spread=None, constant_spec_hum=False):
-        """
-        Set outgoing longwave radiation.
-        """
+    def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, 
+            RH_vert_profile=None, RH_lat_profile=None, gaussian_spread1=None, 
+			gaussian_spread2=None, scale_efe=False, constant_spec_hum=False):
         self.olr_type = olr_type
         if olr_type == 'planck':
             """ PLANCK RADIATION """
@@ -218,7 +219,7 @@ class EnergyBalanceModel():
             self.nLevels = 30
             self.radiation = climt.RRTMGLongwave(cloud_overlap_method='clear_only')
             self.state = climt.get_default_state([self.radiation], x={}, 
-                            y={'label' : 'latitude', 'values': self.lats, 'units' : 'radians'},
+                            y={'label' : 'latitude', 'values': self.lats, 'units' : 'degress N'},
                             mid_levels={'label' : 'mid_levels', 'values': np.arange(self.nLevels), 'units' : ''},
                             interface_levels={'label' : 'interface_levels', 'values': np.arange(self.nLevels + 1), 'units' : ''}
                             )
@@ -236,20 +237,65 @@ class EnergyBalanceModel():
                         self.RH_dist[:, i] = 0
                     elif pressures[i]/100 > 300 and pressures[i]/100 < 800:
                         self.RH_dist[:, i] = 0.2
+            elif RH_vert_profile == 'zero_top':
+                for i in range(self.nLevels):
+                    # 0-200:    0
+                    # 200-1000: 0.8
+                    if pressures[i]/100 < 200:
+                        self.RH_dist[:, i] = 0
+            else:
+                RH_vert_profile = 'constant'
             self.RH_vert_profile = RH_vert_profile
 
             # Latitudinal RH profile
             gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )
-            if RH_lat_profile == 'mid_level_gaussian':
-                spread = np.deg2rad(gaussian_spread)
-                lat_efe = 0
-                midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]
-                def shift_dist(RH_dist, lat_center):
-                    RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat_center, spread, self.lats), len(midlevels)).reshape( (self.N_pts, len(midlevels)) )
+            if RH_lat_profile == 'gaussian':
+                spread = 45
+                lat0 = 0
+                def shift_dist(RH_dist, lat0):
+                    if scale_efe:
+                        lat0 *= 0.64
+                    RH_dist *=  np.repeat(gaussian(lat0, spread, self.lats), 
+                        self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
                     return RH_dist
-                self.RH_dist = shift_dist(self.RH_dist, lat_efe)
+                self.RH_dist = shift_dist(self.RH_dist, lat0)
+            elif RH_lat_profile == 'mid_level_gaussian':
+                spread = gaussian_spread1
+                lat0 = 0
+                midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]
+                def shift_dist(RH_dist, lat0):
+                    if scale_efe:
+                        lat0 *= 0.64
+                    RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread, self.lats), 
+                        len(midlevels)).reshape( (self.lats.shape[0], len(midlevels)) )
+                    return RH_dist
+                self.RH_dist = shift_dist(self.RH_dist, lat0)
+            elif RH_lat_profile == 'mid_and_upper_level_gaussian':
+                spread1 = gaussian_spread1
+                spread2 = gaussian_spread2
+                lat0 = 0
+                midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]
+                upperlevels = np.where( np.logical_and(pressures/100 < 300, pressures/100 > 200) )[0]
+                def shift_dist(RH_dist, lat0):
+                    if scale_efe:
+                        lat0 *= 0.64
+                    RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread1, self.lats), 
+                        len(midlevels)).reshape( (self.lats.shape[0], len(midlevels)) )
+                    RH_dist[:, upperlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat0, spread2, self.lats), 
+                        len(upperlevels)).reshape( (self.lats.shape[0], len(upperlevels)) )
+                    return RH_dist
+                self.RH_dist = shift_dist(self.RH_dist, lat0)
+            else:
+                RH_lat_profile = 'constant'
             self.RH_lat_profile = RH_lat_profile
-            self.gaussian_spread = gaussian_spread
+            self.gaussian_spread1 = gaussian_spread1
+            self.gaussian_spread2 = gaussian_spread2
+
+            ## Debug:
+            # plt.imshow(self.RH_dist.T, extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
+            # plt.colorbar()
+            # plt.show()
+            # os.sys.exit()
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
             moist_data = np.load(self.EBM_PATH + '/data/moist_adiabat_data.npz')
@@ -263,7 +309,7 @@ class EnergyBalanceModel():
             self.interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures_flipped, Tdata)
 
             if water_vapor_feedback == False:
-                T_control = self.ctl_data["ctl_state_temp"].values[0, :, 0]
+                T_control = np.load(self.EBM_PATH + '/data/T_array_{}_{}{}_n{}.npz'.format(self.RH_vert_profile, self.RH_lat_profile, self.gaussian_spread1, self.lats.shape[0]))['arr_0']
                 T_control = T_control[-1, :]
                 Tgrid_control = np.repeat(T_control, 
                         pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
@@ -281,11 +327,6 @@ class EnergyBalanceModel():
             self.pressures = pressures
             self.pressures_flipped = pressures_flipped
        
-            # # Debug:
-            # plt.imshow(self.RH_dist.T, extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
-            # plt.colorbar()
-            # plt.show()
-
             def L(T):
                 """ 
                 OLR function.
@@ -306,8 +347,8 @@ class EnergyBalanceModel():
                     if RH_lat_profile != 'constant':
                         # Change RH based on ITCZ
                         E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
-                        lat_efe = self.lats[np.argmax(E)] 
-                        self.RH_dist = shift_dist(self.RH_dist, lat_efe)
+                        lat0 = self.lats[np.argmax(E)] 
+                        self.RH_dist = shift_dist(self.RH_dist, lat0)
                     self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(self.state['air_temperature'].values[0, :, :], 
                             self.state['air_pressure'].values[0, :, :] / 100)[1]
                 # CliMT takes over here, this is where the slowdown occurs
@@ -321,11 +362,10 @@ class EnergyBalanceModel():
 
 
     def take_step(self):
-        """
-        Take single time step for integration.
-        """
-        # step forward using the take_step_matrix set up in self.solve()
-        self.E = np.dot(self.take_step_matrix, self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
+        if self.numerical_method == 'explicit':
+            self.E = self.E + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) ) + self.dt * D / Re**2 / self.cos_lats * np.gradient( (np.gradient(self.E, self.dlat_rad) * self.cos_lats), self.dlat_rad)
+        elif self.numerical_method == 'implicit':
+            self.E = np.dot(self.C, self.E) + self.dt * g/ps * ( (1-self.alb)*self.S - self.L(self.T) )
     
         # insulated boundaries
         self.E[0] = self.E[1]; self.E[-1] = self.E[-2]
@@ -338,48 +378,65 @@ class EnergyBalanceModel():
 
 
     def _print_progress(self, frame, error):
-        """ 
-        Print the progress of the integration.
-        """
+        """ Print the progress of the integration """
         T_avg = np.mean(self.T)
         if frame == 0:
             print('frame = {:5d}; T_avg = {:3.1f}'.format(0, T_avg))
         else:
             print('frame = {:5d}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, T_avg, error))
 
-
     def solve(self, numerical_method, frames):
-        """
-        Loop through integration time steps.
-        """
-        # begin by computing the take_step_matrix for particular scheme
         self.numerical_method = numerical_method
         if numerical_method == 'implicit':
-            eta = 1
-        elif numerical_method == 'explicit':
-            eta = 0
-        elif numerical_method == 'semi-implicit':
-            eta = 0.5
-        
-        beta = D / Re**2 * self.dt * (1 - self.sin_lats**2) / self.dx**2
-        alpha = D / Re**2 * self.dt * self.sin_lats / self.dx
+            K  = D / Re**2 * self.dt / self.dlat_rad**2
+            c1 = K * np.ones(self.lats.shape)
+            c2 = K * self.cos_lats_bounds
 
-        matrix1 = (np.diag(1 + 2 * eta * beta, k=0) + np.diag(eta * alpha[:-1] - eta * beta[:-1], k=1) + np.diag(-eta * beta[1:] - eta * alpha[1:], k=-1))
-        matrix2 = (np.diag(1 - 2 * (1 - eta) * beta, k=0) + np.diag((1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], k=1) + np.diag((1 - eta) * beta[1:] + (1 - eta) * alpha[1:], k=-1))
-         
-        self.take_step_matrix = np.dot(np.linalg.inv(matrix1), matrix2)
+            J         = self.cos_lats_bounds.size - 1
+            weight1   = self.cos_lats_bounds
+            weight2   = self.cos_lats
+            weightedK = weight1 * K
+            Ka1       = weightedK[0:J] / weight2
+            Ka3       = weightedK[1:J+1] / weight2
+            Ka2       = np.insert(Ka1[1:J], 0, 0) + np.append(Ka3[0:J-1], 0)
+            A         = (np.diag(1 + Ka2, k=0) +
+                        np.diag(-Ka3[0:J-1], k=1) +
+                        np.diag(-Ka1[1:J], k=-1))
 
+            self.C = np.linalg.inv(A)
+        #elif numerical_method == 'semi-implicit':
+        #    alpha = 0.5
+            
+        #    r = D * self.dt / self.dy**2
+            
+        #    A = np.zeros((len(self.lats), len(self.lats)))
+        #    B = np.zeros((len(self.lats), len(self.lats)))
+            
+        #    rng = np.arange(len(self.lats)-1)
+            
+        #    np.fill_diagonal(A, 2 + 2*r)
+        #    A[rng, rng+1] = -r   
+        #    A[rng+1, rng] = -r   
+            
+        #    np.fill_diagonal(B, 2 - 2*r) 
+        #    B[rng, rng+1] = r   
+        #    B[rng+1, rng] = r   
+            
+        #    #insulated boundaries
+        #    A[0, 0] = 1; A[0, 1] = -1
+        #    A[-1, -2] = 1; A[-1, -1] = -1
+            
+        #    B[0, 0] = 1; B[0, 1] = -1
+        #    B[-1, -2] = 1; B[-1, -1] = -1
+            
+        #    Ainv = np.linalg.inv(A)
+        #    self.C = np.dot(Ainv, B)
 
-        # Print some useful information
         print('\nModel Params:')
         print("dtmax:            {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax / self.secs_in_day))
         print("dt:               {:.2f} s / {:.4f} days = {:.2f} * dtmax".format(self.dt, self.dt / self.secs_in_day, self.dt / self.dtmax))
         print("max_sim_years:    {} years = {:.0f} iterations".format(self.max_sim_years, self.max_iters))
-        print("dx:               {:.5f}".format(self.dx))
-        # print("max dlat:         {:.5f}".format(np.rad2deg(np.max(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
-        # print("min dlat:         {:.5f}".format(np.rad2deg(np.min(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
-        # print("max dlat:         {:.5f}".format(np.rad2deg(np.max(np.abs(self.dx / np.cos(self.lats))))))
-        # print("min dlat:         {:.5f}".format(np.rad2deg(np.min(np.abs(self.dx / np.cos(self.lats))))))
+        print("dlat:             {:.2f} degrees".format(self.dlat))
         print("tolerance:        |dT/dt| < {:.2E}".format(self.tol))
         print("frames:           {}\n".format(frames))
         
@@ -397,26 +454,24 @@ class EnergyBalanceModel():
             print('\tRH Latitudinal Profile: {}'.format(self.RH_lat_profile))
         print('Numerical Method:  {}\n'.format(self.numerical_method))
         
-        # Setup arrays to save data in
-        T_array = np.zeros((frames, self.lats.shape[0]))
-        E_array = np.zeros((frames, self.lats.shape[0]))
+        T_array   = np.zeros((frames, self.lats.shape[0]))
+        E_array   = np.zeros((frames, self.lats.shape[0]))
         alb_array = np.zeros((frames, self.lats.shape[0]))
-        L_array = np.zeros((frames, self.lats.shape[0]))
+        L_array   = np.zeros((frames, self.lats.shape[0]))
         if self.olr_type in ['full_wvf', 'full_no_wvf']:
-            q_array = np.zeros((frames, self.lats.shape[0], self.nLevels))
+            q_array   = np.zeros((frames, self.lats.shape[0], self.nLevels))
         
-        self.T = self.init_temp
-        self.E = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
-        self.alb = self.init_alb
+        self.T    = self.init_temp
+        self.E    = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
+        self.alb  = self.init_alb
 
-        # Loop through self.take_step() until converged
-        t0 = clock()
+        t0          = clock()
         its_per_frame = int(self.max_iters / (frames - 1))
         for frame in range(frames):
-            T_array[frame, :] = self.T
-            E_array[frame, :] = self.E
-            L_array[frame, :] = self.L(self.T)
-            alb_array[frame, :] = self.alb
+            T_array[frame, :]    = self.T
+            E_array[frame, :]    = self.E
+            L_array[frame, :]    = self.L(self.T)
+            alb_array[frame, :]  = self.alb
             if self.olr_type in ['full_wvf', 'full_no_wvf']:
                 q_array[frame, :, :] = self.state['specific_humidity'].values[0, :, :]
 
@@ -425,12 +480,12 @@ class EnergyBalanceModel():
             self._print_progress(frame, error)
 
             if error < self.tol:
-                T_array = T_array[:frame+1, :]
-                E_array = E_array[:frame+1, :]
+                T_array   = T_array[:frame+1, :]
+                E_array   = E_array[:frame+1, :]
                 alb_array = alb_array[:frame+1, :]
-                L_array = L_array[:frame+1, :]
+                L_array   = L_array[:frame+1, :]
                 if self.olr_type in ['full_wvf', 'full_no_wvf']:
-                    q_array = q_array[:frame+1, :]
+                    q_array      = q_array[:frame+1, :]
                 print('Equilibrium reached in {:8.5f} days ({} iterations).'.format(frame * its_per_frame * self.dt / self.secs_in_day, frame * its_per_frame))
                 break
 
@@ -443,18 +498,15 @@ class EnergyBalanceModel():
         if frame > 0:
             print('\nEfficiency: \n{:10.10f} seconds/iteration\n{:10.10f} seconds/sim day\n'.format((tf-t0) / (frame * its_per_frame), (tf-t0) / (frame * its_per_frame) / self.dt * self.secs_in_day))
 
-        self.T_array = T_array
-        self.E_array = E_array
+        self.T_array   = T_array
+        self.E_array   = E_array
         self.alb_array = alb_array
-        self.L_array = L_array
+        self.L_array   = L_array
         if self.olr_type in ['full_wvf', 'full_no_wvf']:
-            self.q_array = q_array
-
+            self.q_array   = q_array
 
     def save_data(self):
-        """
-        Save arrays of state variables.
-        """
+        # Save data
         np.savez('T_array.npz', self.T_array)
         np.savez('E_array.npz', self.E_array)
         np.savez('L_array.npz', self.L_array)
@@ -483,7 +535,9 @@ class EnergyBalanceModel():
         closest_root = roots[min_error_index]
 
         self.EFE = closest_root
+        self.EFE_rad = np.deg2rad(self.EFE)
         self.ITCZ = 0.64 * self.EFE 
+        self.ITCZ_rad = np.deg2rad(self.ITCZ)
 
 
     def log_efe(self, fname_efe):
@@ -497,9 +551,9 @@ class EnergyBalanceModel():
 
         with open(fname_efe, 'a') as f:
             if self.insolation_type == 'perturbation':
-                data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}, {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, np.rad2deg(self.EFE), np.rad2deg(self.ITCZ))
+                data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}, {:2.16f}'.format(self.perturb_center, self.perturb_spread, self.perturb_intensity, self.EFE, self.ITCZ)
             else:
-                data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}, {:2.16f}'.format(0, 0, 0, np.rad2deg(self.EFE), np.rad2deg(self.ITCZ))
+                data = '{:2d}, {:2.2f}, {:2d}, {:2.16f}, {:2.16f}'.format(0, 0, 0, self.EFE, self.ITCZ)
             f.write(data + '\n')
         print('Logged "{}" in "{}"'.format(data, fname_efe))
 
@@ -509,24 +563,28 @@ class EnergyBalanceModel():
         integrate some array f over phi up to index i
         """
         if i == -1:
-            return trapz( f * 2 * np.pi * Re**2 * np.ones(self.lats.shape[0]), dx=self.dx ) 
+            return trapz( f * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad ) 
         else:
             if isinstance(f, np.ndarray):
-                return trapz( f[:i+1] * 2 * np.pi * Re**2, dx=self.dx ) 
+                return trapz( f[:i+1] * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad ) 
             else:
-                return trapz( f * 2 * np.pi * Re**2, dx=self.dx ) 
+                return trapz( f * 2 * np.pi * Re**2 * self.cos_lats[:i+1], dx=self.dlat_rad ) 
 
 
     def _calculate_shift(self):
         """
         Calculate dphi using control values
         """
-        S_ctl           = self.ctl_data['S']
-        L_bar_ctl       = self.ctl_data['L_bar']
-        flux_total_ctl  = self.ctl_data['flux_total']
-        # flux_planck_ctl = self.ctl_data['flux_planck']
-        # flux_wv_ctl     = self.ctl_data['flux_wv']
-        # flux_no_fb_ctl  = self.ctl_data['flux_no_fb']
+        if self.albedo_feedback:
+            ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
+        else:
+            ctl_data = np.load(self.EBM_PATH + '/data/control_data.npz')
+        S_ctl           = ctl_data['S']
+        L_bar_ctl       = ctl_data['L_bar']
+        flux_total_ctl  = ctl_data['flux_total']
+        # flux_planck_ctl = ctl_data['flux_planck']
+        # flux_wv_ctl     = ctl_data['flux_wv']
+        # flux_no_fb_ctl  = ctl_data['flux_no_fb']
 
         dS = self.S_f - S_ctl
         self.delta_S = - self._calculate_feedback_flux(dS)
@@ -584,6 +642,10 @@ class EnergyBalanceModel():
         """
         Calculate each feedback flux and log data on the shifts
         """
+        if self.insolation_type != 'perturbation':
+            print('Calculating EFE...')
+            self._calculate_efe()
+
         print('\nCalculating feedbacks...')
 
         self.plot_fluxes = True
@@ -596,76 +658,108 @@ class EnergyBalanceModel():
         area = self._integrate_lat(1)
         self.L_bar = 1 / area * self._integrate_lat(L_f)
 
-        # # Get CTL data
-        # ctl_state_temp = self.ctl_data['ctl_state_temp']
-        # pert_state_temp = np.copy(self.state['air_temperature'].values[:, :, :])
+        # Get CTL data
+        if self.albedo_feedback:
+            ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
+        else:
+            ctl_data = np.load(self.EBM_PATH + '/data/control_data.npz')
 
-        # ctl_state_q = self.RH_dist * self._humidsat(ctl_state_temp[0, :, :], self.state['air_pressure'].values[0, :, :] / 100)[1]
-        # pert_state_q = np.copy(self.state['specific_humidity'].values[0, :, :])
+        ctl_state_temp = ctl_data['ctl_state_temp']
+        pert_state_temp = np.copy(self.state['air_temperature'].values[:, :, :])
 
-        # flux_total_ctl  = self.ctl_data['flux_total']
+        ctl_state_q = self.RH_dist * self._humidsat(ctl_state_temp[0, :, :], self.state['air_pressure'].values[0, :, :] / 100)[1]
+        pert_state_q = np.copy(self.state['specific_humidity'].values[0, :, :])
 
-        # self.T_f_ctl = ctl_state_temp[0, :, 0]
-        # self.ctl_state_temp = ctl_state_temp
-        # self.pert_state_temp = pert_state_temp
-        # self.ctl_state_q = ctl_state_q
-        # self.pert_state_q = pert_state_q
+        flux_total_ctl  = ctl_data['flux_total']
+
+        self.T_f_ctl = ctl_state_temp[0, :, 0]
+        self.ctl_state_temp = ctl_state_temp
+        self.pert_state_temp = pert_state_temp
+        self.ctl_state_q = ctl_state_q
+        self.pert_state_q = pert_state_q
 
         # Total
-        self.flux_total = - (D * ps / g / Re**2) * (2 * np.pi * Re * np.cos(self.lats)) * ( np.cos(self.lats) / Re) * np.gradient(E_f, self.dx)
+        self.flux_total = 10**-15 * (2 * np.pi * Re * self.cos_lats) * (- ps / g * D / Re) * np.gradient(E_f, self.dlat_rad)
+        self.delta_flux_total = self.flux_total - flux_total_ctl
 
-        plt.plot(self.sin_lats, self.flux_total)
-        plt.show()
+        # All LW Feedbacks
+        self.flux_all_fb = self._calculate_feedback_flux(L_f)
+        
+        # Planck
+        emissivity = 0.6
+        L_planck = emissivity * sig * T_f**4
+        self.flux_planck1 = self._calculate_feedback_flux(L_planck)
 
-        # if self.perturb_intensity == 0 and self.olr_type == 'full_wvf':
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
+
+        self.state['air_temperature'].values[0, :, :] =  pert_state_temp - Tgrid_diff
+        self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0]
+        self.state['specific_humidity'].values[0, :, :] = pert_state_q
+        tendencies, diagnostics = self.radiation(self.state)
+        self.L_pert_shifted_T = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
+        self.delta_flux_planck = self._calculate_feedback_flux(L_f - self.L_pert_shifted_T)
+        
+        # Water Vapor 
+        RH_copy = self.RH_dist[:, :] 
+        self.RH_dist[:, :] = 0.0
+        L_f_zero_q = self.L(T_f)
+        # np.savez('L_f_zero_q.npz', L_f_zero_q)
+        self.flux_wv1 = self._calculate_feedback_flux(L_f - L_f_zero_q)
+        self.RH_dist[:, :] = RH_copy
+
+        self.state['air_temperature'].values[0, :, :] = pert_state_temp
+        self.state['surface_temperature'].values[:] = pert_state_temp[0, :, 0]
+        self.state['specific_humidity'].values[0, :, :] = ctl_state_q
+        tendencies, diagnostics = self.radiation(self.state)
+        self.L_pert_shifted_q =  diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
+        self.delta_flux_wv = self._calculate_feedback_flux(L_f - self.L_pert_shifted_q)
+        
+        # Lapse Rate
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
+        self.state['air_temperature'].values[0, :, :] =  ctl_state_temp + Tgrid_diff
+        self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0]
+        self.state['specific_humidity'].values[0, :, :] = pert_state_q
+        tendencies, diagnostics = self.radiation(self.state)
+        self.L_pert_shifted_LR = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
+        self.delta_flux_lr = self._calculate_feedback_flux(L_f - self.L_pert_shifted_LR)
+
+        # No feedbacks
+        self.flux_no_fb = self.flux_total - self.flux_all_fb
+
+        # if self.insolation_type == 'annual_mean_clark' and self.olr_type == 'full_wvf':
         #     np.savez('control_data.npz', S=self.S_f, L_bar=self.L_bar, flux_total=self.flux_total, ctl_state_temp=self.state['air_temperature'].values[:, :, :])
-        # self.delta_flux_total = self.flux_total - flux_total_ctl
 
-        # # All LW Feedbacks
-        # self.flux_all_fb = self._calculate_feedback_flux(L_f)
+        self._calculate_shift()
+        # I = self.lats.shape[0]//2 + 1
+        # integral_SL = trapz( (S_f[:I] - L_f[:I]) * 2 * np.pi * Re**2 * self.cos_lats[:I], dx=self.dlat_rad )
         
-        # # Planck
-        # emissivity = 0.6
-        # L_planck = emissivity * sig * T_f**4
-        # self.flux_planck1 = self._calculate_feedback_flux(L_planck)
-
-        # Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
-
-        # self.state['air_temperature'].values[0, :, :] =  pert_state_temp - Tgrid_diff
-        # self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0]
-        # self.state['specific_humidity'].values[0, :, :] = pert_state_q
-        # tendencies, diagnostics = self.radiation(self.state)
-        # self.L_pert_shifted_T = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
-        # self.delta_flux_planck = self._calculate_feedback_flux(L_f - self.L_pert_shifted_T)
+        # print('Integral S - L from SP to EQ: {:2.2f} PW/m'.format(10**-15 * integral_SL))
+        # print('F(0):                         {:2.2f} PW/m'.format(10**-15 * self.flux_total[I-1]))
         
-        # # Water Vapor 
-        # RH_copy = self.RH_dist[:, :] 
-        # self.RH_dist[:, :] = 0.0
-        # L_f_zero_q = self.L(T_f)
-        # # np.savez('L_f_zero_q.npz', L_f_zero_q)
-        # self.flux_wv1 = self._calculate_feedback_flux(L_f - L_f_zero_q)
-        # self.RH_dist[:, :] = RH_copy
-
-        # self.state['air_temperature'].values[0, :, :] = pert_state_temp
-        # self.state['surface_temperature'].values[:] = pert_state_temp[0, :, 0]
-        # self.state['specific_humidity'].values[0, :, :] = ctl_state_q
-        # tendencies, diagnostics = self.radiation(self.state)
-        # self.L_pert_shifted_q =  diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
-        # self.delta_flux_wv = self._calculate_feedback_flux(L_f - self.L_pert_shifted_q)
+        # self.integral_SLbar = trapz( (S_f[:I] - L_bar) * 2 * np.pi * Re**2 * self.cos_lats[:I], dx=self.dlat_rad )
         
-        # # Lapse Rate
-        # Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
-        # self.state['air_temperature'].values[0, :, :] =  ctl_state_temp + Tgrid_diff
-        # self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0]
-        # self.state['specific_humidity'].values[0, :, :] = pert_state_q
-        # tendencies, diagnostics = self.radiation(self.state)
-        # self.L_pert_shifted_LR = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
-        # self.delta_flux_lr = self._calculate_feedback_flux(L_f - self.L_pert_shifted_LR)
+        # with open(fname_feedbacks, 'a') as f:
+        #     f.write('EFE, no_fb, planck, wv, wv_anom, planck+wv, planck+wv_anom\n')
 
-        # # No feedbacks
-        # self.flux_no_fb = self.flux_total - self.flux_all_fb
+        #     shift_no_fb              = self._calculate_shift([])
+        #     shift_planck             = self._calculate_shift([self.flux_planck])
+        #     if self.olr_type == 'full_wvf':
+        #         shift_wv             = self._calculate_shift([self.flux_wv])
+        #     else:
+        #         shift_wv             = 0
+        #     shift_wv_anom            = self._calculate_shift([self.flux_wv_anom])
+        #     if self.olr_type == 'full_wvf':
+        #         shift_planck_and_wv  = self._calculate_shift([self.flux_planck, self.flux_wv])
+        #     else:
+        #         shift_planck_and_wv  = 0
+        #     shift_planck_and_wv_anom = self._calculate_shift([self.flux_planck, self.flux_wv_anom])
 
-        # self._calculate_shift()
+        #     data = '{:2.2f}, {:2.2f}, {:2.2f}, {:2.2f}, {:2.2f}, {:2.2f}, {:2.2f}'.format(
+        #             self.EFE, shift_no_fb, shift_planck, shift_wv, shift_wv_anom,
+        #             shift_planck_and_wv, shift_planck_and_wv_anom)
+        #     f.write(data + '\n')
+        # print('Logged {} into {}'.format(data, fname_feedbacks))
+
 
     def save_plots(self):
         """
@@ -725,16 +819,17 @@ class EnergyBalanceModel():
             
             self._calculate_efe()
             E_f = self.E_array[-1, :]
-            print("EFE = {:.5f}; ITCZ = {:.5f}".format(np.rad2deg(self.EFE), np.rad2deg(self.ITCZ)))
+            print("EFE = {:.5f}; ITCZ = {:.5f}".format(self.EFE, self.ITCZ))
             
             f, ax = plt.subplots(1, figsize=(16, 10))
-            ax.plot(self.sin_lats, E_f / 1000, 'c', lw=4)
-            ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(E_f)/1000], 'r')
-            ax.text(np.sin(self.EFE) + 0.1, np.average(E_f)/1000, "EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)), size=16)
+            ax.plot(self.sin_lats, E_f / 1000, 'c', label='Final Energy Distribution', lw=4)
+            min_max = [E_f.min()/1000, E_f.max()/1000]
+            ax.plot([np.sin(np.deg2rad(self.EFE)), np.sin(np.deg2rad(self.EFE))], ax.get_ylim(), 'r')
+            ax.text(np.sin(np.deg2rad(self.EFE)) + 0.1, np.average(min_max), "EFE $\\approx$ {:.2f}$^\\circ$".format(self.EFE), size=16)
             ax.set_title("Final Energy Distribution")
+            ax.legend(fontsize=14, loc="upper left")
             ax.set_xlabel('Lat')
             ax.set_ylabel('E (kJ / kg)')
-            ax.set_ylim([np.min(E_f)/1000 - 1, np.max(E_f)/1000 + 1])
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
             
@@ -904,35 +999,35 @@ class EnergyBalanceModel():
 
 
         
-        # ### LW vs. T
-        # print('\nPlotting LW vs. T')
-        # f, ax = plt.subplots(1, figsize=(16, 10))
-        # ax.set_title("Relationship Between T$_s$ and OLR")
-        # ax.set_xlabel("T$_s$ (K)")
-        # ax.set_ylabel("OLR (W/m$^2$)")
+        ### LW vs. T
+        print('\nPlotting LW vs. T')
+        f, ax = plt.subplots(1, figsize=(16, 10))
+        ax.set_title("Relationship Between T$_s$ and OLR")
+        ax.set_xlabel("T$_s$ (K)")
+        ax.set_ylabel("OLR (W/m$^2$)")
         
-        # func = lambda t, a, b: a + b*t
+        func = lambda t, a, b: a + b*t
         
-        # x_data = self.T_array.flatten()
-        # y_data = self.L_array.flatten()
+        x_data = self.T_array.flatten()
+        y_data = self.L_array.flatten()
         
-        # popt, pcov = curve_fit(func, x_data, y_data)
-        # print('A: {:.2f} W/m2, B: {:.2f} W/m2/K'.format(popt[0], popt[1]))
+        popt, pcov = curve_fit(func, x_data, y_data)
+        print('A: {:.2f} W/m2, B: {:.2f} W/m2/K'.format(popt[0], popt[1]))
         
-        # xvals = np.linspace(np.min(x_data), np.max(x_data), 1000)
-        # yvals = func(xvals, *popt)
+        xvals = np.linspace(np.min(x_data), np.max(x_data), 1000)
+        yvals = func(xvals, *popt)
         
-        # ax.plot(x_data, y_data, 'co', ms=2, label='data points: "{}"'.format(self.olr_type))
-        # ax.plot(xvals, func(xvals, *popt), 'k--', label='linear fit')
-        # ax.text(np.min(xvals) + 0.1 * (np.max(xvals)-np.min(xvals)), np.mean(yvals), s='A = {:.2f},\nB = {:.2f}'.format(popt[0], popt[1]), size=16)
-        # ax.legend()
+        ax.plot(x_data, y_data, 'co', ms=2, label='data points: "{}"'.format(self.olr_type))
+        ax.plot(xvals, func(xvals, *popt), 'k--', label='linear fit')
+        ax.text(np.min(xvals) + 0.1 * (np.max(xvals)-np.min(xvals)), np.mean(yvals), s='A = {:.2f},\nB = {:.2f}'.format(popt[0], popt[1]), size=16)
+        ax.legend()
         
-        # plt.tight_layout()
+        plt.tight_layout()
         
-        # fname = 'OLR_vs_T_fit_{}.png'.format(self.olr_type)
-        # plt.savefig(fname, dpi=80)
-        # print('{} created.'.format(fname))
-        # plt.close()
+        fname = 'OLR_vs_T_fit_{}.png'.format(self.olr_type)
+        plt.savefig(fname, dpi=80)
+        print('{} created.'.format(fname))
+        plt.close()
         
         #if self.olr_type in ['full_wvf', 'full_no_wvf']:
         #    ### VERTICAL AIR TEMP
