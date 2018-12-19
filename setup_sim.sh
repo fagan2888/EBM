@@ -112,8 +112,8 @@ if [ "$1" == "-o" ]; then
 elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
 	
-	olr_type=full_wvf
-	# olr_type=full_no_wvf
+	# olr_type=full_wvf
+	olr_type=full_no_wvf
 	# olr_type=linear
 	A=None
 	# A=-452.68

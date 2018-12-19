@@ -186,10 +186,10 @@ class EnergyBalanceModel():
         # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
             self.init_alb = (40 / 342) * np.ones(len(self.lats))
 
-        # if self.albedo_feedback:
-        #     self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
-        # else:
-        #     self.ctl_data = np.load(self.EBM_PATH + '/data/control_data.npz')
+        if self.albedo_feedback:
+            self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
+        else:
+            self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
 
         self.alb = self.init_alb
 
@@ -263,14 +263,10 @@ class EnergyBalanceModel():
             self.interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures_flipped, Tdata)
 
             if water_vapor_feedback == False:
-                T_control = self.ctl_data["ctl_state_temp"].values[0, :, 0]
-                T_control = T_control[-1, :]
-                Tgrid_control = np.repeat(T_control, 
-                        pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
-                air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, 
-                        self.state['air_pressure'].values[0, :, :])
-                self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(air_temp, 
-                        self.state['air_pressure'].values[0, :, :] / 100)[1]
+                T_control = self.ctl_data["ctl_state_temp"][0, :, 0]
+                Tgrid_control = np.repeat(T_control, pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
+                air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, self.state['air_pressure'].values[0, :, :])
+                self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(air_temp, self.state['air_pressure'].values[0, :, :] / 100)[1]
                 if constant_spec_hum == True:
                     for i in range(self.nLevels):
                         # get area weighted mean of specific_humidity and set all lats on this level to that val
@@ -308,8 +304,7 @@ class EnergyBalanceModel():
                         E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
                         lat_efe = self.lats[np.argmax(E)] 
                         self.RH_dist = shift_dist(self.RH_dist, lat_efe)
-                    self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(self.state['air_temperature'].values[0, :, :], 
-                            self.state['air_pressure'].values[0, :, :] / 100)[1]
+                    self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(self.state['air_temperature'].values[0, :, :], self.state['air_pressure'].values[0, :, :] / 100)[1]
                 # CliMT takes over here, this is where the slowdown occurs
                 tendencies, diagnostics = self.radiation(self.state)
                 return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
