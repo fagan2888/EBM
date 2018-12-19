@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# sim_dir=~/my-scratch/EBM_sims/
-sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
+sim_dir=~/my-scratch/EBM_sims/
+# sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 
-N_pts=400
+N_pts=401
 dtmax_multiple=5.0
 max_sim_years=5
 tol=1e-8
@@ -182,13 +182,13 @@ elif [ "$1" == "-s" ]; then
 	            ${EBM_PATH}/simulation.py > simulation.py
 	        
 	        sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job
-	        cp -p ${EBM_PATH}/DEBM.py .
+	        cp -p ${EBM_PATH}/EBM.py .
 	        
 	        # echo "Running job."
 	        sbatch run_EBM.job
 	        
 	        # echo "Logging simulation."
-	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | albedo_feedback=$albedo_feedback | alb_ice=$alb_ice | alb_water=$alb_water |"
+	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | "
 	        echo "Adding line to log.txt: $log"
 	        echo $log >> ${EBM_PATH}/log.txt 
 	        
