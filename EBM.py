@@ -510,6 +510,8 @@ class EnergyBalanceModel():
                 return trapz( f[:i+1] * 2 * np.pi * Re**2, dx=self.dx ) 
             else:
                 return trapz( f * 2 * np.pi * Re**2, dx=self.dx ) 
+                # dx = cos(phi) dphi
+                # integral( f * 2 pi * r^2 * cos(phi) dphi )
 
 
     def _calculate_shift(self):
@@ -607,7 +609,8 @@ class EnergyBalanceModel():
         # self.pert_state_q = pert_state_q
 
         # Total
-        self.flux_total = - (D * ps / g / Re**2) * (2 * np.pi * Re * np.cos(self.lats)) * ( np.cos(self.lats) / Re) * np.gradient(E_f, self.dx)
+        # self.flux_total = -(D * ps / g / Re**2) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(E_f, self.dx)
+        self.flux_total = -(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(E_f, self.dx)
 
         plt.plot(self.sin_lats, self.flux_total)
         plt.show()

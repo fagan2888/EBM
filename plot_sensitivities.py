@@ -52,7 +52,9 @@ files = {
         # 'perturbed_efe_planck_linear_fit.dat':               ['Linear Planck OLR Fit',                     'lawngreen'],
 
         'sensitivity_full_wvf.dat':    ['CliMT Interactive WV', 'red'],
-        # 'perturbed_efe_full_no_wvf_mid_level_gaussian5.dat': ['CliMT Prescribed WV',  'blue'],
+        'sensitivity_full_wvf_old.dat':    ['OLD CliMT Interactive WV', 'black'],
+        'sensitivity_full_no_wvf.dat':    ['CliMT Prescribed WV', 'blue'],
+        'sensitivity_full_no_wvf_old.dat':    ['OLD CliMT Prescribed WV', 'grey'],
 
         # 'perturbed_efe_full_wvf.dat':                        ['CliMT Interactive WV',                      'red'],
         # 'perturbed_efe_full_wvf_linear.dat':                 ['Linear Interactive WV (Solden & Held)',     'pink'],

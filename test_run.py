@@ -13,7 +13,7 @@ model.albedo(albedo_feedback=False, alb_ice=None, alb_water=None)
 
 model.insolation(insolation_type='perturbation', perturb_center=15, perturb_spread=4.94, perturb_intensity=0)
         
-model.outgoing_longwave(olr_type='full_no_wvf', A=300.0, B=0.0, emissivity=0.6, RH_vert_profile='steps', RH_lat_profile='mid_level_gaussian', gaussian_spread=5, constant_spec_hum=False)
+model.outgoing_longwave(olr_type='planck', A=300.0, B=0.0, emissivity=0.6, RH_vert_profile='steps', RH_lat_profile='mid_level_gaussian', gaussian_spread=5, constant_spec_hum=False)
 
 # model.solve(numerical_method='explicit', frames=100)
 # model.solve(numerical_method='semi-implicit', frames=100)
@@ -23,6 +23,6 @@ model.save_data()
 
 model.log_efe(fname_efe='itcz.log')
 
-# model.log_feedbacks(fname_feedbacks='feedbacks.log')
+model.log_feedbacks(fname_feedbacks='feedbacks.log')
 
 model.save_plots()
