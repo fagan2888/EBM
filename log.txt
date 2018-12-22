@@ -803,3 +803,16 @@ sim182 | perturbation | lat0=60 | M=18 | full_no_wvf |
 60, 9.89, 10, -0.6995922581793135, -0.4477390452347607
 60, 9.89, 15, -1.0249369955978405, -0.6559596771826178
 60, 9.89, 18, -1.2149633921247027, -0.7775765709598098
+
+---
+# 12-21
+---
+The folder sim183 contains an identical simulation to sim166 (control full_wvf) but with doubled CO2. 
+See plot of Delta T in that folder. 
+
+I modified EBM.py to match as much of Merlis and Henry's EBM as possible (mostly just changed my constants) in sim184.
+I used the exact same linear OLR as them to test the doubled CO2 forcing. 
+I got almost identical results (see folder's plot).
+
+A redo of sim183 is done in sim185 with MH's numbers and insolation/albedo. 
+The results are surprisingly different from those in sim183, but both have lower numbers that we expect.

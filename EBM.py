@@ -65,6 +65,8 @@ class EnergyBalanceModel():
         self.N_pts = N_pts
         self.dx = 2 / N_pts
         self.sin_lats = np.linspace(-1.0 + self.dx/2, 1.0 - self.dx/2, N_pts)
+        # self.sin_lats = np.linspace(-1.0 + 1e-3, 1.0 - 1e-3, N_pts)
+        # self.dx = self.sin_lats[1] - self.sin_lats[0]
         self.lats = np.arcsin(self.sin_lats)
 
         # Calculate stable dt
@@ -186,10 +188,11 @@ class EnergyBalanceModel():
         # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
             self.init_alb = (40 / 342) * np.ones(len(self.lats))
 
-        if self.albedo_feedback:
-            self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
-        else:
-            self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
+        if self.plot_fluxes:
+            if self.albedo_feedback:
+                self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
+            else:
+                self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
 
         self.alb = self.init_alb
 
@@ -223,6 +226,10 @@ class EnergyBalanceModel():
                             interface_levels={'label' : 'interface_levels', 'values': np.arange(self.nLevels + 1), 'units' : ''}
                             )
             pressures = self.state['air_pressure'].values[0, 0, :]
+
+            # Double CO2
+            self.state['mole_fraction_of_carbon_dioxide_in_air'].values[0, :, :] = 2 * self.state['mole_fraction_of_carbon_dioxide_in_air'].values[0, :, :]
+            print(self.state['mole_fraction_of_carbon_dioxide_in_air'])
 
             # Vertical RH profile
             self.RH_dist = RH * np.ones( (self.lats.shape[0], self.nLevels) )
@@ -320,16 +327,21 @@ class EnergyBalanceModel():
         Take single time step for integration.
         """
         # step forward using the take_step_matrix set up in self.solve()
-        self.E = np.dot(self.take_step_matrix, self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
+        E_new = np.dot(self.take_step_matrix, self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
     
         # insulated boundaries
-        self.E[0] = self.E[1]; self.E[-1] = self.E[-2]
+        E_new[0] = E_new[1]
+        E_new[-1] = E_new[-2]
 
-        self.T = self.T_dataset[np.searchsorted(self.E_dataset, self.E)]
+        T_new = self.T_dataset[np.searchsorted(self.E_dataset, E_new)]
 
         if self.albedo_feedback:
-            self.alb = self.alb_water * np.ones(len(self.lats))
-            self.alb[np.where(self.T <= 273.16)] = self.alb_ice    
+            alb_new = self.alb_water * np.ones(self.N_pts)
+            alb_new[np.where(T_new <= 273.16)] = self.alb_ice    
+        else:
+            alb_new = self.alb
+        
+        return E_new, T_new, alb_new
 
 
     def _print_progress(self, frame, error):
@@ -364,21 +376,18 @@ class EnergyBalanceModel():
          
         self.take_step_matrix = np.dot(np.linalg.inv(matrix1), matrix2)
 
-
         # Print some useful information
         print('\nModel Params:')
         print("dtmax:            {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax / self.secs_in_day))
         print("dt:               {:.2f} s / {:.4f} days = {:.2f} * dtmax".format(self.dt, self.dt / self.secs_in_day, self.dt / self.dtmax))
         print("max_sim_years:    {} years = {:.0f} iterations".format(self.max_sim_years, self.max_iters))
         print("dx:               {:.5f}".format(self.dx))
-        # print("max dlat:         {:.5f}".format(np.rad2deg(np.max(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
-        # print("min dlat:         {:.5f}".format(np.rad2deg(np.min(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
-        # print("max dlat:         {:.5f}".format(np.rad2deg(np.max(np.abs(self.dx / np.cos(self.lats))))))
-        # print("min dlat:         {:.5f}".format(np.rad2deg(np.min(np.abs(self.dx / np.cos(self.lats))))))
+        print("max dlat:         {:.5f}".format(np.rad2deg(np.max(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
+        print("min dlat:         {:.5f}".format(np.rad2deg(np.min(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
         print("tolerance:        |dT/dt| < {:.2E}".format(self.tol))
-        print("frames:           {}\n".format(frames))
+        print("frames:           {}".format(frames))
         
-        print('Insolation Type:   {}'.format(self.insolation_type))
+        print('\nInsolation Type:   {}'.format(self.insolation_type))
         if self.insolation_type == 'perturbation':
             print('\tlat0 = {:.0f}, M = {:.0f}, sigma = {:.2f}'.format(
                 self.perturb_center, self.perturb_intensity, self.perturb_spread))
@@ -407,37 +416,57 @@ class EnergyBalanceModel():
         # Loop through self.take_step() until converged
         t0 = clock()
         its_per_frame = int(self.max_iters / (frames - 1))
-        for frame in range(frames):
-            T_array[frame, :] = self.T
-            E_array[frame, :] = self.E
-            L_array[frame, :] = self.L(self.T)
-            alb_array[frame, :] = self.alb
-            if self.olr_type in ['full_wvf', 'full_no_wvf']:
-                q_array[frame, :, :] = self.state['specific_humidity'].values[0, :, :]
+        error = self.tol + 1
+        iteration = 0
+        frame = 0
+        while error > self.tol and frame < frames:
+            # take a step, calculate error 
+            E_new, T_new, alb_new = self.take_step()
+            error = np.abs(np.mean(T_new - self.T) / self.dt)
 
-            error = np.max(np.abs(T_array[frame, :] - T_array[frame-1, :])) / (self.dt * its_per_frame)
+            self.E = E_new
+            self.T = T_new
+            self.alb = alb_new
 
-            self._print_progress(frame, error)
-
-            if error < self.tol:
-                T_array = T_array[:frame+1, :]
-                E_array = E_array[:frame+1, :]
-                alb_array = alb_array[:frame+1, :]
-                L_array = L_array[:frame+1, :]
+            if iteration % its_per_frame == 0:
+                T_array[frame, :] = self.T
+                E_array[frame, :] = self.E
+                L_array[frame, :] = self.L(self.T)
+                alb_array[frame, :] = self.alb
                 if self.olr_type in ['full_wvf', 'full_no_wvf']:
-                    q_array = q_array[:frame+1, :]
-                print('Equilibrium reached in {:8.5f} days ({} iterations).'.format(frame * its_per_frame * self.dt / self.secs_in_day, frame * its_per_frame))
-                break
+                    q_array[frame, :, :] = self.state['specific_humidity'].values[0, :, :]
 
-            for i in range(its_per_frame):
-                self.take_step()
+                self._print_progress(frame, error)
+                # print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(self.S * (1 - self.alb) - L_array[frame, :])))
+                frame += 1
+
+            iteration += 1
+            if self.tol == 0:
+                # never stop if tol = 0
+                error = 1
+
         tf = clock()
+        sim_time = tf - t0
 
-        if T_array.shape[0] == frames:
-            print('Failed to reach equilibrium in {:8.5f} days ({} iterations). |dT/dt| = {:4.16f}'.format(frame * its_per_frame * self.dt / self.secs_in_day, frame * its_per_frame, np.max(np.abs(T_array[-1, :] - T_array[-2, :])) / self.dt))
-        if frame > 0:
-            print('\nEfficiency: \n{:10.10f} seconds/iteration\n{:10.10f} seconds/sim day\n'.format((tf-t0) / (frame * its_per_frame), (tf-t0) / (frame * its_per_frame) / self.dt * self.secs_in_day))
+        # Truncate arrays
+        if iteration-1 % its_per_frame == 0:
+            frame += 1
+        T_array = T_array[:frame, :]
+        E_array = E_array[:frame, :]
+        alb_array = alb_array[:frame, :]
+        L_array = L_array[:frame, :]
+        if self.olr_type in ['full_wvf', 'full_no_wvf']:
+            q_array = q_array[:frame, :]
 
+        # Print exit messages
+        print('Equilibrium reached in {:8.5f} days ({} iterations).'.format(iteration * self.dt / self.secs_in_day, iteration))
+
+        if frame == frames:
+            print('Failed to reach equilibrium in {:8.5f} days ({} iterations). |dT/dt| = {:4.16f}'.format(iteration * self.dt / self.secs_in_day, iteration, error))
+        
+        print('\nEfficiency: \n{:10.10f} seconds/iteration\n{:10.10f} seconds/sim day\n'.format(sim_time / iteration, sim_time / (iteration * self.dt / self.secs_in_day)))
+
+        # Save arrays to class
         self.T_array = T_array
         self.E_array = E_array
         self.alb_array = alb_array
@@ -464,7 +493,7 @@ class EnergyBalanceModel():
         """
         # Get data and final dist
         E_f = self.E_array[-1, :]
-        
+
         # Interp and find roots
         spl = UnivariateSpline(self.lats, E_f, k=4, s=0)
         roots = spl.derivative().roots()
