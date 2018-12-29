@@ -227,9 +227,9 @@ class EnergyBalanceModel():
                             )
             pressures = self.state['air_pressure'].values[0, 0, :]
 
-            # Double CO2
-            self.state['mole_fraction_of_carbon_dioxide_in_air'].values[0, :, :] = 2 * self.state['mole_fraction_of_carbon_dioxide_in_air'].values[0, :, :]
-            print(self.state['mole_fraction_of_carbon_dioxide_in_air'])
+            # # Double CO2
+            # self.state['mole_fraction_of_carbon_dioxide_in_air'].values[0, :, :] = 2 * self.state['mole_fraction_of_carbon_dioxide_in_air'].values[0, :, :]
+            # print(self.state['mole_fraction_of_carbon_dioxide_in_air'])
 
             # Vertical RH profile
             self.RH_dist = RH * np.ones( (self.lats.shape[0], self.nLevels) )
