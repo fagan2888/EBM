@@ -225,6 +225,8 @@ class EnergyBalanceModel():
                             mid_levels={'label' : 'mid_levels', 'values': np.arange(self.nLevels), 'units' : ''},
                             interface_levels={'label' : 'interface_levels', 'values': np.arange(self.nLevels + 1), 'units' : ''}
                             )
+            print(self.state.keys())
+            os.sys.exit()
             pressures = self.state['air_pressure'].values[0, 0, :]
 
             # # Double CO2
@@ -302,8 +304,7 @@ class EnergyBalanceModel():
                 # Create a 2D array of the T vals and pass to self.interpolated_moist_adiabat
                 #   note: shape of 'air_temperature' is (lons, lats, press) 
                 Tgrid = np.repeat(T, self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
-                self.state['air_temperature'].values[0, :, :] = self.interpolated_moist_adiabat.ev(Tgrid, 
-                        self.state['air_pressure'].values[0, :, :])
+                self.state['air_temperature'].values[0, :, :] = self.interpolated_moist_adiabat.ev(Tgrid, self.state['air_pressure'].values[0, :, :])
                 # Set specific hum assuming constant RH
                 if water_vapor_feedback == True:
                     if RH_lat_profile != 'constant':
