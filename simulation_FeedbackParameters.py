@@ -4,9 +4,9 @@ from EBM_FeedbackParameters import EnergyBalanceModel
 
 model = EnergyBalanceModel(N_pts=401, dtmax_multiple=5.0, max_sim_years=5.0, tol=1e-9)
 
-model.insolation(insolation_type='basic_state', perturb_center=None, perturb_spread=None, perturb_intensity=None)
+model.insolation(insolation_type='constant', perturb_center=None, perturb_spread=None, perturb_intensity=None)
 
-model.feedback_parameters(feedback_parameters_type='constant')
+model.feedback_parameters(feedback_parameters_type='subtropics_and_iceline')
 
 model.solve(numerical_method='implicit', frames=100)
 

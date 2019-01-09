@@ -92,7 +92,13 @@ class EnergyBalanceModel():
         self.q_dataset = self._humidsat(self.T_dataset, ps/100)[1]
         self.E_dataset = cp*self.T_dataset + RH*self.q_dataset*Lv
 
-        self.T_basic_state = np.load(self.EBM_PATH + "/data/control_data_N401.npz")["ctl_state_temp"][0, :, 0]
+        # self.T_basic_state = np.load(self.EBM_PATH + "/data/control_data_N401.npz")["ctl_state_temp"][0, :, 0]
+        # self.T_basic_state = 288.6 - 29.3 * (3/2 * self.sin_lats**2 - 1/2) - 4.9 * (35/8 * self.sin_lats**4 - 30/8 * self.sin_lats**2 + 3/8)
+        self.T_basic_state = np.polynomial.legendre.Legendre((288.6, 0, -29.3, 0, -4.9))(self.sin_lats)
+        # self.T_basic_state = 288.57 - 47.2427 * (3/2 * self.sin_lats**2 - 1/2) + 2.16105 * (35/8 * self.sin_lats**4 - 30/8 * self.sin_lats**2 + 3/8)
+        # self.T_basic_state = np.polynomial.legendre.Legendre((288.57, 0, -47.2427, 0, 2.16105))(self.sin_lats)
+        # plt.plot(self.sin_lats, self.T_basic_state)
+        # plt.show()
         self.E_basic_state = self.E_dataset[np.searchsorted(self.T_dataset, self.T_basic_state)]
 
         # Boolean options

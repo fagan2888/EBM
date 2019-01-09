@@ -837,4 +837,9 @@ sim187 used for tests on CliMT to see if I am using it right. seems okay.
 ---
 sim188 has the three summarizing calculations with EBM_FeedbackParameters.py from Roe et al. to show to Bill tomorrow.
 
+---
+# 1-8
+---
+sim189 contains feedback calculations (lambdas). See email with Bill.
+
 

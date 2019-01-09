@@ -25,7 +25,7 @@ import os
 ### STYLES
 ################################################################################
 rc('animation', html='html5')
-rc('lines', linewidth=2, color='b', markersize=10)
+rc('lines', linewidth=4, markersize=10)
 rc('axes', titlesize=20, labelsize=16, xmargin=0.01, ymargin=0.01, 
         linewidth=1.5)
 rc('axes.spines', top=False, right=False)
