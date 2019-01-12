@@ -188,11 +188,10 @@ class EnergyBalanceModel():
         # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
             self.init_alb = (40 / 342) * np.ones(len(self.lats))
 
-        if self.plot_fluxes:
-            if self.albedo_feedback:
-                self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
-            else:
-                self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
+        if self.albedo_feedback:
+            self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
+        else:
+            self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
 
         self.alb = self.init_alb
 
@@ -225,8 +224,6 @@ class EnergyBalanceModel():
                             mid_levels={'label' : 'mid_levels', 'values': np.arange(self.nLevels), 'units' : ''},
                             interface_levels={'label' : 'interface_levels', 'values': np.arange(self.nLevels + 1), 'units' : ''}
                             )
-            print(self.state.keys())
-            os.sys.exit()
             pressures = self.state['air_pressure'].values[0, 0, :]
 
             # # Double CO2
@@ -548,46 +545,34 @@ class EnergyBalanceModel():
         """
         Calculate dphi using control values
         """
-        S_ctl           = self.ctl_data['S']
-        L_bar_ctl       = self.ctl_data['L_bar']
-        flux_total_ctl  = self.ctl_data['flux_total']
-        # flux_planck_ctl = self.ctl_data['flux_planck']
-        # flux_wv_ctl     = self.ctl_data['flux_wv']
-        # flux_no_fb_ctl  = self.ctl_data['flux_no_fb']
+        dS = self.S_f - self.S_ctl
+        dL_bar = self.L_bar - self.L_bar_ctl
 
-        dS = self.S_f - S_ctl
-        self.delta_S = - self._calculate_feedback_flux(dS)
-        dL_bar = self.L_bar - L_bar_ctl
-
-        I_equator = self.lats.shape[0]//2 
-
-        # self.dflux_planck1 = self.flux_planck1 - flux_planck_ctl 
-        # self.dflux_wv1 = self.flux_wv1 - flux_wv_ctl 
-        # dflux_no_fb = self.flux_no_fb - flux_no_fb_ctl 
+        I_equator = self.N_pts//2 
 
         # Method 1: Do the basic Taylor approx
         numerator = self.flux_total[I_equator]
         denominator = 0
 
-        spl = UnivariateSpline(self.lats_rad, self.flux_total, k=4, s=0)
-        denominator -= spl.derivative()(self.EFE_rad)
+        spl = UnivariateSpline(self.lats, self.flux_total, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE)
 
         shift = np.rad2deg(numerator / denominator)
         print('Simple Taylor Shift: {:2.2f}'.format(shift))
         print('\tNum / Denom = {}/{}'.format(numerator, denominator))
 
         # Method 2: Use feedbacks relative to control
-        numerator = flux_total_ctl[I_equator] + 10**-15 * self._integrate_lat(dS - dL_bar, I_equator) + self.delta_flux_planck[I_equator] + self.delta_flux_wv[I_equator] + self.delta_flux_lr[I_equator]
+        numerator = self.flux_total_ctl[I_equator] + self._integrate_lat(dS - dL_bar, I_equator) + self.delta_flux_planck[I_equator] + self.delta_flux_wv[I_equator] + self.delta_flux_lr[I_equator]
         denominator = 0 
 
-        spl = UnivariateSpline(self.lats_rad, flux_total_ctl, k=4, s=0)
-        denominator -= spl.derivative()(self.EFE_rad)
-        spl = UnivariateSpline(self.lats_rad, self.delta_flux_planck, k=4, s=0)
-        denominator -= spl.derivative()(self.EFE_rad)
-        spl = UnivariateSpline(self.lats_rad, self.delta_flux_wv, k=4, s=0)
-        denominator -= spl.derivative()(self.EFE_rad)
-        spl = UnivariateSpline(self.lats_rad, self.delta_flux_lr, k=4, s=0)
-        denominator -= spl.derivative()(self.EFE_rad)
+        spl = UnivariateSpline(self.lats, self.flux_total_ctl, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE)
+        spl = UnivariateSpline(self.lats, self.delta_flux_planck, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE)
+        spl = UnivariateSpline(self.lats, self.delta_flux_wv, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE)
+        spl = UnivariateSpline(self.lats, self.delta_flux_lr, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE)
 
         shift = np.rad2deg(numerator / denominator)
         print('Shift with Feedbacks: {:2.2f}'.format(shift))
@@ -604,7 +589,7 @@ class EnergyBalanceModel():
         flux = np.zeros( L_flux.shape )
         for i in range( L_flux.shape[0] ):
             flux[i] = -self._integrate_lat(L_flux - L_flux_bar, i)
-        return 10**-15 * flux
+        return flux
 
 
     def log_feedbacks(self, fname_feedbacks):
@@ -623,50 +608,55 @@ class EnergyBalanceModel():
         area = self._integrate_lat(1)
         self.L_bar = 1 / area * self._integrate_lat(L_f)
 
-        # # Get CTL data
-        # ctl_state_temp = self.ctl_data['ctl_state_temp']
-        # pert_state_temp = np.copy(self.state['air_temperature'].values[:, :, :])
+        # Get CTL data
+        ctl_state_temp = self.ctl_data['ctl_state_temp']
+        pert_state_temp = np.copy(self.state['air_temperature'].values[:, :, :])
 
-        # ctl_state_q = self.RH_dist * self._humidsat(ctl_state_temp[0, :, :], self.state['air_pressure'].values[0, :, :] / 100)[1]
-        # pert_state_q = np.copy(self.state['specific_humidity'].values[0, :, :])
+        ctl_state_q = self.RH_dist * self._humidsat(ctl_state_temp[0, :, :], self.state['air_pressure'].values[0, :, :] / 100)[1]
+        pert_state_q = np.copy(self.state['specific_humidity'].values[0, :, :])
 
-        # flux_total_ctl  = self.ctl_data['flux_total']
+        self.S_ctl = self.ctl_data['S']
+        self.L_bar_ctl = self.ctl_data['L_bar']
 
-        # self.T_f_ctl = ctl_state_temp[0, :, 0]
-        # self.ctl_state_temp = ctl_state_temp
-        # self.pert_state_temp = pert_state_temp
-        # self.ctl_state_q = ctl_state_q
-        # self.pert_state_q = pert_state_q
+        # flux_total_ctl = self.ctl_data['flux_total']
 
-        # Total
-        # self.flux_total = -(D * ps / g / Re**2) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(E_f, self.dx)
+        self.T_f_ctl = ctl_state_temp[0, :, 0]
+        self.ctl_state_temp = ctl_state_temp
+        self.pert_state_temp = pert_state_temp
+        self.ctl_state_q = ctl_state_q
+        self.pert_state_q = pert_state_q
+
+        dS = self.S_f - self.S_ctl
+        self.delta_S = - self._calculate_feedback_flux(dS)
+
+        ## Total
+        E_f_ctl = self.E_dataset[np.searchsorted(self.T_dataset, self.T_f_ctl)]
+        self.flux_total_ctl = -(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(E_f_ctl, self.dx)
         self.flux_total = -(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(E_f, self.dx)
-
-        plt.plot(self.sin_lats, self.flux_total)
-        plt.show()
+        self.delta_flux_total = self.flux_total - self.flux_total_ctl
 
         # if self.perturb_intensity == 0 and self.olr_type == 'full_wvf':
         #     np.savez('control_data.npz', S=self.S_f, L_bar=self.L_bar, flux_total=self.flux_total, ctl_state_temp=self.state['air_temperature'].values[:, :, :])
         # self.delta_flux_total = self.flux_total - flux_total_ctl
 
-        # # All LW Feedbacks
-        # self.flux_all_fb = self._calculate_feedback_flux(L_f)
+        # All LW Feedbacks
+        self.flux_all_fb = self._calculate_feedback_flux(L_f)
         
-        # # Planck
+        ## Planck
         # emissivity = 0.6
         # L_planck = emissivity * sig * T_f**4
         # self.flux_planck1 = self._calculate_feedback_flux(L_planck)
 
-        # Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
 
-        # self.state['air_temperature'].values[0, :, :] =  pert_state_temp - Tgrid_diff
-        # self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0]
-        # self.state['specific_humidity'].values[0, :, :] = pert_state_q
-        # tendencies, diagnostics = self.radiation(self.state)
-        # self.L_pert_shifted_T = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
-        # self.delta_flux_planck = self._calculate_feedback_flux(L_f - self.L_pert_shifted_T)
+        self.state['air_temperature'].values[0, :, :] =  pert_state_temp - Tgrid_diff
+        self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0]
+        self.state['specific_humidity'].values[0, :, :] = pert_state_q
+        tendencies, diagnostics = self.radiation(self.state)
+        self.L_pert_shifted_T = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
+        self.delta_flux_planck = self._calculate_feedback_flux(L_f - self.L_pert_shifted_T)
         
-        # # Water Vapor 
+        ## Water Vapor 
         # RH_copy = self.RH_dist[:, :] 
         # self.RH_dist[:, :] = 0.0
         # L_f_zero_q = self.L(T_f)
@@ -674,26 +664,26 @@ class EnergyBalanceModel():
         # self.flux_wv1 = self._calculate_feedback_flux(L_f - L_f_zero_q)
         # self.RH_dist[:, :] = RH_copy
 
-        # self.state['air_temperature'].values[0, :, :] = pert_state_temp
-        # self.state['surface_temperature'].values[:] = pert_state_temp[0, :, 0]
-        # self.state['specific_humidity'].values[0, :, :] = ctl_state_q
-        # tendencies, diagnostics = self.radiation(self.state)
-        # self.L_pert_shifted_q =  diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
-        # self.delta_flux_wv = self._calculate_feedback_flux(L_f - self.L_pert_shifted_q)
+        self.state['air_temperature'].values[0, :, :] = pert_state_temp
+        self.state['surface_temperature'].values[:] = pert_state_temp[0, :, 0]
+        self.state['specific_humidity'].values[0, :, :] = ctl_state_q
+        tendencies, diagnostics = self.radiation(self.state)
+        self.L_pert_shifted_q =  diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
+        self.delta_flux_wv = self._calculate_feedback_flux(L_f - self.L_pert_shifted_q)
         
-        # # Lapse Rate
-        # Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
-        # self.state['air_temperature'].values[0, :, :] =  ctl_state_temp + Tgrid_diff
-        # self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0]
-        # self.state['specific_humidity'].values[0, :, :] = pert_state_q
-        # tendencies, diagnostics = self.radiation(self.state)
-        # self.L_pert_shifted_LR = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
-        # self.delta_flux_lr = self._calculate_feedback_flux(L_f - self.L_pert_shifted_LR)
+        ## Lapse Rate
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
+        self.state['air_temperature'].values[0, :, :] =  ctl_state_temp + Tgrid_diff
+        self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0]
+        self.state['specific_humidity'].values[0, :, :] = pert_state_q
+        tendencies, diagnostics = self.radiation(self.state)
+        self.L_pert_shifted_LR = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
+        self.delta_flux_lr = self._calculate_feedback_flux(L_f - self.L_pert_shifted_LR)
 
-        # # No feedbacks
-        # self.flux_no_fb = self.flux_total - self.flux_all_fb
+        # No feedbacks
+        self.flux_no_fb = self.flux_total - self.flux_all_fb
 
-        # self._calculate_shift()
+        self._calculate_shift()
 
     def save_plots(self):
         """
@@ -819,7 +809,7 @@ class EnergyBalanceModel():
             # ax.plot(self.sin_lats, self.flux_planck + self.flux_wv, 'c--', label='Planck + Total WV')
             # ax.plot(self.sin_lats, self.flux_no_fb + self.flux_all_fb, 'c', label='No FB + All FB')
             # ax.plot(self.sin_lats, self.flux_no_fb + self.flux_wv + self.flux_planck, 'c--', label='No FB + (Planck + Total WV)')
-            ax.plot(np.sin(self.EFE_rad), 0,  'Xr', label='EFE')
+            ax.plot(np.sin(self.EFE), 0,  'Xr', label='EFE')
 
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
@@ -884,51 +874,51 @@ class EnergyBalanceModel():
             print('{} created.'.format(fname))
             plt.close()
 
-            ### Vertical T
-            print('\nPlotting Vertical T')
+            # ### Vertical T
+            # print('\nPlotting Vertical T')
 
-            lat = 15
-            lat_index = int((lat + 90) / self.dlat)
-            f, ax = plt.subplots(1, figsize=(16, 10))
-            ax.plot(self.pert_state_temp[0, lat_index, :], self.pressures/100, 'b',  label='$T_p(z)$')
-            ax.plot(self.ctl_state_temp[0, lat_index, :],  self.pressures/100, 'r',  label='$T_{ctl}(z)$')
+            # lat = 15
+            # lat_index = int((lat + 90) / self.dlat)
+            # f, ax = plt.subplots(1, figsize=(16, 10))
+            # ax.plot(self.pert_state_temp[0, lat_index, :], self.pressures/100, 'b',  label='$T_p(z)$')
+            # ax.plot(self.ctl_state_temp[0, lat_index, :],  self.pressures/100, 'r',  label='$T_{ctl}(z)$')
 
-            ax.grid()
-            ax.legend()
-            ax.set_title("$T(z)$ at 15$^\\circ$ Lat")
-            ax.set_xlabel("K")
-            ax.set_ylabel("hPa")
-            ax.invert_yaxis()
+            # ax.grid()
+            # ax.legend()
+            # ax.set_title("$T(z)$ at 15$^\\circ$ Lat")
+            # ax.set_xlabel("K")
+            # ax.set_ylabel("hPa")
+            # ax.invert_yaxis()
             
-            plt.tight_layout()
+            # plt.tight_layout()
             
-            fname = 'vertical_T.png'
-            plt.savefig(fname, dpi=80)
-            print('{} created.'.format(fname))
-            plt.close()
+            # fname = 'vertical_T.png'
+            # plt.savefig(fname, dpi=80)
+            # print('{} created.'.format(fname))
+            # plt.close()
 
-            ### Diff in q
-            print('\nPlotting Difference in q')
+            # ### Diff in q
+            # print('\nPlotting Difference in q')
 
-            f, ax = plt.subplots(1, figsize=(16, 10))
+            # f, ax = plt.subplots(1, figsize=(16, 10))
             
-            im = ax.imshow(self.pert_state_q[:, :].T - self.ctl_state_q[:, :].T, extent=(-90, 90, 0, 1000), aspect=0.1, cmap='Blues', origin='upper')
-            cb = plt.colorbar(im, ax=ax)
-            cb.set_label("g / g")
+            # im = ax.imshow(self.pert_state_q[:, :].T - self.ctl_state_q[:, :].T, extent=(-90, 90, 0, 1000), aspect=0.1, cmap='Blues', origin='upper')
+            # cb = plt.colorbar(im, ax=ax)
+            # cb.set_label("g / g")
 
-            ax.grid()
-            ax.set_title("Difference in $q$")
-            ax.set_xticks([-90, -60, -30, 0, 30, 60, 90])
-            ax.set_xlabel("Lat")
-            ax.set_ylabel("hPa")
-            ax.invert_yaxis()
+            # ax.grid()
+            # ax.set_title("Difference in $q$")
+            # ax.set_xticks([-90, -60, -30, 0, 30, 60, 90])
+            # ax.set_xlabel("Lat")
+            # ax.set_ylabel("hPa")
+            # ax.invert_yaxis()
             
-            plt.tight_layout()
+            # plt.tight_layout()
             
-            fname = 'qdiff.png'
-            plt.savefig(fname, dpi=80)
-            print('{} created.'.format(fname))
-            plt.close()
+            # fname = 'qdiff.png'
+            # plt.savefig(fname, dpi=80)
+            # print('{} created.'.format(fname))
+            # plt.close()
 
 
         
