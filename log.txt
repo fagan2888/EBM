@@ -912,11 +912,11 @@ In data/sensitivity_full_radiation.dat:
 60, 9.89, 15, -2.9467608164108263, -1.8859269225029289
 60, 9.89, 18, -3.3616588870803148, -2.1514616877314015
 
-sim229 | perturbation | lat0=15 | M=5 | full_radiation_no_wv |
+sim229 | perturbation | lat0=15 | M=5  | full_radiation_no_wv |
 sim230 | perturbation | lat0=15 | M=10 | full_radiation_no_wv |
 sim231 | perturbation | lat0=15 | M=15 | full_radiation_no_wv |
 sim232 | perturbation | lat0=15 | M=18 | full_radiation_no_wv |
-sim233 | perturbation | lat0=60 | M=5 | full_radiation_no_wv |
+sim233 | perturbation | lat0=60 | M=5  | full_radiation_no_wv |
 sim234 | perturbation | lat0=60 | M=10 | full_radiation_no_wv |
 sim235 | perturbation | lat0=60 | M=15 | full_radiation_no_wv |
 sim236 | perturbation | lat0=60 | M=18 | full_radiation_no_wv |
@@ -930,3 +930,20 @@ In data/sensitivity_full_radiation_no_wv.dat:
 60, 9.89, 15, -1.0239566534654339, -0.6553322582178776
 60, 9.89, 18, -1.2143733106399131, -0.7771989188095444
 
+sim237 | perturbation | lat0=15 | M=5  | full_radiation_no_lr |
+sim238 | perturbation | lat0=15 | M=10 | full_radiation_no_lr |
+sim239 | perturbation | lat0=15 | M=15 | full_radiation_no_lr |
+sim240 | perturbation | lat0=15 | M=18 | full_radiation_no_lr |
+sim241 | perturbation | lat0=60 | M=5  | full_radiation_no_lr |
+sim242 | perturbation | lat0=60 | M=10 | full_radiation_no_lr |
+sim243 | perturbation | lat0=60 | M=15 | full_radiation_no_lr |
+sim244 | perturbation | lat0=60 | M=18 | full_radiation_no_lr |
+In data/sensitivity_full_radiation_no_lr.dat:
+15, 4.94,  5, -3.6032143491206812, -2.3060571834372361
+15, 4.94, 10, -6.4952576087417748, -4.1569648695947361
+15, 4.94, 15, -8.9069748118523790, -5.7004638795855236
+15, 4.94, 18, -10.2431673868576176, -6.5556271275888758
+60, 9.89,  5, -1.3868908664378452, -0.8876101545202210
+60, 9.89, 10, -2.5221633108169681, -1.6141845189228596
+60, 9.89, 15, -3.5384305396274192, -2.2645955453615483
+60, 9.89, 18, -3.9934085298511501, -2.5557814591047361
