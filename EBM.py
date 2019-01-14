@@ -188,10 +188,10 @@ class EnergyBalanceModel():
         # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
             self.init_alb = (40 / 342) * np.ones(len(self.lats))
 
-        # if self.albedo_feedback:
-        #     self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
-        # else:
-        #     self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
+        if self.albedo_feedback:
+            self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
+        else:
+            self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
 
         self.alb = self.init_alb
 
@@ -274,7 +274,7 @@ class EnergyBalanceModel():
 
             if water_vapor_feedback == False:
                 T_control = self.ctl_data["ctl_state_temp"][0, :, 0]
-                Tgrid_control = np.repeat(T_control, pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
+                Tgrid_control = np.repeat(T_control, self.nLevels).reshape( (self.N_pts, self.nLevels) )
                 air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, self.state['air_pressure'].values[0, :, :])
                 self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(air_temp, self.state['air_pressure'].values[0, :, :] / 100)[1]
 
@@ -392,7 +392,7 @@ class EnergyBalanceModel():
         print('OLR Scheme:        {}'.format(self.olr_type))
         if self.olr_type == 'linear':
             print('\tA = {:.2f}, B = {:.2f}'.format(self.A, self.B))
-        elif self.olr_type in ['full_wvf', 'full_no_wvf']:
+        elif "full_radiation" in self.olr_type:
             print('\tRH Vertical Profile: {}'.format(self.RH_vert_profile))
             print('\tRH Latitudinal Profile: {}'.format(self.RH_lat_profile))
         print('Numerical Method:  {}\n'.format(self.numerical_method))
@@ -402,7 +402,7 @@ class EnergyBalanceModel():
         E_array = np.zeros((frames, self.lats.shape[0]))
         alb_array = np.zeros((frames, self.lats.shape[0]))
         L_array = np.zeros((frames, self.lats.shape[0]))
-        if self.olr_type in ['full_wvf', 'full_no_wvf']:
+        if "full_radiation" in self.olr_type:
             q_array = np.zeros((frames, self.lats.shape[0], self.nLevels))
         
         self.T = self.init_temp
@@ -425,7 +425,7 @@ class EnergyBalanceModel():
                 E_array[frame, :] = self.E
                 L_array[frame, :] = self.L(self.T)
                 alb_array[frame, :] = self.alb
-                if self.olr_type in ['full_wvf', 'full_no_wvf']:
+                if "full_radiation" in self.olr_type:
                     q_array[frame, :, :] = self.state['specific_humidity'].values[0, :, :]
 
                 self._print_progress(frame, error)
@@ -447,7 +447,7 @@ class EnergyBalanceModel():
         E_array = E_array[:frame, :]
         alb_array = alb_array[:frame, :]
         L_array = L_array[:frame, :]
-        if self.olr_type in ['full_wvf', 'full_no_wvf']:
+        if "full_radiation" in self.olr_type:
             q_array = q_array[:frame, :]
 
         # Print exit messages
@@ -463,7 +463,7 @@ class EnergyBalanceModel():
         self.E_array = E_array
         self.alb_array = alb_array
         self.L_array = L_array
-        if self.olr_type in ['full_wvf', 'full_no_wvf']:
+        if "full_radiation" in self.olr_type:
             self.q_array = q_array
 
 
@@ -475,7 +475,7 @@ class EnergyBalanceModel():
         np.savez('E_array.npz', self.E_array)
         np.savez('L_array.npz', self.L_array)
         np.savez('alb_array.npz', self.alb_array)
-        if self.olr_type in ['full_wvf', 'full_no_wvf']:
+        if "full_radiation" in self.olr_type:
             np.savez('q_array.npz', self.q_array)
 
 
