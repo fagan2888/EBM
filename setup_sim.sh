@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# sim_dir=~/my-scratch/EBM_sims/
-sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
+sim_dir=~/my-scratch/EBM_sims/
+# sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 
 N_pts=401
 dtmax_multiple=10.0
