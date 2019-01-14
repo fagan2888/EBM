@@ -303,7 +303,7 @@ class EnergyBalanceModel():
                 self.state['surface_temperature'].values[:] = T
                 if lapse_rate_feedback == False:
                     # Retain LR from control simulations by just shifting all levels by difference at surface
-                    dT = T - self.ctl_data["ctl_state_temp"][0, :, 0]
+                    dT = np.repeat(T - self.ctl_data["ctl_state_temp"][0, :, 0], self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
                     self.state['air_temperature'].values[0, :, :] = self.ctl_data["ctl_state_temp"][0, :, :] + dT
                 else:
                     # Create a 2D array of the T vals and pass to self.interpolated_moist_adiabat
