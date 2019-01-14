@@ -188,10 +188,10 @@ class EnergyBalanceModel():
         # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
             self.init_alb = (40 / 342) * np.ones(len(self.lats))
 
-        if self.albedo_feedback:
-            self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
-        else:
-            self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
+        # if self.albedo_feedback:
+        #     self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
+        # else:
+        #     self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
 
         self.alb = self.init_alb
 
@@ -209,12 +209,12 @@ class EnergyBalanceModel():
             self.A = A
             self.B = B
             L = lambda T: self.A + self.B * T
-        elif olr_type in ['full_wvf', 'full_no_wvf']:
+        elif "full_radiation" in olr_type:
             """ FULL BLOWN """
-            if olr_type == 'full_wvf':
-                water_vapor_feedback = True
-            else:
+            if olr_type == 'full_radiation_no_wv':
                 water_vapor_feedback = False
+            else:
+                water_vapor_feedback = True
         
             # Use CliMT radiation scheme along with MetPy's moist adiabat calculator
             self.nLevels = 30
@@ -226,9 +226,9 @@ class EnergyBalanceModel():
                             )
             pressures = self.state['air_pressure'].values[0, 0, :]
 
-            # # Double CO2
-            # self.state['mole_fraction_of_carbon_dioxide_in_air'].values[0, :, :] = 2 * self.state['mole_fraction_of_carbon_dioxide_in_air'].values[0, :, :]
-            # print(self.state['mole_fraction_of_carbon_dioxide_in_air'])
+            if olr_type == "full_radiation_2xCO2":
+                # Double CO2
+                self.state['mole_fraction_of_carbon_dioxide_in_air'].values[0, :, :] = 2 * self.state['mole_fraction_of_carbon_dioxide_in_air'].values[0, :, :]
 
             # Vertical RH profile
             self.RH_dist = RH * np.ones( (self.lats.shape[0], self.nLevels) )
@@ -242,6 +242,8 @@ class EnergyBalanceModel():
                         self.RH_dist[:, i] = 0
                     elif pressures[i]/100 > 300 and pressures[i]/100 < 800:
                         self.RH_dist[:, i] = 0.2
+            else:
+                print("Invalid RH_vert_profile")
             self.RH_vert_profile = RH_vert_profile
 
             # Latitudinal RH profile
@@ -254,6 +256,8 @@ class EnergyBalanceModel():
                     RH_dist[:, midlevels] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat_center, spread, self.lats), len(midlevels)).reshape( (self.N_pts, len(midlevels)) )
                     return RH_dist
                 self.RH_dist = shift_dist(self.RH_dist, lat_efe)
+            else:
+                print("Invalid RH_lat_profile")
             self.RH_lat_profile = RH_lat_profile
             self.gaussian_spread = gaussian_spread
 
@@ -273,12 +277,6 @@ class EnergyBalanceModel():
                 Tgrid_control = np.repeat(T_control, pressures.shape[0]).reshape( (self.lats.shape[0], pressures.shape[0]) )
                 air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, self.state['air_pressure'].values[0, :, :])
                 self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(air_temp, self.state['air_pressure'].values[0, :, :] / 100)[1]
-                if constant_spec_hum == True:
-                    for i in range(self.nLevels):
-                        # get area weighted mean of specific_humidity and set all lats on this level to that val
-                        qvals = self.state['specific_humidity'].values[0, :, i]
-                        q_const = trapz( qvals * 2 * np.pi * Re**2 * self.cos_lats, dx=self.dlat_rad) / (4 * np.pi * Re**2)
-                        self.state['specific_humidity'].values[0, :, i] = q_const
 
             self.pressures = pressures
             self.pressures_flipped = pressures_flipped
@@ -304,11 +302,11 @@ class EnergyBalanceModel():
                 self.state['air_temperature'].values[0, :, :] = self.interpolated_moist_adiabat.ev(Tgrid, self.state['air_pressure'].values[0, :, :])
                 # Set specific hum assuming constant RH
                 if water_vapor_feedback == True:
-                    if RH_lat_profile != 'constant':
-                        # Change RH based on ITCZ
-                        E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
-                        lat_efe = self.lats[np.argmax(E)] 
-                        self.RH_dist = shift_dist(self.RH_dist, lat_efe)
+                    # Shift RH_dist based on ITCZ
+                    E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
+                    lat_efe = self.lats[np.argmax(E)] 
+                    self.RH_dist = shift_dist(self.RH_dist, lat_efe)
+                    # Recalculate q
                     self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(self.state['air_temperature'].values[0, :, :], self.state['air_pressure'].values[0, :, :] / 100)[1]
                 # CliMT takes over here, this is where the slowdown occurs
                 tendencies, diagnostics = self.radiation(self.state)
@@ -419,14 +417,10 @@ class EnergyBalanceModel():
         frame = 0
         while error > self.tol and frame < frames:
             # take a step, calculate error 
-            E_new, T_new, alb_new = self.take_step()
-            error = np.abs(np.mean(T_new - self.T) / self.dt)
-
-            self.E = E_new
-            self.T = T_new
-            self.alb = alb_new
+            self.E, self.T, self.alb = self.take_step()
 
             if iteration % its_per_frame == 0:
+                error = np.mean(np.abs(self.T - T_array[frame-1, :]) / (its_per_frame * self.dt))
                 T_array[frame, :] = self.T
                 E_array[frame, :] = self.E
                 L_array[frame, :] = self.L(self.T)

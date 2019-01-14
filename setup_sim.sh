@@ -4,9 +4,9 @@
 sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 
 N_pts=401
-dtmax_multiple=5.0
+dtmax_multiple=10.0
 max_sim_years=5
-tol=1e-8
+tol=1e-10
 
 initial_condition=legendre
 low=270
@@ -53,9 +53,6 @@ if [ "$1" == "-o" ]; then
 	RH_lat_profile=mid_level_gaussian
 	# RH_lat_profile=mid_and_upper_level_gaussian
 	gaussian_spread=5
-	# constant_spec_hum=True
-	constant_spec_hum=False
-	
 	
 	i=0
 	while [ -d ${sim_dir}sim$i ];
@@ -89,7 +86,6 @@ if [ "$1" == "-o" ]; then
 	    -e 's/RH_vert_profile=/RH_vert_profile="'$RH_vert_profile'"/g' \
 	    -e 's/RH_lat_profile=/RH_lat_profile="'$RH_lat_profile'"/g' \
 	    -e 's/gaussian_spread=/gaussian_spread='$gaussian_spread'/g' \
-	    -e 's/constant_spec_hum=/constant_spec_hum='$constant_spec_hum'/g' \
 	    -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
 	    -e 's/frames=/frames='$frames'/g' \
 	    -e 's/fname_efe=/fname_efe="'$fname_efe'"/g' \
@@ -112,27 +108,13 @@ if [ "$1" == "-o" ]; then
 elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
 	
-	# olr_type=full_wvf
-	olr_type=full_no_wvf
-	# olr_type=linear
+	olr_type=full_radiation
 	A=None
-	# A=-452.68
 	B=None
-	# B=2.51
 	emissivity=None
-	# RH_vert_profile=None
-	# RH_vert_profile=zero_top
 	RH_vert_profile=steps
-	# RH_lat_profile=None
-	# RH_lat_profile=constant
-	# RH_lat_profile=gaussian
 	RH_lat_profile=mid_level_gaussian
-	# RH_lat_profile=mid_and_upper_level_gaussian
-	# gaussian_spread=None
 	gaussian_spread=5
-	# scale_efe=None
-	# constant_spec_hum=True
-	constant_spec_hum=False
 	
 	insolation_type=perturbation
 	for perturb_center in 15 60; do
@@ -174,7 +156,6 @@ elif [ "$1" == "-s" ]; then
 	            -e 's/RH_vert_profile=/RH_vert_profile="'$RH_vert_profile'"/g' \
 	            -e 's/RH_lat_profile=/RH_lat_profile="'$RH_lat_profile'"/g' \
 	            -e 's/gaussian_spread=/gaussian_spread='$gaussian_spread'/g' \
-	    		-e 's/constant_spec_hum=/constant_spec_hum='$constant_spec_hum'/g' \
 	            -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
 	            -e 's/frames=/frames='$frames'/g' \
 	            -e 's/fname_efe=/fname_efe="'$fname_efe'"/g' \
@@ -225,8 +206,6 @@ elif [ "$1" == "-c" ]; then
 	RH_lat_profile=mid_level_gaussian
 	# RH_lat_profile=mid_and_upper_level_gaussian
 	gaussian_spread=5
-    # constant_spec_hum=True
-    constant_spec_hum=False
 	
 	i=0
 	while [ -d ${sim_dir}sim$i ];
@@ -234,9 +213,9 @@ elif [ "$1" == "-c" ]; then
 	    i=`echo "$i + 1" | bc`
 	done
 	
-	for N_pts in 301 401 501; do
+	for N_pts in 401 501; do
 		for tol in 1e-8 1e-9 1e-10; do
-			for dtmax_multiple in 1.0 5.0 10.0; do
+			for dtmax_multiple in 0.1 1.0 5.0 10.0 50.0; do
 				echo "Making new simulation in ${sim_dir}sim$i"
 				mkdir ${sim_dir}sim$i
 				cd ${sim_dir}sim$i
@@ -263,7 +242,6 @@ elif [ "$1" == "-c" ]; then
 				    -e 's/RH_vert_profile=/RH_vert_profile="'$RH_vert_profile'"/g' \
 				    -e 's/RH_lat_profile=/RH_lat_profile="'$RH_lat_profile'"/g' \
 				    -e 's/gaussian_spread=/gaussian_spread='$gaussian_spread'/g' \
-				    -e 's/constant_spec_hum=/constant_spec_hum='$constant_spec_hum'/g' \
 				    -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
 				    -e 's/frames=/frames='$frames'/g' \
 				    -e 's/fname_efe=/fname_efe="'$fname_efe'"/g' \

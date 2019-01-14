@@ -10,7 +10,7 @@ model.albedo(albedo_feedback=, alb_ice=, alb_water=)
 
 model.insolation(insolation_type=, perturb_center=, perturb_spread=, perturb_intensity=)
         
-model.outgoing_longwave(olr_type=, A=, B=, emissivity=, RH_vert_profile=, RH_lat_profile=, gaussian_spread=, constant_spec_hum=)
+model.outgoing_longwave(olr_type=, A=, B=, emissivity=, RH_vert_profile=, RH_lat_profile=, gaussian_spread=)
 
 model.solve(numerical_method=, frames=)
 

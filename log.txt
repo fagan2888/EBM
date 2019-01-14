@@ -845,31 +845,47 @@ sim189 contains feedback calculations (lambdas). See email with Bill.
 ---
 # 1-13
 ---
-Convergence tests
-sim190 | N_pts=301 | dtmax_multiple=1.0 | tol=1e-8 |
-sim191 | N_pts=301 | dtmax_multiple=5.0 | tol=1e-8 |
-sim192 | N_pts=301 | dtmax_multiple=10.0 | tol=1e-8 |
-sim193 | N_pts=301 | dtmax_multiple=1.0 | tol=1e-9 |
-sim194 | N_pts=301 | dtmax_multiple=5.0 | tol=1e-9 |
-sim195 | N_pts=301 | dtmax_multiple=10.0 | tol=1e-9 |
-sim196 | N_pts=301 | dtmax_multiple=1.0 | tol=1e-10 |
-sim197 | N_pts=301 | dtmax_multiple=5.0 | tol=1e-10 |
-sim198 | N_pts=301 | dtmax_multiple=10.0 | tol=1e-10 |
-sim199 | N_pts=401 | dtmax_multiple=1.0 | tol=1e-8 |
-sim200 | N_pts=401 | dtmax_multiple=5.0 | tol=1e-8 |
-sim201 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-8 |
-sim202 | N_pts=401 | dtmax_multiple=1.0 | tol=1e-9 |
-sim203 | N_pts=401 | dtmax_multiple=5.0 | tol=1e-9 |
-sim204 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-9 |
-sim205 | N_pts=401 | dtmax_multiple=1.0 | tol=1e-10 |
-sim206 | N_pts=401 | dtmax_multiple=5.0 | tol=1e-10 |
-sim207 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-10 |
-sim208 | N_pts=501 | dtmax_multiple=1.0 | tol=1e-8 |
-sim209 | N_pts=501 | dtmax_multiple=5.0 | tol=1e-8 |
-sim210 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-8 |
-sim211 | N_pts=501 | dtmax_multiple=1.0 | tol=1e-9 |
-sim212 | N_pts=501 | dtmax_multiple=5.0 | tol=1e-9 |
-sim213 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-9 |
-sim214 | N_pts=501 | dtmax_multiple=1.0 | tol=1e-10 |
-sim215 | N_pts=501 | dtmax_multiple=5.0 | tol=1e-10 |
-sim216 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-10 |
+Redo convergence tests now that we have slightly diff error calculation nad we know we can do higher dtmax
+Planck radiation. Implicit scheme.
+sim190 | N_pts=401 | dtmax_multiple=0.5  | tol=1e-8  | T_avg=306.60 | SW-LW= -0.04967 |
+sim191 | N_pts=401 | dtmax_multiple=1.0  | tol=1e-8  | T_avg=306.60 | SW-LW= -0.04843 |
+sim192 | N_pts=401 | dtmax_multiple=5.0  | tol=1e-8  | T_avg=306.59 | SW-LW= -0.03694 |
+sim193 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-8  | T_avg=306.58 | SW-LW= -0.02463 |
+sim194 | N_pts=401 | dtmax_multiple=50.0 | tol=1e-8  | T_avg=306.53 | SW-LW= +0.06657 |
+sim195 | N_pts=401 | dtmax_multiple=0.5  | tol=1e-9  | T_avg=306.69 | SW-LW= -0.22256 |
+sim196 | N_pts=401 | dtmax_multiple=1.0  | tol=1e-9  | T_avg=306.69 | SW-LW= -0.22400 |
+##sim197 | N_pts=401 | dtmax_multiple=5.0  | tol=1e-9  | T_avg=306.68 | SW-LW= -0.21335 |
+sim198 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-9  | T_avg=306.67 | SW-LW= -0.20049 |
+sim199 | N_pts=401 | dtmax_multiple=50.0 | tol=1e-9  | T_avg=306.63 | SW-LW= -0.11629 |
+sim200 | N_pts=401 | dtmax_multiple=0.1  | tol=1e-10 | T_avg=306.70 | SW-LW= -0.24141 |
+sim201 | N_pts=401 | dtmax_multiple=1.0  | tol=1e-10 | T_avg=306.70 | SW-LW= -0.24069 |
+sim202 | N_pts=401 | dtmax_multiple=5.0  | tol=1e-10 | T_avg=306.69 | SW-LW= -0.23030 |
+##sim203 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-10 | T_avg=306.68 | SW-LW= -0.21756 |
+sim204 | N_pts=401 | dtmax_multiple=50.0 | tol=1e-10 | T_avg=306.64 | SW-LW= -0.13438 |
+
+sim205 | N_pts=501 | dtmax_multiple=0.5  | tol=1e-8  | T_avg=306.55 | SW-LW= -0.00381 |
+sim206 | N_pts=501 | dtmax_multiple=1.0  | tol=1e-8  | T_avg=306.55 | SW-LW= -0.00294 |
+sim207 | N_pts=501 | dtmax_multiple=5.0  | tol=1e-8  | T_avg=306.54 | SW-LW= +0.00378 |
+sim208 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-8  | T_avg=306.54 | SW-LW= +0.01191 |
+sim209 | N_pts=501 | dtmax_multiple=50.0 | tol=1e-8  | T_avg=306.50 | SW-LW= +0.06964 |
+sim210 | N_pts=501 | dtmax_multiple=0.5  | tol=1e-9  | T_avg=306.63 | SW-LW= -0.17520 |
+sim211 | N_pts=501 | dtmax_multiple=1.0  | tol=1e-9  | T_avg=306.63 | SW-LW= -0.17705 |
+sim212 | N_pts=501 | dtmax_multiple=5.0  | tol=1e-9  | T_avg=306.63 | SW-LW= -0.17018 |
+sim213 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-9  | T_avg=306.62 | SW-LW= -0.16191 |
+sim214 | N_pts=501 | dtmax_multiple=50.0 | tol=1e-9  | T_avg=306.59 | SW-LW= -0.10551 |
+#sim215 | N_pts=501 | dtmax_multiple=0.5  | tol=1e-10 | T_avg=306.64 | SW-LW= -0.19440 |
+sim216 | N_pts=501 | dtmax_multiple=1.0  | tol=1e-10 | T_avg=306.64 | SW-LW= -0.19359 |
+sim217 | N_pts=501 | dtmax_multiple=5.0  | tol=1e-10 | T_avg=306.64 | SW-LW= -0.18664 |
+sim218 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-10 | T_avg=306.63 | SW-LW= -0.17841 |
+sim219 | N_pts=501 | dtmax_multiple=50.0 | tol=1e-10 | T_avg=306.60 | SW-LW= -0.12246 |
+
+"The Best" should be sim215 with the most points, smallest times step, and smallest tolerance. 
+It seems that SW-LW= -0.2 is going to be a consistent issue, so we need to look for sims that went long enough to get to that point.
+We would like to do N_pts=401. 
+Either sim197 or sim203 would be fine.
+
+Calculation of seconds it took to finish each:
+sim197: 33401 its * 0.0010054225 s/it = 33.5821169225 s
+sim203: 22379 its * 0.0010560593 s/it = 23.6335510747 s
+
+So we go with sim203: N_pts=401, dtmax_multiple=10.0, tol=1e-10.
