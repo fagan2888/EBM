@@ -215,6 +215,11 @@ class EnergyBalanceModel():
                 water_vapor_feedback = False
             else:
                 water_vapor_feedback = True
+
+            if olr_type == 'full_radiation_no_lr':
+                lapse_rate_feedback = False
+            else:
+                lapse_rate_feedback = True
         
             # Use CliMT radiation scheme along with MetPy's moist adiabat calculator
             self.nLevels = 30
@@ -296,11 +301,16 @@ class EnergyBalanceModel():
                 """
                 # Set surface state
                 self.state['surface_temperature'].values[:] = T
-                # Create a 2D array of the T vals and pass to self.interpolated_moist_adiabat
-                #   note: shape of 'air_temperature' is (lons, lats, press) 
-                Tgrid = np.repeat(T, self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
-                self.state['air_temperature'].values[0, :, :] = self.interpolated_moist_adiabat.ev(Tgrid, self.state['air_pressure'].values[0, :, :])
-                # Set specific hum assuming constant RH
+                if lapse_rate_feedback == False:
+                    # Retain LR from control simulations by just shifting all levels by difference at surface
+                    dT = T - self.ctl_data["ctl_state_temp"][0, :, 0]
+                    self.state['air_temperature'].values[0, :, :] = self.ctl_data["ctl_state_temp"][0, :, :] + dT
+                else:
+                    # Create a 2D array of the T vals and pass to self.interpolated_moist_adiabat
+                    #   note: shape of 'air_temperature' is (lons, lats, press) 
+                    Tgrid = np.repeat(T, self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
+                    self.state['air_temperature'].values[0, :, :] = self.interpolated_moist_adiabat.ev(Tgrid, self.state['air_pressure'].values[0, :, :])
+                    # Set specific hum assuming constant RH
                 if water_vapor_feedback == True:
                     # Shift RH_dist based on ITCZ
                     E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
@@ -466,6 +476,8 @@ class EnergyBalanceModel():
         if "full_radiation" in self.olr_type:
             self.q_array = q_array
 
+        if self.perturb_intensity == 0 and self.olr_type == 'full_radiation':
+            np.savez('control_data.npz', S=self.S * (1 - self.alb), L_bar=1 / self._integrate_lat(1) * self._integrate_lat(self.L(self.T)), flux_total=-(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(self.E, self.dx), ctl_state_temp=self.state['air_temperature'].values[:, :, :])
 
     def save_data(self):
         """
@@ -629,8 +641,6 @@ class EnergyBalanceModel():
         self.flux_total = -(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(E_f, self.dx)
         self.delta_flux_total = self.flux_total - self.flux_total_ctl
 
-        # if self.perturb_intensity == 0 and self.olr_type == 'full_wvf':
-        #     np.savez('control_data.npz', S=self.S_f, L_bar=self.L_bar, flux_total=self.flux_total, ctl_state_temp=self.state['air_temperature'].values[:, :, :])
         # self.delta_flux_total = self.flux_total - flux_total_ctl
 
         # All LW Feedbacks
