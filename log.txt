@@ -890,10 +890,10 @@ sim203: 22379 its * 0.0010560593 s/it = 23.6335510747 s
 
 So we go with sim203: N_pts=401, dtmax_multiple=10.0, tol=1e-10
 
-Control Simulation:
+# Control Simulation:
 sim221 | perturbation | lat0=15 | M=0 | full_radiation |
 
-Sensitivity Experiments
+# Sensitivity Experiments
 sim221 | perturbation | lat0=15 | M=5  | full_radiation |
 sim222 | perturbation | lat0=15 | M=10 | full_radiation |
 sim223 | perturbation | lat0=15 | M=15 | full_radiation |
@@ -902,3 +902,31 @@ sim225 | perturbation | lat0=60 | M=5  | full_radiation |
 sim226 | perturbation | lat0=60 | M=10 | full_radiation |
 sim227 | perturbation | lat0=60 | M=15 | full_radiation |
 sim228 | perturbation | lat0=60 | M=18 | full_radiation |
+In data/sensitivity_full_radiation.dat:
+15, 4.94,  5, -3.2234487159344911, -2.0630071781980743
+15, 4.94, 10, -5.7254538783852755, -3.6642904821665758
+15, 4.94, 15, -7.9629868864638578, -5.0963116073368688
+15, 4.94, 18, -9.1536291345546008, -5.8583226461149440
+60, 9.89,  5, -1.1008438010507908, -0.7045400326725061
+60, 9.89, 10, -2.1022327864970007, -1.3454289833580804
+60, 9.89, 15, -2.9467608164108263, -1.8859269225029289
+60, 9.89, 18, -3.3616588870803148, -2.1514616877314015
+
+sim229 | perturbation | lat0=15 | M=5 | full_radiation_no_wv |
+sim230 | perturbation | lat0=15 | M=10 | full_radiation_no_wv |
+sim231 | perturbation | lat0=15 | M=15 | full_radiation_no_wv |
+sim232 | perturbation | lat0=15 | M=18 | full_radiation_no_wv |
+sim233 | perturbation | lat0=60 | M=5 | full_radiation_no_wv |
+sim234 | perturbation | lat0=60 | M=10 | full_radiation_no_wv |
+sim235 | perturbation | lat0=60 | M=15 | full_radiation_no_wv |
+sim236 | perturbation | lat0=60 | M=18 | full_radiation_no_wv |
+In data/sensitivity_full_radiation_no_wv.dat:
+15, 4.94,  5, -1.8380935581346449, -1.1763798772061727
+15, 4.94, 10, -3.4182479649863042, -2.1876786975912350
+15, 4.94, 15, -4.8298285131576852, -3.0910902484209188
+15, 4.94, 18, -5.6167321509760431, -3.5947085766246674
+60, 9.89,  5, -0.3577732629205488, -0.2289748882691513
+60, 9.89, 10, -0.6977868566892077, -0.4465835882810929
+60, 9.89, 15, -1.0239566534654339, -0.6553322582178776
+60, 9.89, 18, -1.2143733106399131, -0.7771989188095444
+

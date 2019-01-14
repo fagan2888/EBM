@@ -108,7 +108,8 @@ if [ "$1" == "-o" ]; then
 elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
 	
-	olr_type=full_radiation
+	# olr_type=full_radiation
+	olr_type=full_radiation_no_wv
 	A=None
 	B=None
 	emissivity=None
