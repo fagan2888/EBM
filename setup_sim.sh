@@ -1,7 +1,7 @@
 #!/bin/bash
 
-sim_dir=~/my-scratch/EBM_sims/
-# sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
+# sim_dir=~/my-scratch/EBM_sims/
+sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 
 N_pts=401
 dtmax_multiple=5.0
@@ -234,9 +234,9 @@ elif [ "$1" == "-c" ]; then
 	    i=`echo "$i + 1" | bc`
 	done
 	
-	for N_pts in 300 400 500; do
-		for tol in 1e-7 1e-8 1e-9; do
-			for dtmax_multiple in 0.5 1.5 5.0; do
+	for N_pts in 301 401 501; do
+		for tol in 1e-8 1e-9 1e-10; do
+			for dtmax_multiple in 1.0 5.0 10.0; do
 				echo "Making new simulation in ${sim_dir}sim$i"
 				mkdir ${sim_dir}sim$i
 				cd ${sim_dir}sim$i

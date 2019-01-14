@@ -842,4 +842,34 @@ sim188 has the three summarizing calculations with EBM_FeedbackParameters.py fro
 ---
 sim189 contains feedback calculations (lambdas). See email with Bill.
 
-
+---
+# 1-13
+---
+Convergence tests
+sim190 | N_pts=301 | dtmax_multiple=1.0 | tol=1e-8 |
+sim191 | N_pts=301 | dtmax_multiple=5.0 | tol=1e-8 |
+sim192 | N_pts=301 | dtmax_multiple=10.0 | tol=1e-8 |
+sim193 | N_pts=301 | dtmax_multiple=1.0 | tol=1e-9 |
+sim194 | N_pts=301 | dtmax_multiple=5.0 | tol=1e-9 |
+sim195 | N_pts=301 | dtmax_multiple=10.0 | tol=1e-9 |
+sim196 | N_pts=301 | dtmax_multiple=1.0 | tol=1e-10 |
+sim197 | N_pts=301 | dtmax_multiple=5.0 | tol=1e-10 |
+sim198 | N_pts=301 | dtmax_multiple=10.0 | tol=1e-10 |
+sim199 | N_pts=401 | dtmax_multiple=1.0 | tol=1e-8 |
+sim200 | N_pts=401 | dtmax_multiple=5.0 | tol=1e-8 |
+sim201 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-8 |
+sim202 | N_pts=401 | dtmax_multiple=1.0 | tol=1e-9 |
+sim203 | N_pts=401 | dtmax_multiple=5.0 | tol=1e-9 |
+sim204 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-9 |
+sim205 | N_pts=401 | dtmax_multiple=1.0 | tol=1e-10 |
+sim206 | N_pts=401 | dtmax_multiple=5.0 | tol=1e-10 |
+sim207 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-10 |
+sim208 | N_pts=501 | dtmax_multiple=1.0 | tol=1e-8 |
+sim209 | N_pts=501 | dtmax_multiple=5.0 | tol=1e-8 |
+sim210 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-8 |
+sim211 | N_pts=501 | dtmax_multiple=1.0 | tol=1e-9 |
+sim212 | N_pts=501 | dtmax_multiple=5.0 | tol=1e-9 |
+sim213 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-9 |
+sim214 | N_pts=501 | dtmax_multiple=1.0 | tol=1e-10 |
+sim215 | N_pts=501 | dtmax_multiple=5.0 | tol=1e-10 |
+sim216 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-10 |
