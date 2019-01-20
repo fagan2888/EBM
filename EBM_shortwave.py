@@ -162,13 +162,10 @@ class EnergyBalanceModel():
             self.perturb_spread = perturb_spread
             self.perturb_intensity = perturb_intensity
 
-            S_control = S0 / np.pi * np.cos(self.lats)
-
             func = lambda y: 0.5 * np.exp(-(y - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2)) * np.cos(y)
             perturb_normalizer, er = quadrature(func, -np.pi/2, np.pi/2, tol=1e-16, rtol=1e-16, maxiter=1000)
 
-            dS = -perturb_intensity/perturb_normalizer * np.exp(-(self.lats - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
-            self.S = S_control + dS
+            self.dS = -perturb_intensity/perturb_normalizer * np.exp(-(self.lats - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
 
 
     def albedo(self, albedo_feedback=False, alb_ice=None, alb_water=None):
@@ -182,11 +179,11 @@ class EnergyBalanceModel():
             self.init_alb = alb_water * np.ones(len(self.lats))
             self.init_alb[np.where(self.init_temp <= 273.16)] = alb_ice
         else:
-        # From Clark:
-        #   self.init_alb = 0.2725 * np.ones(len(lats))
-        # Using the below calculation from KiehlTrenberth1997
-        # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
-            self.init_alb = (40 / 342) * np.ones(len(self.lats))
+            # From Clark:
+            self.init_alb = 0.2725 * np.ones(self.N_pts)
+            # Using the below calculation from KiehlTrenberth1997
+            # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
+            # self.init_alb = (40 / 342) * np.ones(len(self.lats))
 
         if self.albedo_feedback:
             self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
@@ -223,8 +220,9 @@ class EnergyBalanceModel():
         
             # Use CliMT radiation scheme along with MetPy's moist adiabat calculator
             self.nLevels = 30
-            self.radiation = climt.RRTMGLongwave(cloud_overlap_method='clear_only')
-            self.state = climt.get_default_state([self.radiation], x={}, 
+            self.longwave_radiation = climt.RRTMGLongwave(cloud_overlap_method='clear_only')
+            self.shortwave_radiation = climt.RRTMGShortwave(use_solar_constant_from_fortran=True, solar_variability_method=-1, ignore_day_of_year=True)
+            self.state = climt.get_default_state([self.shortwave_radiation, self.longwave_radiation], x={}, 
                             y={'label' : 'latitude', 'values': self.lats, 'units' : 'radians'},
                             mid_levels={'label' : 'mid_levels', 'values': np.arange(self.nLevels), 'units' : ''},
                             interface_levels={'label' : 'interface_levels', 'values': np.arange(self.nLevels + 1), 'units' : ''}

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-sim_dir=~/my-scratch/EBM_sims/
-# sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
+# sim_dir=~/my-scratch/EBM_sims/
+sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 
 N_pts=401
 dtmax_multiple=10.0
@@ -110,10 +110,14 @@ elif [ "$1" == "-s" ]; then
 	
 	# olr_type=full_radiation
 	# olr_type=full_radiation_no_wv
-	olr_type=full_radiation_no_lr
-	A=None
-	B=None
-	emissivity=None
+	# olr_type=full_radiation_no_lr
+	# olr_type=planck
+	olr_type=linear
+	# A=-572.3
+	# B=2.92
+	A=-281.67
+	B=1.8
+	emissivity=0.65
 	RH_vert_profile=steps
 	RH_lat_profile=mid_level_gaussian
 	gaussian_spread=5
@@ -164,11 +168,12 @@ elif [ "$1" == "-s" ]; then
 	            -e 's/fname_feedbacks=/fname_feedbacks="'$fname_feedbacks'"/g' \
 	            ${EBM_PATH}/simulation.py > simulation.py
 	        
-	        sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job
+	        # sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job
 	        cp -p ${EBM_PATH}/EBM.py .
 	        
 	        # echo "Running job."
-	        sbatch run_EBM.job
+	        # sbatch run_EBM.job
+			python -u simulation.py > out0 &
 	        
 	        # echo "Logging simulation."
 	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | "

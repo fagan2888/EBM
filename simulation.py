@@ -18,6 +18,6 @@ model.save_data()
 
 model.log_efe(fname_efe=)
 
-model.log_feedbacks(fname_feedbacks=)
+# model.log_feedbacks(fname_feedbacks=)
 
 model.save_plots()

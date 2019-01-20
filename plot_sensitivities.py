@@ -8,7 +8,7 @@ from matplotlib import animation, rc
 from matplotlib import colors as mcolors
 
 rc('animation', html='html5')
-rc('lines', linewidth=2, color='b', markersize=8)
+rc('lines', linewidth=2, color='b', markersize=10)
 rc('axes', titlesize=20, labelsize=16, xmargin=0.05, ymargin=0.05, linewidth=2)
 rc('axes.spines', top=False, right=False)
 rc('xtick', labelsize=13)
@@ -44,28 +44,12 @@ ax1 = axes[0]; ax2 = axes[1]
 # dictionary of 'file' : ['label', 'color'] elements
 # (see matplotlib.colors.CSS4_COLORS in a terminal to see all the names)
 files = {
-        # 'perturbed_efe_clark_no_wvf.dat':                    ['Prescirbed WV (Clark et al.)',              'darkorange'],
-        # 'perturbed_efe_clark_wvf.dat':                       ['Interactive WV (Clark et al.)',             'darkorange'],
-
-        # 'perturbed_efe_planck.dat':                          ['Planck OLR',                                'gray'],
-        # 'perturbed_efe_planck_linear.dat':                   ['Linear Planck OLR (Solden & Held)',         'firebrick'],
-        # 'perturbed_efe_planck_linear_fit.dat':               ['Linear Planck OLR Fit',                     'lawngreen'],
-
-        'sensitivity_full_wvf.dat':    ['CliMT Interactive WV', 'red'],
-        'sensitivity_full_wvf_old.dat':    ['OLD CliMT Interactive WV', 'black'],
-        'sensitivity_full_no_wvf.dat':    ['CliMT Prescribed WV', 'blue'],
-        'sensitivity_full_no_wvf_old.dat':    ['OLD CliMT Prescribed WV', 'grey'],
-
-        # 'perturbed_efe_full_wvf.dat':                        ['CliMT Interactive WV',                      'red'],
-        # 'perturbed_efe_full_wvf_linear.dat':                 ['Linear Interactive WV (Solden & Held)',     'pink'],
-        # 'perturbed_efe_full_wvf_linear_fit.dat':             ['Linear CliMT Interactive WV Fit',           'lightskyblue'],
-
-        # 'perturbed_efe_full_no_wvf.dat':                     ['CliMT Prescribed WV',                       'green'],
-        # 'perturbed_efe_full_no_wvf_linear.dat':              ['Linear Prescribed WV (Solden & Held)',      'black'],
-        # 'perturbed_efe_full_no_wvf_linear_fit.dat':          ['Linear CliMT Prescribed WV Fit',            'purple']
-
-        # 'perturbed_efe_full_wvf_alb_feedback.dat': ['CliMT Interactive WV, Albedo Feedback 0.3',  'pink'],
-        # 'perturbed_efe_full_wvf_alb_feedback0.5.dat': ['CliMT Interactive WV, Albedo Feedback 0.5',  'cyan'],
+        'sensitivity_full_radiation.dat':    ['CliMT', 'black'],
+        'sensitivity_full_radiation_no_wv.dat':    ['CliMT No WV Feedback', 'green'],
+        'sensitivity_full_radiation_no_lr.dat':    ['CliMT No LR Feedback', 'purple'],
+        'sensitivity_planck.dat':    ['Planck Radiation ($\\epsilon=0.65$)', 'red'],
+        'sensitivity_linear.dat':    ['Linear Radiation ($A=-572.3, B=2.92$)', 'brown'],
+        'sensitivity_linear1.dat':    ['Linear Radiation ($A=-281.7, B=1.8$)', 'pink'],
         }
 color_dict = mcolors.CSS4_COLORS
 

@@ -9,10 +9,10 @@ from scipy.optimize import curve_fit
 ################################################################################
 ### LOAD DATA
 ################################################################################
-T_array   = np.load('data/T_array.npz')['arr_0']
-E_array   = np.load('data/E_array.npz')['arr_0']
-L_array   = np.load('data/L_array.npz')['arr_0']
-alb_array = np.load('data/alb_array.npz')['arr_0']
+T_array   = np.load('T_array.npz')['arr_0']
+E_array   = np.load('E_array.npz')['arr_0']
+L_array   = np.load('L_array.npz')['arr_0']
+alb_array = np.load('alb_array.npz')['arr_0']
 
 ################################################################################
 ### LW vs. T
