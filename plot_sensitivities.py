@@ -47,9 +47,9 @@ files = {
         'sensitivity_full_radiation.dat':    ['CliMT', 'black'],
         'sensitivity_full_radiation_no_wv.dat':    ['CliMT No WV Feedback', 'green'],
         'sensitivity_full_radiation_no_lr.dat':    ['CliMT No LR Feedback', 'purple'],
-        'sensitivity_planck.dat':    ['Planck Radiation ($\\epsilon=0.65$)', 'red'],
-        'sensitivity_linear.dat':    ['Linear Radiation ($A=-572.3, B=2.92$)', 'brown'],
-        'sensitivity_linear1.dat':    ['Linear Radiation ($A=-281.7, B=1.8$)', 'pink'],
+        # 'sensitivity_planck.dat':    ['Planck Radiation ($\\epsilon=0.65$)', 'red'],
+        # 'sensitivity_linear.dat':    ['Linear Radiation ($A=-572.3, B=2.92$)', 'brown'],
+        # 'sensitivity_linear1.dat':    ['Linear Radiation ($A=-281.7, B=1.8$)', 'pink'],
         }
 color_dict = mcolors.CSS4_COLORS
 

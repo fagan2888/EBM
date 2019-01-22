@@ -198,15 +198,7 @@ class EnergyBalanceModel():
         Set outgoing longwave radiation.
         """
         self.olr_type = olr_type
-        if olr_type == 'planck':
-            """ PLANCK RADIATION """
-            L = lambda T: emissivity * sig * T**4 
-        elif olr_type == 'linear':
-            """ LINEAR FIT """
-            self.A = A
-            self.B = B
-            L = lambda T: self.A + self.B * T
-        elif "full_radiation" in olr_type:
+        if "full_radiation" in olr_type:
             """ FULL BLOWN """
             if olr_type == 'full_radiation_no_wv':
                 water_vapor_feedback = False
@@ -289,14 +281,10 @@ class EnergyBalanceModel():
             # plt.colorbar()
             # plt.show()
 
-            for i in self.state.keys():
-                print(i)
-            os.sys.exit()
-
-            def L(T):
+            def S_and_L(T):
                 """ 
-                OLR function.
-                Outputs OLR given T_surf.
+                NEI function.
+                Outputs NEI given T_surf.
                 Assumes moist adiabat structure, uses full blown radiation code from CliMT.
                 Sets temp profile with interpolation of moist adiabat calculations from MetPy.
                 Sets specific hum profile by assuming constant RH and using _humidsat function from Boos
@@ -312,7 +300,6 @@ class EnergyBalanceModel():
                     #   note: shape of 'air_temperature' is (lons, lats, press) 
                     Tgrid = np.repeat(T, self.nLevels).reshape( (self.lats.shape[0], self.nLevels) )
                     self.state['air_temperature'].values[0, :, :] = self.interpolated_moist_adiabat.ev(Tgrid, self.state['air_pressure'].values[0, :, :])
-                    # Set specific hum assuming constant RH
                 if water_vapor_feedback == True:
                     # Shift RH_dist based on ITCZ
                     E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
@@ -320,22 +307,33 @@ class EnergyBalanceModel():
                     self.RH_dist = shift_dist(self.RH_dist, lat_efe)
                     # Recalculate q
                     self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(self.state['air_temperature'].values[0, :, :], self.state['air_pressure'].values[0, :, :] / 100)[1]
-                # CliMT takes over here, this is where the slowdown occurs
-                tendencies, diagnostics = self.radiation(self.state)
-                return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0]
+                self.state['surface_albedo_for_diffuse_near_infrared'].values[0, :] = self.alb
+                self.state['surface_albedo_for_direct_near_infrared'].values[0, :] = self.alb
+                self.state['surface_albedo_for_diffuse_shortwave'].values[0, :] = self.alb
+                self.state['surface_albedo_for_direct_shortwave'].values[0, :] = self.alb
+
+                shortwave_tendencies, shortwave_diagnostics = self.shortwave_radiation(self.state)
+                longwave_tendencies, longwave_diagnostics = self.longwave_radiation(self.state)
+
+                S = shortwave_diagnostics['upwelling_shortwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0] 
+                L = longwave_diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].sel(interface_levels=self.nLevels).values[0] 
+                return S, L
         else:
             os.sys.exit('Invalid keyword for olr_type: {}'.format(self.olr_type))
 
 
-        self.L = L
+        self.S_and_L = S_and_L
 
 
     def take_step(self):
         """
         Take single time step for integration.
         """
+        # get NEI
+        S, L = self.S_and_L(self.T)
+        NEI = (S + self.dS) - L
         # step forward using the take_step_matrix set up in self.solve()
-        E_new = np.dot(self.take_step_matrix, self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
+        E_new = np.dot(self.take_step_matrix, self.E + self.dt * g / ps * NEI)
     
         # insulated boundaries
         E_new[0] = E_new[1]
@@ -411,11 +409,7 @@ class EnergyBalanceModel():
         
         # Setup arrays to save data in
         T_array = np.zeros((frames, self.lats.shape[0]))
-        E_array = np.zeros((frames, self.lats.shape[0]))
         alb_array = np.zeros((frames, self.lats.shape[0]))
-        L_array = np.zeros((frames, self.lats.shape[0]))
-        if "full_radiation" in self.olr_type:
-            q_array = np.zeros((frames, self.lats.shape[0], self.nLevels))
         
         self.T = self.init_temp
         self.E = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
@@ -434,14 +428,20 @@ class EnergyBalanceModel():
             if iteration % its_per_frame == 0:
                 error = np.mean(np.abs(self.T - T_array[frame-1, :]) / (its_per_frame * self.dt))
                 T_array[frame, :] = self.T
-                E_array[frame, :] = self.E
-                L_array[frame, :] = self.L(self.T)
                 alb_array[frame, :] = self.alb
-                if "full_radiation" in self.olr_type:
-                    q_array[frame, :, :] = self.state['specific_humidity'].values[0, :, :]
+
+                ### PLOT NEI
+                S, L = self.S_and_L(self.T)
+                NEI = (S + self.dS) - L
+                f, ax = plt.subplots(1, figsize=(16,10))
+                ax.plot(self.sin_lats, S, 'g-')
+                ax.plot(self.sin_lats, 1368.22 / np.pi * np.cos(self.lats) + self.dS, 'g--')
+                ax.plot(self.sin_lats, L, 'r-')
+                ax.plot(self.sin_lats, NEI, 'k-')
+                plt.show()
 
                 self._print_progress(frame, error)
-                # print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(self.S * (1 - self.alb) - L_array[frame, :])))
+                print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(NEI)))
                 frame += 1
 
             iteration += 1
@@ -456,11 +456,7 @@ class EnergyBalanceModel():
         if iteration-1 % its_per_frame == 0:
             frame += 1
         T_array = T_array[:frame, :]
-        E_array = E_array[:frame, :]
         alb_array = alb_array[:frame, :]
-        L_array = L_array[:frame, :]
-        if "full_radiation" in self.olr_type:
-            q_array = q_array[:frame, :]
 
         # Print exit messages
         print('Equilibrium reached in {:8.5f} days ({} iterations).'.format(iteration * self.dt / self.secs_in_day, iteration))
@@ -472,11 +468,7 @@ class EnergyBalanceModel():
 
         # Save arrays to class
         self.T_array = T_array
-        self.E_array = E_array
         self.alb_array = alb_array
-        self.L_array = L_array
-        if "full_radiation" in self.olr_type:
-            self.q_array = q_array
 
         if self.perturb_intensity == 0 and self.olr_type == 'full_radiation':
             np.savez('control_data.npz', S=self.S * (1 - self.alb), L_bar=1 / self._integrate_lat(1) * self._integrate_lat(self.L(self.T)), flux_total=-(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(self.E, self.dx), ctl_state_temp=self.state['air_temperature'].values[:, :, :])
@@ -486,11 +478,7 @@ class EnergyBalanceModel():
         Save arrays of state variables.
         """
         np.savez('T_array.npz', self.T_array)
-        np.savez('E_array.npz', self.E_array)
-        np.savez('L_array.npz', self.L_array)
         np.savez('alb_array.npz', self.alb_array)
-        if "full_radiation" in self.olr_type:
-            np.savez('q_array.npz', self.q_array)
 
 
     def _calculate_efe(self):
