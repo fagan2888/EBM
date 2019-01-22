@@ -2,10 +2,10 @@
 
 from EBM_shortwave import EnergyBalanceModel
 
-model = EnergyBalanceModel(N_pts=401, dtmax_multiple=10.0, max_sim_years=5.0, tol=1e-10)
+model = EnergyBalanceModel(N_pts=401, dtmax_multiple=100.0, max_sim_years=5.0, tol=1e-10)
 
 # model.initial_temperature(initial_condition='load_data', low=None, high=None)
-model.initial_temperature(initial_condition='legendre', low=270, high=310)
+model.initial_temperature(initial_condition='legendre', low=270, high=300)
 
 model.albedo(albedo_feedback=False, alb_ice=None, alb_water=None)
 
