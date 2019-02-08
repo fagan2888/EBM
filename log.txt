@@ -890,8 +890,8 @@ sim203: 22379 its * 0.0010560593 s/it = 23.6335510747 s
 
 So we go with sim203: N_pts=401, dtmax_multiple=10.0, tol=1e-10
 
-# Control Simulation:
-sim221 | perturbation | lat0=15 | M=0 | full_radiation |
+# Control Simulation: sim220
+sim220 | perturbation | lat0=15 | M=0 | full_radiation |
 
 # Sensitivity Experiments
 sim221 | perturbation | lat0=15 | M=5  | full_radiation |
@@ -1003,4 +1003,26 @@ sim268 | perturbation | lat0=60 | M=18 | linear |
 60, 9.89, 10, -3.7907979488662620, -2.4261106872744076
 60, 9.89, 15, -5.2178047757500448, -3.3393950564800288
 60, 9.89, 18, -5.9494718357130170, -3.8076619748563307
+
+---
+# 2-4
+---
+plot_asymmetries.py shows the asymmetries btwn WV and no WV runs as in Clark et al.
+
+sim269 tests to see if taking control sim as basic state and dRdT calculations as c_i's gives the same results for ITCZ shift.
+It did not work well... need to investigate further.
+
+!FIXME: looks like temperatures are much lower now that I have updated climt. 
+I suggest looking at all those spots where you reshaped arrays and seeing if something is wrong.
+Investigation is taking place in sim270
+
+---
+# 2-7
+---
+Looks like the issue with colder temperatures was indeed how I was handling the new array shapes.
+In sim270 I fixed the problem with the line
+	self.state['air_temperature'].values[:] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
+The .T transpose is key here.
+
+
 

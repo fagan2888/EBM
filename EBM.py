@@ -14,6 +14,8 @@ import numpy as np
 import climt
 from scipy.integrate import quadrature, trapz
 from scipy.interpolate import RectBivariateSpline
+# from scipy.sparse import diags
+# import scipy
 from time import clock
 import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
@@ -182,11 +184,15 @@ class EnergyBalanceModel():
             self.init_alb = alb_water * np.ones(len(self.lats))
             self.init_alb[np.where(self.init_temp <= 273.16)] = alb_ice
         else:
-        # From Clark:
-        #   self.init_alb = 0.2725 * np.ones(len(lats))
-        # Using the below calculation from KiehlTrenberth1997
-        # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
-            self.init_alb = (40 / 342) * np.ones(len(self.lats))
+            # From Clark:
+            # self.init_alb = 0.2725 * np.ones(len(lats))
+
+            # Using the below calculation from KiehlTrenberth1997
+            # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
+            # self.init_alb = (40 / 342) * np.ones(len(self.lats))
+
+            # To get an Earth-like T dist (~250 at poles ~300 at EQ)
+            self.init_alb = 0.25 * np.ones(len(self.lats))
 
         if self.albedo_feedback:
             self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
@@ -234,7 +240,7 @@ class EnergyBalanceModel():
                 self.state['mole_fraction_of_carbon_dioxide_in_air'].values[:] = 2 * self.state['mole_fraction_of_carbon_dioxide_in_air'].values[:]
 
             # Vertical RH profile
-            self.RH_dist = RH * np.ones( (self.N_levels, self.N_pts) )
+            self.RH_dist = RH * np.ones( (self.N_levels, self.N_pts, 1) )
             if RH_vert_profile == 'steps':
                 for i in range(self.N_levels):
                     # 0-200:    0
@@ -242,9 +248,9 @@ class EnergyBalanceModel():
                     # 300-800:  0.2
                     # 800-1000: 0.8
                     if pressures[i]/100 < 200:
-                        self.RH_dist[i, :] = 0
+                        self.RH_dist[i, :, :] = 0
                     elif pressures[i]/100 > 300 and pressures[i]/100 < 800:
-                        self.RH_dist[i, :] = 0.2
+                        self.RH_dist[i, :, :] = 0.2
             else:
                 print("Invalid RH_vert_profile")
             self.RH_vert_profile = RH_vert_profile
@@ -256,7 +262,7 @@ class EnergyBalanceModel():
                 lat_efe = 0
                 midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]
                 def shift_dist(RH_dist, lat_center):
-                    RH_dist[midlevels, :] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat_center, spread, self.lats), len(midlevels)).reshape( (len(midlevels), self.N_pts) )
+                    RH_dist[midlevels, :, 0] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat_center, spread, self.lats), len(midlevels)).reshape( (self.N_pts, len(midlevels)) ).T
                     return RH_dist
                 self.RH_dist = shift_dist(self.RH_dist, lat_efe)
             else:
@@ -267,8 +273,8 @@ class EnergyBalanceModel():
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
             moist_data = np.load(self.EBM_PATH + '/data/moist_adiabat_data.npz')
             # pressures  = moist_data['pressures']
-            Tsample    = moist_data['Tsample']
-            Tdata      = moist_data['Tdata']
+            Tsample = moist_data['Tsample']
+            Tdata = moist_data['Tdata']
 
             # RectBivariateSpline needs increasing x values
             pressures_flipped = np.flip(pressures, axis=0)
@@ -277,15 +283,15 @@ class EnergyBalanceModel():
 
             if water_vapor_feedback == False:
                 T_control = self.ctl_data["ctl_state_temp"][0, :, 0]
-                Tgrid_control = np.repeat(T_control, self.N_levels).reshape( (self.N_pts, self.N_levels) )
-                air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, self.state['air_pressure'].values[:, :, 0]).T
-                self.state['specific_humidity'].values[0, :, :] = self.RH_dist * self._humidsat(air_temp, self.state['air_pressure'].values[:, :, 0] / 100)[1]
+                Tgrid_control = np.repeat(T_control, self.N_levels).reshape( (self.N_pts, self.N_levels, 1) )
+                air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, self.state['air_pressure'].values[:]).T
+                self.state['specific_humidity'].values[:] = self.RH_dist * self._humidsat(air_temp, self.state['air_pressure'].values[:] / 100)[1]
 
             self.pressures = pressures
             self.pressures_flipped = pressures_flipped
        
             # # Debug:
-            # plt.imshow(self.RH_dist.T, extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
+            # plt.imshow(self.RH_dist[:, :, 0], extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
             # plt.colorbar()
             # plt.show()
 
@@ -301,21 +307,30 @@ class EnergyBalanceModel():
                 self.state['surface_temperature'].values[:] = T.reshape((self.N_pts, 1))
                 if lapse_rate_feedback == False:
                     # Retain LR from control simulations by just shifting all levels by difference at surface
-                    dT = np.repeat(T - self.ctl_data["ctl_state_temp"][0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts) )
-                    self.state['air_temperature'].values[:, :, 0] = self.ctl_data["ctl_state_temp"][:, :, 0] + dT
+                    dT = np.repeat(T - self.ctl_data["ctl_state_temp"][0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts, 1) )
+                    self.state['air_temperature'].values[:] = self.ctl_data["ctl_state_temp"][:].reshape( (self.N_levels, self.N_pts, 1) ) + dT
                 else:
                     # Create a 2D array of the T vals and pass to self.interpolated_moist_adiabat
                     #   note: shape of 'air_temperature' is (lons, lats, press) 
                     Tgrid = np.repeat(T, self.N_levels).reshape( (self.N_pts, self.N_levels) )
-                    self.state['air_temperature'].values[:, :, 0] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T
-                    # Set specific hum assuming constant RH
+                    self.state['air_temperature'].values[:] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
+
+                    # # Debug 
+                    # for i in range(self.N_levels):
+                    #     plt.plot(self.sin_lats, self.state['air_temperature'].values[i, :, 0])
+                    # plt.show()
                 if water_vapor_feedback == True:
                     # Shift RH_dist based on ITCZ
                     E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
                     lat_efe = self.lats[np.argmax(E)] 
                     self.RH_dist = shift_dist(self.RH_dist, lat_efe)
                     # Recalculate q
-                    self.state['specific_humidity'].values[:, :, 0] = self.RH_dist * self._humidsat(self.state['air_temperature'].values[:, :, 0], self.state['air_pressure'].values[:, :, 0] / 100)[1]
+                    self.state['specific_humidity'].values[:] = self.RH_dist * self._humidsat(self.state['air_temperature'].values[:], self.state['air_pressure'].values[:] / 100)[1]
+                    # # Debug 
+                    # for i in range(self.N_levels):
+                    #     plt.plot(self.sin_lats, self.state['specific_humidity'].values[i, :, 0])
+                    # plt.show()
+
                 # CliMT takes over here, this is where the slowdown occurs
                 tendencies, diagnostics = self.longwave_radiation(self.state)
                 return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
@@ -332,6 +347,8 @@ class EnergyBalanceModel():
         """
         # step forward using the take_step_matrix set up in self.solve()
         E_new = np.dot(self.take_step_matrix, self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
+        # E_new = np.linalg.solve(self.LHS_matrix, np.dot(self.RHS_matrix, self.E)) + np.linalg.solve(self.LHS_matrix, self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
+        # E_new = scipy.sparse.linalg.spsolve(self.LHS_matrix, np.dot(self.RHS_matrix, self.E)) #+ np.linalg.solve(self.LHS_matrix, self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
     
         # insulated boundaries
         E_new[0] = E_new[1]
@@ -375,10 +392,12 @@ class EnergyBalanceModel():
         beta = D / Re**2 * self.dt * (1 - self.sin_lats**2) / self.dx**2
         alpha = D / Re**2 * self.dt * self.sin_lats / self.dx
 
-        matrix1 = (np.diag(1 + 2 * eta * beta, k=0) + np.diag(eta * alpha[:-1] - eta * beta[:-1], k=1) + np.diag(-eta * beta[1:] - eta * alpha[1:], k=-1))
-        matrix2 = (np.diag(1 - 2 * (1 - eta) * beta, k=0) + np.diag((1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], k=1) + np.diag((1 - eta) * beta[1:] + (1 - eta) * alpha[1:], k=-1))
+        self.LHS_matrix = (np.diag(1 + 2 * eta * beta, k=0) + np.diag(eta * alpha[:-1] - eta * beta[:-1], k=1) + np.diag(-eta * beta[1:] - eta * alpha[1:], k=-1))
+        self.RHS_matrix = (np.diag(1 - 2 * (1 - eta) * beta, k=0) + np.diag((1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], k=1) + np.diag((1 - eta) * beta[1:] + (1 - eta) * alpha[1:], k=-1))
+        # self.LHS_matrix = diags([1 + 2 * eta * beta, eta * alpha[:-1] - eta * beta[:-1], -eta * beta[1:] - eta * alpha[1:]], offsets=[0, 1, -1])
+        # self.RHS_matrix = diags([1 - 2 * (1 - eta) * beta, (1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], (1 - eta) * beta[1:] + (1 - eta) * alpha[1:]], offsets=[0, 1, -1])
          
-        self.take_step_matrix = np.dot(np.linalg.inv(matrix1), matrix2)
+        self.take_step_matrix = np.dot(np.linalg.inv(self.LHS_matrix), self.RHS_matrix)
 
         # Print some useful information
         print('\nModel Params:')
@@ -613,11 +632,15 @@ class EnergyBalanceModel():
         self.L_bar = 1 / area * self._integrate_lat(L_f)
 
         # Get CTL data
-        ctl_state_temp = self.ctl_data['ctl_state_temp']
-        pert_state_temp = np.copy(self.state['air_temperature'].values[:, :, :])
+        ctl_state_temp = self.ctl_data['ctl_state_temp'].T.reshape((self.N_levels, self.N_pts, 1))
+        pert_state_temp = np.copy(self.state['air_temperature'].values[:])
 
-        ctl_state_q = self.RH_dist * self._humidsat(ctl_state_temp[0, :, :], self.state['air_pressure'].values[:, :, 0] / 100)[1]
-        pert_state_q = np.copy(self.state['specific_humidity'].values[:, :, 0])
+        for i in range(self.N_levels):
+            plt.plot(self.sin_lats, ctl_state_temp[i, :, 0])
+        plt.show()
+
+        ctl_state_q = self.RH_dist * self._humidsat(ctl_state_temp, self.state['air_pressure'].values[:] / 100)[1]
+        pert_state_q = np.copy(self.state['specific_humidity'].values[:])
 
         self.S_ctl = self.ctl_data['S']
         self.L_bar_ctl = self.ctl_data['L_bar']
@@ -649,12 +672,12 @@ class EnergyBalanceModel():
         # L_planck = emissivity * sig * T_f**4
         # self.flux_planck1 = self._calculate_feedback_flux(L_planck)
 
-        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts) )
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts, 1) )
 
-        self.state['air_temperature'].values[:, :, 0] =  pert_state_temp - Tgrid_diff
-        self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0]
-        self.state['specific_humidity'].values[:, :, 0] = pert_state_q
-        tendencies, diagnostics = self.radiation(self.state)
+        self.state['air_temperature'].values[:] =  pert_state_temp - Tgrid_diff
+        self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0].reshape( (self.N_pts, 1) )
+        self.state['specific_humidity'].values[:] = pert_state_q
+        tendencies, diagnostics = self.longwave_radiation(self.state)
         self.L_pert_shifted_T = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
         self.delta_flux_planck = self._calculate_feedback_flux(L_f - self.L_pert_shifted_T)
         
@@ -666,19 +689,19 @@ class EnergyBalanceModel():
         # self.flux_wv1 = self._calculate_feedback_flux(L_f - L_f_zero_q)
         # self.RH_dist[:, :] = RH_copy
 
-        self.state['air_temperature'].values[:, :, 0] = pert_state_temp
-        self.state['surface_temperature'].values[:] = pert_state_temp[0, :, 0]
-        self.state['specific_humidity'].values[:, :, 0] = ctl_state_q
-        tendencies, diagnostics = self.radiation(self.state)
+        self.state['air_temperature'].values[:] = pert_state_temp
+        self.state['surface_temperature'].values[:] = pert_state_temp[0, :, 0].reshape( (self.N_pts, 1) )
+        self.state['specific_humidity'].values[:] = ctl_state_q
+        tendencies, diagnostics = self.longwave_radiation(self.state)
         self.L_pert_shifted_q =  diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
         self.delta_flux_wv = self._calculate_feedback_flux(L_f - self.L_pert_shifted_q)
         
         ## Lapse Rate
-        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts) )
-        self.state['air_temperature'].values[:, :, 0] =  ctl_state_temp + Tgrid_diff
-        self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0]
-        self.state['specific_humidity'].values[:, :, 0] = pert_state_q
-        tendencies, diagnostics = self.radiation(self.state)
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts, 1) )
+        self.state['air_temperature'].values[:] =  ctl_state_temp + Tgrid_diff
+        self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0].reshape( (self.N_pts, 1) )
+        self.state['specific_humidity'].values[:] = pert_state_q
+        tendencies, diagnostics = self.longwave_radiation(self.state)
         self.L_pert_shifted_LR = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
         self.delta_flux_lr = self._calculate_feedback_flux(L_f - self.L_pert_shifted_LR)
 
