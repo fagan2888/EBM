@@ -1024,5 +1024,14 @@ In sim270 I fixed the problem with the line
 	self.state['air_temperature'].values[:] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
 The .T transpose is key here.
 
+---
+# 2-8
+---
+sim271 and sim272 contain M=15 simulations for interactive and prescribed wv but at lower temp (alb = .25).
+We use these to compare asymmetries to before.
 
+sim271: Interactive
+15, 4.94, 15, -8.0471898976742491, -5.1502015345115195
+sim272: Prescribed
+15, 4.94, 15, -5.2086807503393624, -3.3335556802171915
 

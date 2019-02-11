@@ -346,7 +346,8 @@ class EnergyBalanceModel():
         Take single time step for integration.
         """
         # step forward using the take_step_matrix set up in self.solve()
-        E_new = np.dot(self.take_step_matrix, self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
+        E_new = np.dot(self.LHS_matrix_inv, np.dot(self.RHS_matrix, self.E) + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
+        # E_new = np.dot(self.take_step_matrix, self.E) + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T))
         # E_new = np.linalg.solve(self.LHS_matrix, np.dot(self.RHS_matrix, self.E)) + np.linalg.solve(self.LHS_matrix, self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
         # E_new = scipy.sparse.linalg.spsolve(self.LHS_matrix, np.dot(self.RHS_matrix, self.E)) #+ np.linalg.solve(self.LHS_matrix, self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
     
@@ -397,7 +398,7 @@ class EnergyBalanceModel():
         # self.LHS_matrix = diags([1 + 2 * eta * beta, eta * alpha[:-1] - eta * beta[:-1], -eta * beta[1:] - eta * alpha[1:]], offsets=[0, 1, -1])
         # self.RHS_matrix = diags([1 - 2 * (1 - eta) * beta, (1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], (1 - eta) * beta[1:] + (1 - eta) * alpha[1:]], offsets=[0, 1, -1])
          
-        self.take_step_matrix = np.dot(np.linalg.inv(self.LHS_matrix), self.RHS_matrix)
+        self.LHS_matrix_inv = np.linalg.inv(self.LHS_matrix)
 
         # Print some useful information
         print('\nModel Params:')
@@ -635,9 +636,10 @@ class EnergyBalanceModel():
         ctl_state_temp = self.ctl_data['ctl_state_temp'].T.reshape((self.N_levels, self.N_pts, 1))
         pert_state_temp = np.copy(self.state['air_temperature'].values[:])
 
-        for i in range(self.N_levels):
-            plt.plot(self.sin_lats, ctl_state_temp[i, :, 0])
-        plt.show()
+        # # Debug
+        # for i in range(self.N_levels):
+        #     plt.plot(self.sin_lats, ctl_state_temp[i, :, 0])
+        # plt.show()
 
         ctl_state_q = self.RH_dist * self._humidsat(ctl_state_temp, self.state['air_pressure'].values[:] / 100)[1]
         pert_state_q = np.copy(self.state['specific_humidity'].values[:])

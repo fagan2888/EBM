@@ -20,16 +20,15 @@ def asym(A):
     return A[L//2:] - np.flip(A[:L//2 + L%2], axis=0)
 
 
-################################################################################
-# Just plot full L and q
-################################################################################
 # Pick Sims to Compare
 forcing_type = "Tropical"
 sim_dir_pairs = [ 
                   # ['sim221','sim229', 'M=5'],
                   # ['sim222','sim230', 'M=10'],
-                  ['sim223','sim231', 'M=15'],
+                  # ['sim223','sim231', 'M=15'],
                   # ['sim224','sim232', 'M=18'],
+                  # ['sim271','sim272', 'M=15'],
+                  ['sim271','test', 'M=15'],
                 ]
 
 # forcing_type = "ExtraTropical"
@@ -40,6 +39,9 @@ sim_dir_pairs = [
 #                   # ['sim228','sim236', 'M=18'],
 #                 ]
 
+################################################################################
+# Just plot full L and q
+################################################################################
 # Plot setup
 f = plt.figure(figsize=(10,12))
 
@@ -109,23 +111,6 @@ print(fname, "created")
 ################################################################################
 # Plot diffs for L and q
 ################################################################################
-# Pick Sims to Compare
-forcing_type = "Tropical"
-sim_dir_pairs = [ 
-                  # ['sim221','sim229', 'M=5'],
-                  # ['sim222','sim230', 'M=10'],
-                  ['sim223','sim231', 'M=15'],
-                  # ['sim224','sim232', 'M=18'],
-                ]
-
-# forcing_type = "ExtraTropical"
-# sim_dir_pairs = [ 
-#                   # ['sim225','sim233', 'M=5'],
-#                   # ['sim226','sim234', 'M=10'],
-#                   ['sim227','sim235', 'M=15'],
-#                   # ['sim228','sim236', 'M=18'],
-#                 ]
-
 # Plot setup
 f = plt.figure(figsize=(10,12))
 
@@ -186,23 +171,6 @@ print(fname, "created")
 ################################################################################
 # Plot Asymmetry
 ################################################################################
-# Pick Sims to Compare
-forcing_type = "Tropical"
-sim_dir_pairs = [ 
-                  # ['sim221','sim229', 'M=5'],
-                  # ['sim222','sim230', 'M=10'],
-                  ['sim223','sim231', 'M=15'],
-                  # ['sim224','sim232', 'M=18'],
-                ]
-
-# forcing_type = "ExtraTropical"
-# sim_dir_pairs = [ 
-#                   ['sim225','sim233', 'M=5'],
-#                   ['sim226','sim234', 'M=10'],
-#                   ['sim227','sim235', 'M=15'],
-#                   ['sim228','sim236', 'M=18'],
-#                 ]
-
 # Setup plots
 f = plt.figure(figsize=(10,12))
 
