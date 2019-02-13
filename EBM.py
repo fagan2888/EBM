@@ -4,7 +4,7 @@
 # This file contains the class for a diffusive moist static energy balance 
 # model. 
 #
-# Henry G. Peterson with Bill Boos, 2018
+# Henry G. Peterson with Bill Boos, 2019
 ################################################################################
 
 ################################################################################
@@ -14,8 +14,6 @@ import numpy as np
 import climt
 from scipy.integrate import quadrature, trapz
 from scipy.interpolate import RectBivariateSpline
-# from scipy.sparse import diags
-# import scipy
 from time import clock
 import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
@@ -56,19 +54,19 @@ sig = 5.67e-8  #J/s/m2/K4
 ################################################################################
 class EnergyBalanceModel():
     """
-    Diffusive moist static energy balance model
+    Diffusive moist static energy balance model.
     """
     
-    # This path must be set in your OS environment!
+    # This is the path to the folder that contains control sims, moist adiabat data, etc.
+    # Either set it as a path in your OS environment or write it here manually.
     EBM_PATH = os.environ['EBM_PATH']
+    # EBM_PATH = "/home/hpeter/ResearchBoos/EBM_files/EBM"
     
     def __init__(self, N_pts=100, dtmax_multiple=1.0, max_sim_years=2, tol=0.001):
         # Setup grid
         self.N_pts = N_pts
         self.dx = 2 / N_pts
         self.sin_lats = np.linspace(-1.0 + self.dx/2, 1.0 - self.dx/2, N_pts)
-        # self.sin_lats = np.linspace(-1.0 + 1e-3, 1.0 - 1e-3, N_pts)
-        # self.dx = self.sin_lats[1] - self.sin_lats[0]
         self.lats = np.arcsin(self.sin_lats)
 
         # Calculate stable dt
@@ -144,6 +142,16 @@ class EnergyBalanceModel():
     def initial_temperature(self, initial_condition, low=None, high=None):
         """
         Set the initial temperature distribution.
+
+        INPUTS
+            initial_condition: "triangle"  -> triangle in temp with max at eq
+                               "legendre"  -> using first two legendre polys
+                               "load_data" -> load T_array.npz data if it is in the folder
+            low: lowest temp
+            high: highest temp
+
+        OUTPUTS
+            Creates array init_temp saved to class.
         """
         self.initial_condition = initial_condition
         if initial_condition == 'triangle':
@@ -157,6 +165,15 @@ class EnergyBalanceModel():
     def insolation(self, insolation_type, perturb_center=None, perturb_spread=None, perturb_intensity=None):
         """
         Set the incoming shortwave radiation.
+
+        INPUTS
+            insolation_type: "perturbation" -> as in Clark et al. 2018 with a gaussian subtracted
+            perturb_center: degrees lat -> center of gaussian 
+            perturb_spread: degrees lat -> spread of gaussian 
+            perturb_intensity: W/m^2 -> M from Clark et al. 2018
+
+        OUTPUTS
+            Creates array S saved to class.
         """
         self.insolation_type = insolation_type
         if insolation_type == 'perturbation':
@@ -176,6 +193,14 @@ class EnergyBalanceModel():
     def albedo(self, albedo_feedback=False, alb_ice=None, alb_water=None):
         """
         Set surface albedo.
+
+        INPUTS
+            albedo_feedback: boolean -> run model with changing albedo or not
+            alb_ice: [0, 1] -> albedo of ice
+            alb_water: [0, 1] -> albedo of water
+
+        OUTPUTS
+            Creates arrays alb and init_alb saved to class.
         """
         self.albedo_feedback = albedo_feedback
         self.alb_ice = alb_ice
@@ -202,9 +227,26 @@ class EnergyBalanceModel():
         self.alb = self.init_alb
 
 
-    def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, RH_vert_profile=None, RH_lat_profile=None, gaussian_spread=None, constant_spec_hum=False):
+    def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, RH_vert_profile=None, RH_lat_profile=None, gaussian_spread=None):
         """
         Set outgoing longwave radiation.
+
+        INPUTS
+            olr_type: "planck" -> L = epsillon * sigma * T^4
+                      "linear" -> L = A + B * T 
+                      "full_radiation" -> CliMT radiation scheme
+                      "full_radiation_2xCO2" -> CliMT radiation scheme with doubled CO2 
+                      "full_radiation_no_wv" -> CliMT radiation scheme with prescribed WV
+                      "full_radiation_no_lr" -> CliMT radiation scheme with prescribed LR
+            emissivity: [0, 1] -> epsillon for "planck" option
+            A: float -> A for "linear" option
+            B: float -> B for "linear" option
+            RH_vert_profile: "steps" -> set up RH vertical dist as 0.8, 0.2, 0.8, 0.0
+            RH_lat_profile: "mid_level_gaussian" -> set up RH latitudinal profile as a gaussian in the mid levels
+            gaussian_spread: degrees lat -> the spread of the gaussian for "mid_level_gaussian"
+
+        OUTPUTS
+            Creates function L(T) saved within the class.
         """
         self.olr_type = olr_type
         if olr_type == 'planck':
@@ -228,11 +270,11 @@ class EnergyBalanceModel():
                 lapse_rate_feedback = True
         
             # Use CliMT radiation scheme along with MetPy's moist adiabat calculator
-            self.N_levels = 30
-            self.longwave_radiation = climt.RRTMGLongwave(cloud_overlap_method='clear_only')
-            grid = climt.get_grid(nx=1, ny=self.N_pts, nz=self.N_levels)
-            grid["latitude"].values[:] = np.rad2deg(self.lats).reshape((self.N_pts, 1))
-            self.state = climt.get_default_state([self.longwave_radiation], grid_state=grid)
+            self.N_levels = 30   # vertical levels
+            self.longwave_radiation = climt.RRTMGLongwave(cloud_overlap_method='clear_only')    # longwave component
+            grid = climt.get_grid(nx=1, ny=self.N_pts, nz=self.N_levels)    # setup grid
+            grid["latitude"].values[:] = np.rad2deg(self.lats).reshape((self.N_pts, 1))    # force the grid to have my model's lats
+            self.state = climt.get_default_state([self.longwave_radiation], grid_state=grid)    # get the state for this model setup
             pressures = self.state['air_pressure'].values[:, 0, 0]
 
             if olr_type == "full_radiation_2xCO2":
@@ -243,10 +285,12 @@ class EnergyBalanceModel():
             self.RH_dist = RH * np.ones( (self.N_levels, self.N_pts, 1) )
             if RH_vert_profile == 'steps':
                 for i in range(self.N_levels):
-                    # 0-200:    0
-                    # 200-300:  0.8
-                    # 300-800:  0.2
-                    # 800-1000: 0.8
+                    # P (hPa)  | RH
+                    # --------------
+                    #    0-200 | 0
+                    #  200-300 | 0.8
+                    #  300-800 | 0.2
+                    # 800-1000 | 0.8
                     if pressures[i]/100 < 200:
                         self.RH_dist[i, :, :] = 0
                     elif pressures[i]/100 > 300 and pressures[i]/100 < 800:
@@ -256,12 +300,15 @@ class EnergyBalanceModel():
             self.RH_vert_profile = RH_vert_profile
 
             # Latitudinal RH profile
-            gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )
+            gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )    # quick and dirty gaussian function
             if RH_lat_profile == 'mid_level_gaussian':
                 spread = np.deg2rad(gaussian_spread)
-                lat_efe = 0
-                midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]
+                lat_efe = 0    # the latitude (radians) of the EFE. set this as the center of the gaussian
+                midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]    # midlevels := [800, 300] hPa
                 def shift_dist(RH_dist, lat_center):
+                    """
+                    Make the RH_lat_profile a gaussian and shift its max to the EFE.
+                    """
                     RH_dist[midlevels, :, 0] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat_center, spread, self.lats), len(midlevels)).reshape( (self.N_pts, len(midlevels)) ).T
                     return RH_dist
                 self.RH_dist = shift_dist(self.RH_dist, lat_efe)
@@ -271,26 +318,26 @@ class EnergyBalanceModel():
             self.gaussian_spread = gaussian_spread
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
-            moist_data = np.load(self.EBM_PATH + '/data/moist_adiabat_data.npz')
+            moist_data = np.load(self.EBM_PATH + '/data/moist_adiabat_data.npz')    # load data from a previous moist adiabat calculation using MetPy
             # pressures  = moist_data['pressures']
-            Tsample = moist_data['Tsample']
-            Tdata = moist_data['Tdata']
+            Tsample = moist_data['Tsample']    # the surface temp points 
+            Tdata = moist_data['Tdata']    # the resulting vertical levels temps
 
-            # RectBivariateSpline needs increasing x values
-            pressures_flipped = np.flip(pressures, axis=0)
+            pressures_flipped = np.flip(pressures, axis=0)   # RectBivariateSpline needs increasing x values
             Tdata = np.flip(Tdata, axis=1)
-            self.interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures_flipped, Tdata)
+            self.interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures_flipped, Tdata)    # this returns an object that has the method .ev() to evaluate the interpolation function
 
             if water_vapor_feedback == False:
-                T_control = self.ctl_data["ctl_state_temp"][0, :, 0]
-                Tgrid_control = np.repeat(T_control, self.N_levels).reshape( (self.N_pts, self.N_levels, 1) )
-                air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, self.state['air_pressure'].values[:]).T
-                self.state['specific_humidity'].values[:] = self.RH_dist * self._humidsat(air_temp, self.state['air_pressure'].values[:] / 100)[1]
+                # prescribe WV from control simulation
+                T_control = self.ctl_data["ctl_state_temp"][0, :, 0]    # control surface temp
+                Tgrid_control = np.repeat(T_control, self.N_levels).reshape( (self.N_pts, self.N_levels, 1) )    # turn it into a grid of copies for interpolated_moist_adiabat
+                air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, self.state['air_pressure'].values[:]).T    # some weird .T here
+                self.state['specific_humidity'].values[:] = self.RH_dist * self._humidsat(air_temp, self.state['air_pressure'].values[:] / 100)[1]    # q = RH * q_sat
 
             self.pressures = pressures
             self.pressures_flipped = pressures_flipped
        
-            # # Debug:
+            # # Debug: Plot RH dist
             # plt.imshow(self.RH_dist[:, :, 0], extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
             # plt.colorbar()
             # plt.show()
@@ -315,7 +362,7 @@ class EnergyBalanceModel():
                     Tgrid = np.repeat(T, self.N_levels).reshape( (self.N_pts, self.N_levels) )
                     self.state['air_temperature'].values[:] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
 
-                    # # Debug 
+                    # # Debug: Show air temps
                     # for i in range(self.N_levels):
                     #     plt.plot(self.sin_lats, self.state['air_temperature'].values[i, :, 0])
                     # plt.show()
@@ -326,34 +373,36 @@ class EnergyBalanceModel():
                     self.RH_dist = shift_dist(self.RH_dist, lat_efe)
                     # Recalculate q
                     self.state['specific_humidity'].values[:] = self.RH_dist * self._humidsat(self.state['air_temperature'].values[:], self.state['air_pressure'].values[:] / 100)[1]
-                    # # Debug 
+                    # # Debug: Show q
                     # for i in range(self.N_levels):
                     #     plt.plot(self.sin_lats, self.state['specific_humidity'].values[i, :, 0])
                     # plt.show()
 
-                # CliMT takes over here, this is where the slowdown occurs
+                # CliMT's FORTRAN code takes over here
                 tendencies, diagnostics = self.longwave_radiation(self.state)
                 return diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
         else:
             os.sys.exit('Invalid keyword for olr_type: {}'.format(self.olr_type))
 
 
-        self.L = L
+        self.L = L    # save to class
 
 
     def take_step(self):
         """
         Take single time step for integration.
+
+        INPUTS
+
+        OUTPUTS
+            Returns E, T, alb arrays for next step.
         """
         # step forward using the take_step_matrix set up in self.solve()
         E_new = np.dot(self.LHS_matrix_inv, np.dot(self.RHS_matrix, self.E) + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
-        # E_new = np.dot(self.take_step_matrix, self.E) + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T))
-        # E_new = np.linalg.solve(self.LHS_matrix, np.dot(self.RHS_matrix, self.E)) + np.linalg.solve(self.LHS_matrix, self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
-        # E_new = scipy.sparse.linalg.spsolve(self.LHS_matrix, np.dot(self.RHS_matrix, self.E)) #+ np.linalg.solve(self.LHS_matrix, self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
     
-        # insulated boundaries
-        E_new[0] = E_new[1]
-        E_new[-1] = E_new[-2]
+        # # insulated boundaries
+        # E_new[0] = E_new[1]
+        # E_new[-1] = E_new[-2]
 
         T_new = self.T_dataset[np.searchsorted(self.E_dataset, E_new)]
 
@@ -366,20 +415,18 @@ class EnergyBalanceModel():
         return E_new, T_new, alb_new
 
 
-    def _print_progress(self, frame, error):
-        """ 
-        Print the progress of the integration.
-        """
-        T_avg = np.mean(self.T)
-        if frame == 0:
-            print('frame = {:5d}; T_avg = {:3.1f}'.format(0, T_avg))
-        else:
-            print('frame = {:5d}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, T_avg, error))
-
-
     def solve(self, numerical_method, frames):
         """
         Loop through integration time steps.
+
+        INPUTS 
+            numerical_method: 'implicit' -> fully implicit method
+                              'explicit' -> fully explicit method
+                              'semi-implicit' -> crank-nicholson
+            frames: int -> number of steps of data to save
+        
+        OUTPUTS
+           Creates set of T, E, alb, and q arrays saved to the class. 
         """
         # begin by computing the take_step_matrix for particular scheme
         self.numerical_method = numerical_method
@@ -395,8 +442,6 @@ class EnergyBalanceModel():
 
         self.LHS_matrix = (np.diag(1 + 2 * eta * beta, k=0) + np.diag(eta * alpha[:-1] - eta * beta[:-1], k=1) + np.diag(-eta * beta[1:] - eta * alpha[1:], k=-1))
         self.RHS_matrix = (np.diag(1 - 2 * (1 - eta) * beta, k=0) + np.diag((1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], k=1) + np.diag((1 - eta) * beta[1:] + (1 - eta) * alpha[1:], k=-1))
-        # self.LHS_matrix = diags([1 + 2 * eta * beta, eta * alpha[:-1] - eta * beta[:-1], -eta * beta[1:] - eta * alpha[1:]], offsets=[0, 1, -1])
-        # self.RHS_matrix = diags([1 - 2 * (1 - eta) * beta, (1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], (1 - eta) * beta[1:] + (1 - eta) * alpha[1:]], offsets=[0, 1, -1])
          
         self.LHS_matrix_inv = np.linalg.inv(self.LHS_matrix)
 
@@ -456,8 +501,14 @@ class EnergyBalanceModel():
                 if "full_radiation" in self.olr_type:
                     q_array[frame, :, :] = self.state['specific_humidity'].values[0, :, :]
 
-                self._print_progress(frame, error)
+                # Print progress 
+                T_avg = np.mean(self.T)
+                if frame == 0:
+                    print('frame = {:5d}; T_avg = {:3.1f}'.format(0, T_avg))
+                else:
+                    print('frame = {:5d}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, T_avg, error))
                 # print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(self.S * (1 - self.alb) - L_array[frame, :])))
+
                 frame += 1
 
             iteration += 1
@@ -497,9 +548,14 @@ class EnergyBalanceModel():
         if self.perturb_intensity == 0 and self.olr_type == 'full_radiation':
             np.savez('control_data.npz', S=self.S * (1 - self.alb), L_bar=1 / self._integrate_lat(1) * self._integrate_lat(self.L(self.T)), flux_total=-(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(self.E, self.dx), ctl_state_temp=self.state['air_temperature'].values[:, :, :])
 
+
     def save_data(self):
         """
         Save arrays of state variables.
+
+        INPUTS
+
+        OUTPUTS
         """
         np.savez('T_array.npz', self.T_array)
         np.savez('E_array.npz', self.E_array)
@@ -512,6 +568,11 @@ class EnergyBalanceModel():
     def _calculate_efe(self):
         """
         EFE = latitude of max of E
+
+        INPUTS
+
+        OUTPUTS
+            Creates floats EFE and ITCZ saved to class.
         """
         # Get data and final dist
         E_f = self.E_array[-1, :]
@@ -534,7 +595,12 @@ class EnergyBalanceModel():
 
     def log_efe(self, fname_efe):
         """
-        Write EFE data to a file
+        Write EFE data to a file.
+
+        INPUTS
+            fname_efe: string -> name of file to save to
+
+        OUTPUTS
         """
         self.plot_efe = True
 
@@ -552,7 +618,14 @@ class EnergyBalanceModel():
 
     def _integrate_lat(self, f, i=-1):
         """
-        integrate some array f over phi up to index i
+        Integrate some array f over phi up to index i.
+
+        INPUTS
+            f: float, array -> some array or constant to integrate
+            i: int -> index in array to integrate up to.
+
+        OUTPUTS
+            Returns integral using trapezoidal method.
         """
         if i == -1:
             return trapz( f * 2 * np.pi * Re**2 * np.ones(self.lats.shape[0]), dx=self.dx ) 
@@ -567,7 +640,11 @@ class EnergyBalanceModel():
 
     def _calculate_shift(self):
         """
-        Calculate dphi using control values
+        Calculate approximations of shift in ITCZ using corrent simulation and control values.
+
+        INPUTS
+
+        OUTPUTS
         """
         dS = self.S_f - self.S_ctl
         dL_bar = self.L_bar - self.L_bar_ctl
@@ -605,8 +682,13 @@ class EnergyBalanceModel():
 
     def _calculate_feedback_flux(self, L_flux):
         """
-        Perform integral calculation to get F_i = - integral of L - L_i
-        (in PW)
+        Perform integral calculation to get F_i = - integral of L - L_i 
+
+        INPUTS
+            L_flux: array -> OLR due to some flux
+
+        OUTPUTS
+            Returns flux array (in PW)
         """
         area = self._integrate_lat(1)
         L_flux_bar = 1 / area * self._integrate_lat(L_flux)
@@ -618,7 +700,13 @@ class EnergyBalanceModel():
 
     def log_feedbacks(self, fname_feedbacks):
         """
-        Calculate each feedback flux and log data on the shifts
+        Calculate each feedback flux and log data on the shifts.
+
+        INPUTS
+            fname_feedbacks: string -> file to write to.
+
+        OUTPUTS
+            Creates arrays for each feedback flux saved to class.
         """
         print('\nCalculating feedbacks...')
 
@@ -715,6 +803,10 @@ class EnergyBalanceModel():
     def save_plots(self):
         """
         Plot various data from the simulation
+
+        INPUTS
+
+        OUTPUTS
         """
         ### INITIAL DISTRIBUTIONS
         print('\nPlotting Initial Dists')
@@ -744,11 +836,13 @@ class EnergyBalanceModel():
         
         ### FINAL TEMP DIST
         print('\nPlotting Final T Dist')
-
-        print('Mean T: {:.2f} K'.format(np.mean(self.T_array[-1,:])))
+        
+        T_avg = np.mean(self.T_array[-1,:])
+        print('Mean T: {:.2f} K'.format(T_avg))
 
         f, ax = plt.subplots(1, figsize=(16,10))
         ax.plot(self.sin_lats, self.T_array[-1, :], 'k')
+        ax.text(0, T_avg, "Mean T = {:.2f} K".format(T_avg), size=16)
         ax.set_title("Final Temperature Distribution")
         ax.set_xlabel('Lat')
         ax.set_ylabel('T (K)')
@@ -1012,4 +1106,3 @@ class EnergyBalanceModel():
         #    plt.gca().invert_yaxis()
         #    plt.legend()
         #    plt.xlabel('sp hum')
-        #    plt.ylabel('pressure')

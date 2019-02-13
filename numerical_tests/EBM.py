@@ -330,8 +330,9 @@ class EnergyBalanceModel():
         Take single time step for integration.
         """
         # step forward using the take_step_matrix set up in self.solve()
-        E_new = np.dot(self.take_step_matrix, self.E)
-        # E_new[1:-1] += (self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))[1:-1]
+        A = self.LHS_matrix
+        b = np.dot(self.RHS_matrix, self.E) + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T))
+        E_new = np.linalg.solve(A, b)
 
         T_new = self.T_dataset[np.searchsorted(self.E_dataset, E_new)]
 
@@ -371,22 +372,19 @@ class EnergyBalanceModel():
         beta = D / Re**2 * self.dt * (1 - self.sin_lats**2) / self.dx**2
         alpha = D / Re**2 * self.dt * self.sin_lats / self.dx
 
-        matrix1 = (np.diag(1 + 2 * eta * beta, k=0) + np.diag(eta * alpha[:-1] - eta * beta[:-1], k=1) + np.diag(-eta * beta[1:] - eta * alpha[1:], k=-1))
-        left_bdy = np.zeros((1, self.N_pts))
-        right_bdy = np.zeros((1, self.N_pts))
-        coeffs = - D / Re**2 * np.sqrt(1 - self.sin_lats**2) 
-        left_bdy[0, :3] = np.array([-1.5 , 2.0, -0.5]) * coeffs[:3]
-        right_bdy[0, -3:] = np.array([0.5 , -2.0, 1.5]) * coeffs[-3:]
-        matrix1[0, :] = left_bdy
-        matrix1[-1, :] = right_bdy
-        print(matrix1)
+        self.LHS_matrix = (np.diag(1 + 2 * eta * beta, k=0) + np.diag(eta * alpha[:-1] - eta * beta[:-1], k=1) + np.diag(-eta * beta[1:] - eta * alpha[1:], k=-1))
+        # left_bdy = np.zeros((1, self.N_pts))
+        # right_bdy = np.zeros((1, self.N_pts))
+        # coeffs = - D / Re**2 * np.sqrt(1 - self.sin_lats**2) 
+        # left_bdy[0, :3] = np.array([-1.5 , 2.0, -0.5]) * coeffs[:3]
+        # right_bdy[0, -3:] = np.array([0.5 , -2.0, 1.5]) * coeffs[-3:]
+        # self.LHS_matrix[0, :] = left_bdy
+        # self.LHS_matrix[-1, :] = right_bdy
 
-        matrix2 = (np.diag(1 - 2 * (1 - eta) * beta, k=0) + np.diag((1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], k=1) + np.diag((1 - eta) * beta[1:] + (1 - eta) * alpha[1:], k=-1))
-        matrix2[0, :] = 0.0
-        matrix2[-1, :] = 0.0
+        self.RHS_matrix = (np.diag(1 - 2 * (1 - eta) * beta, k=0) + np.diag((1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], k=1) + np.diag((1 - eta) * beta[1:] + (1 - eta) * alpha[1:], k=-1))
+        # self.RHS_matrix[0, :] = 0.0
+        # self.RHS_matrix[-1, :] = 0.0
          
-        self.take_step_matrix = np.dot(np.linalg.inv(matrix1), matrix2)
-
         # Print some useful information
         print('\nModel Params:')
         print("dtmax:            {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax / self.secs_in_day))
