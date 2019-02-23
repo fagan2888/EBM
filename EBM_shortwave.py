@@ -191,8 +191,13 @@ class EnergyBalanceModel():
             self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
         else:
             self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
-
+        
+        S = S0 / 4 * np.cos(self.lats)
+        self.init_alb = 1 - (S + self.dS) * (1 - self.init_alb) / S
         self.alb = self.init_alb
+
+        plt.plot(self.sin_lats, self.alb)
+        plt.show()
 
 
     def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, RH_vert_profile=None, RH_lat_profile=None, gaussian_spread=None, constant_spec_hum=False):
@@ -332,9 +337,8 @@ class EnergyBalanceModel():
         """
         # get NEI
         S, L = self.S_and_L(self.T)
-        NEI = (S + self.dS) - L
         # step forward using the take_step_matrix set up in self.solve()
-        E_new = np.dot(self.take_step_matrix, self.E + self.dt * g / ps * NEI)
+        E_new = np.dot(self.take_step_matrix, self.E + self.dt * g / ps * (S - L))
     
         # insulated boundaries
         E_new[0] = E_new[1]
@@ -432,14 +436,15 @@ class EnergyBalanceModel():
                 alb_array[frame, :] = self.alb
 
                 ### PLOT NEI
-                S, L = self.S_and_L(self.T)
-                NEI = (S + self.dS) - L
-                f, ax = plt.subplots(1, figsize=(16,10))
-                ax.plot(self.sin_lats, S, 'g-')
-                ax.plot(self.sin_lats, 1368.22 / np.pi * np.cos(self.lats) + self.dS, 'g--')
-                ax.plot(self.sin_lats, L, 'r-')
-                ax.plot(self.sin_lats, NEI, 'k-')
-                plt.show()
+                # S, L = self.S_and_L(self.T)
+                # f, ax = plt.subplots(1, figsize=(16,10))
+                # ax.plot(self.sin_lats, S, 'g-', label="S")
+                # ax.plot(self.sin_lats, 1368.22 / np.pi * np.cos(self.lats) + self.dS, 'g--', label="old S")
+                # ax.plot(self.sin_lats, L, 'r-', "L")
+                # ax.plot(self.sin_lats, S - L, 'k-', label="S - L")
+                # ax.plot(self.sin_lats, 1368.22 / np.pi * np.cos(self.lats) + self.dS - L, 'k--', label="S - L")
+                # plt.legend()
+                # plt.show()
 
                 self._print_progress(frame, error)
                 # print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(NEI)))
@@ -487,7 +492,7 @@ class EnergyBalanceModel():
         EFE = latitude of max of E
         """
         # Get data and final dist
-        E_f = self.E_array[-1, :]
+        E_f = self.E
 
         # Interp and find roots
         spl = UnivariateSpline(self.lats, E_f, k=4, s=0)
@@ -689,8 +694,7 @@ class EnergyBalanceModel():
         fig, ax = plt.subplots(1, figsize=(16,10))
         
         # radiaiton dist
-        SW = self.S * (1 - self.init_alb)
-        LW = self.L(self.init_temp)
+        SW, LW = self.S_and_L(self.T)
         ax.plot([-1, 1], [0, 0], 'k--', lw=2)
         ax.plot(self.sin_lats, SW, 'r', lw=2, label='SW (with albedo)', alpha=0.5)
         ax.plot(self.sin_lats, LW, 'g', lw=2, label='LW (init)', alpha=0.5)
@@ -737,7 +741,7 @@ class EnergyBalanceModel():
             print('\nPlotting EFE')
             
             self._calculate_efe()
-            E_f = self.E_array[-1, :]
+            E_f = self.E
             print("EFE = {:.5f}; ITCZ = {:.5f}".format(np.rad2deg(self.EFE), np.rad2deg(self.ITCZ)))
             
             f, ax = plt.subplots(1, figsize=(16, 10))
@@ -761,10 +765,9 @@ class EnergyBalanceModel():
         ### FINAL RADIATION DIST
         print('\nPlotting Final Radiation Dist')
 
-        T_f = self.T_array[-1, :]
-        alb_f = self.alb_array[-1, :]
-        SW_f = self.S * (1 - alb_f)
-        LW_f = self.L_array[-1, :]
+        T_f = self.T
+        alb_f = self.alb
+        SW_f, LW_f = self.S_and_L(T_f)
         print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(SW_f - LW_f)))
 
         f, ax = plt.subplots(1, figsize=(16, 10))

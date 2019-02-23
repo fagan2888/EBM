@@ -11,13 +11,11 @@
 ### IMPORTS
 ################################################################################
 import numpy as np
+import scipy as sp
+import scipy.integrate, scipy.sparse, scipy.optimize, scipy.interpolate
 import climt
-from scipy.integrate import quadrature, trapz
-from scipy.interpolate import RectBivariateSpline
 from time import clock
 import matplotlib.pyplot as plt
-from scipy.interpolate import UnivariateSpline
-from scipy.optimize import curve_fit
 from matplotlib import animation, rc
 import os
 
@@ -184,7 +182,7 @@ class EnergyBalanceModel():
             S_control = S0 / np.pi * np.cos(self.lats)
 
             func = lambda y: 0.5 * np.exp(-(y - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2)) * np.cos(y)
-            perturb_normalizer, er = quadrature(func, -np.pi/2, np.pi/2, tol=1e-16, rtol=1e-16, maxiter=1000)
+            perturb_normalizer, er = sp.integrate.quadrature(func, -np.pi/2, np.pi/2, tol=1e-16, rtol=1e-16, maxiter=1000)
 
             dS = -perturb_intensity/perturb_normalizer * np.exp(-(self.lats - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
             self.S = S_control + dS
@@ -317,15 +315,20 @@ class EnergyBalanceModel():
             self.RH_lat_profile = RH_lat_profile
             self.gaussian_spread = gaussian_spread
 
+            # # Debug: Plot RH dist
+            # plt.imshow(self.RH_dist[:, :, 0], extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
+            # plt.colorbar()
+            # plt.show()
+
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
             moist_data = np.load(self.EBM_PATH + '/data/moist_adiabat_data.npz')    # load data from a previous moist adiabat calculation using MetPy
             # pressures  = moist_data['pressures']
             Tsample = moist_data['Tsample']    # the surface temp points 
             Tdata = moist_data['Tdata']    # the resulting vertical levels temps
 
-            pressures_flipped = np.flip(pressures, axis=0)   # RectBivariateSpline needs increasing x values
+            pressures_flipped = np.flip(pressures, axis=0)   # sp.interpolate.RectBivariateSpline needs increasing x values
             Tdata = np.flip(Tdata, axis=1)
-            self.interpolated_moist_adiabat = RectBivariateSpline(Tsample, pressures_flipped, Tdata)    # this returns an object that has the method .ev() to evaluate the interpolation function
+            self.interpolated_moist_adiabat = sp.interpolate.RectBivariateSpline(Tsample, pressures_flipped, Tdata)    # this returns an object that has the method .ev() to evaluate the interpolation function
 
             if water_vapor_feedback == False:
                 # prescribe WV from control simulation
@@ -336,11 +339,6 @@ class EnergyBalanceModel():
 
             self.pressures = pressures
             self.pressures_flipped = pressures_flipped
-       
-            # # Debug: Plot RH dist
-            # plt.imshow(self.RH_dist[:, :, 0], extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
-            # plt.colorbar()
-            # plt.show()
 
             def L(T):
                 """ 
@@ -398,12 +396,8 @@ class EnergyBalanceModel():
             Returns E, T, alb arrays for next step.
         """
         # step forward using the take_step_matrix set up in self.solve()
-        E_new = np.dot(self.LHS_matrix_inv, np.dot(self.RHS_matrix, self.E) + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
+        E_new = self.step_matrix.solve(self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
     
-        # # insulated boundaries
-        # E_new[0] = E_new[1]
-        # E_new[-1] = E_new[-2]
-
         T_new = self.T_dataset[np.searchsorted(self.E_dataset, E_new)]
 
         if self.albedo_feedback:
@@ -421,8 +415,6 @@ class EnergyBalanceModel():
 
         INPUTS 
             numerical_method: 'implicit' -> fully implicit method
-                              'explicit' -> fully explicit method
-                              'semi-implicit' -> crank-nicholson
             frames: int -> number of steps of data to save
         
         OUTPUTS
@@ -430,20 +422,20 @@ class EnergyBalanceModel():
         """
         # begin by computing the take_step_matrix for particular scheme
         self.numerical_method = numerical_method
-        if numerical_method == 'implicit':
-            eta = 1
-        elif numerical_method == 'explicit':
-            eta = 0
-        elif numerical_method == 'semi-implicit':
-            eta = 0.5
         
-        beta = D / Re**2 * self.dt * (1 - self.sin_lats**2) / self.dx**2
-        alpha = D / Re**2 * self.dt * self.sin_lats / self.dx
-
-        self.LHS_matrix = (np.diag(1 + 2 * eta * beta, k=0) + np.diag(eta * alpha[:-1] - eta * beta[:-1], k=1) + np.diag(-eta * beta[1:] - eta * alpha[1:], k=-1))
-        self.RHS_matrix = (np.diag(1 - 2 * (1 - eta) * beta, k=0) + np.diag((1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], k=1) + np.diag((1 - eta) * beta[1:] + (1 - eta) * alpha[1:], k=-1))
-         
-        self.LHS_matrix_inv = np.linalg.inv(self.LHS_matrix)
+        if numerical_method == 'implicit':
+            a = D / Re**2 * self.dt / self.dx**2
+            sin_lats_plus_half = self.sin_lats + self.dx/2
+            sin_lats_minus_half = self.sin_lats - self.dx/2
+            data = np.array([1 + 2 * a - a * (sin_lats_plus_half**2 + sin_lats_minus_half**2), 
+                            a * (sin_lats_plus_half[:-1]**2 - 1), 
+                            a * (sin_lats_minus_half[1:]**2 - 1)])
+            diags = np.array([0, 1, -1])
+            LHS_matrix = sp.sparse.diags(data, diags)
+            # LU factorization:
+            self.step_matrix = sp.sparse.linalg.splu(LHS_matrix)
+        else:
+            os.sys.exit("Invalid numerical method.")
 
         # Print some useful information
         print('\nModel Params:')
@@ -578,7 +570,7 @@ class EnergyBalanceModel():
         E_f = self.E_array[-1, :]
 
         # Interp and find roots
-        spl = UnivariateSpline(self.lats, E_f, k=4, s=0)
+        spl = sp.interpolate.UnivariateSpline(self.lats, E_f, k=4, s=0)
         roots = spl.derivative().roots()
         
         # Find supposed root based on actual data
@@ -628,12 +620,12 @@ class EnergyBalanceModel():
             Returns integral using trapezoidal method.
         """
         if i == -1:
-            return trapz( f * 2 * np.pi * Re**2 * np.ones(self.lats.shape[0]), dx=self.dx ) 
+            return np.trapz( f * 2 * np.pi * Re**2 * np.ones(self.lats.shape[0]), dx=self.dx ) 
         else:
             if isinstance(f, np.ndarray):
-                return trapz( f[:i+1] * 2 * np.pi * Re**2, dx=self.dx ) 
+                return np.trapz( f[:i+1] * 2 * np.pi * Re**2, dx=self.dx ) 
             else:
-                return trapz( f * 2 * np.pi * Re**2, dx=self.dx ) 
+                return np.trapz( f * 2 * np.pi * Re**2, dx=self.dx ) 
                 # dx = cos(phi) dphi
                 # integral( f * 2 pi * r^2 * cos(phi) dphi )
 
@@ -655,7 +647,7 @@ class EnergyBalanceModel():
         numerator = self.flux_total[I_equator]
         denominator = 0
 
-        spl = UnivariateSpline(self.lats, self.flux_total, k=4, s=0)
+        spl = sp.interpolate.UnivariateSpline(self.lats, self.flux_total, k=4, s=0)
         denominator -= spl.derivative()(self.EFE)
 
         shift = np.rad2deg(numerator / denominator)
@@ -666,13 +658,13 @@ class EnergyBalanceModel():
         numerator = self.flux_total_ctl[I_equator] + self._integrate_lat(dS - dL_bar, I_equator) + self.delta_flux_planck[I_equator] + self.delta_flux_wv[I_equator] + self.delta_flux_lr[I_equator]
         denominator = 0 
 
-        spl = UnivariateSpline(self.lats, self.flux_total_ctl, k=4, s=0)
+        spl = sp.interpolate.UnivariateSpline(self.lats, self.flux_total_ctl, k=4, s=0)
         denominator -= spl.derivative()(self.EFE)
-        spl = UnivariateSpline(self.lats, self.delta_flux_planck, k=4, s=0)
+        spl = sp.interpolate.UnivariateSpline(self.lats, self.delta_flux_planck, k=4, s=0)
         denominator -= spl.derivative()(self.EFE)
-        spl = UnivariateSpline(self.lats, self.delta_flux_wv, k=4, s=0)
+        spl = sp.interpolate.UnivariateSpline(self.lats, self.delta_flux_wv, k=4, s=0)
         denominator -= spl.derivative()(self.EFE)
-        spl = UnivariateSpline(self.lats, self.delta_flux_lr, k=4, s=0)
+        spl = sp.interpolate.UnivariateSpline(self.lats, self.delta_flux_lr, k=4, s=0)
         denominator -= spl.derivative()(self.EFE)
 
         shift = np.rad2deg(numerator / denominator)
@@ -1055,7 +1047,7 @@ class EnergyBalanceModel():
         # x_data = self.T_array.flatten()
         # y_data = self.L_array.flatten()
         
-        # popt, pcov = curve_fit(func, x_data, y_data)
+        # popt, pcov = sp.optimize.curve_fit(func, x_data, y_data)
         # print('A: {:.2f} W/m2, B: {:.2f} W/m2/K'.format(popt[0], popt[1]))
         
         # xvals = np.linspace(np.min(x_data), np.max(x_data), 1000)

@@ -11,6 +11,7 @@
 ### IMPORTS
 ################################################################################
 import numpy as np
+import scipy as sp
 import climt
 from scipy.integrate import quadrature, trapz
 from scipy.interpolate import RectBivariateSpline
@@ -65,8 +66,6 @@ class EnergyBalanceModel():
         self.N_pts = N_pts
         self.dx = 2 / N_pts
         self.sin_lats = np.linspace(-1.0 + self.dx/2, 1.0 - self.dx/2, N_pts)
-        # self.sin_lats = np.linspace(-1.0 + 1e-3, 1.0 - 1e-3, N_pts)
-        # self.dx = self.sin_lats[1] - self.sin_lats[0]
         self.lats = np.arcsin(self.sin_lats)
 
         # Calculate stable dt
@@ -186,7 +185,8 @@ class EnergyBalanceModel():
         #   self.init_alb = 0.2725 * np.ones(len(lats))
         # Using the below calculation from KiehlTrenberth1997
         # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
-            self.init_alb = (40 / 342) * np.ones(len(self.lats))
+            # self.init_alb = (40 / 342) * np.ones(len(self.lats))
+            self.init_alb = 0.25 * np.ones(self.N_pts)
 
         if self.albedo_feedback:
             self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
@@ -330,9 +330,8 @@ class EnergyBalanceModel():
         Take single time step for integration.
         """
         # step forward using the take_step_matrix set up in self.solve()
-        A = self.LHS_matrix
-        b = np.dot(self.RHS_matrix, self.E) + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T))
-        E_new = np.linalg.solve(A, b)
+        b = self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T))
+        E_new = self.step_matrix.solve(b)
 
         T_new = self.T_dataset[np.searchsorted(self.E_dataset, E_new)]
 
@@ -369,21 +368,22 @@ class EnergyBalanceModel():
         elif numerical_method == 'semi-implicit':
             eta = 0.5
         
-        beta = D / Re**2 * self.dt * (1 - self.sin_lats**2) / self.dx**2
-        alpha = D / Re**2 * self.dt * self.sin_lats / self.dx
+        # beta = D / Re**2 * self.dt * (1 - self.sin_lats**2) / self.dx**2
+        # alpha = D / Re**2 * self.dt * self.sin_lats / self.dx
+        # self.LHS_matrix = (np.diag(1 + 2 * eta * beta, k=0) + np.diag(eta * alpha[:-1] - eta * beta[:-1], k=1) + np.diag(-eta * beta[1:] - eta * alpha[1:], k=-1))
+        # self.RHS_matrix = (np.diag(1 - 2 * (1 - eta) * beta, k=0) + np.diag((1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], k=1) + np.diag((1 - eta) * beta[1:] + (1 - eta) * alpha[1:], k=-1))
 
-        self.LHS_matrix = (np.diag(1 + 2 * eta * beta, k=0) + np.diag(eta * alpha[:-1] - eta * beta[:-1], k=1) + np.diag(-eta * beta[1:] - eta * alpha[1:], k=-1))
-        # left_bdy = np.zeros((1, self.N_pts))
-        # right_bdy = np.zeros((1, self.N_pts))
-        # coeffs = - D / Re**2 * np.sqrt(1 - self.sin_lats**2) 
-        # left_bdy[0, :3] = np.array([-1.5 , 2.0, -0.5]) * coeffs[:3]
-        # right_bdy[0, -3:] = np.array([0.5 , -2.0, 1.5]) * coeffs[-3:]
-        # self.LHS_matrix[0, :] = left_bdy
-        # self.LHS_matrix[-1, :] = right_bdy
+        a = D / Re**2 * self.dt / self.dx**2
+        sin_lats_plus_half = self.sin_lats + self.dx/2
+        sin_lats_minus_half = self.sin_lats - self.dx/2
+        # self.LHS_matrix = (np.diag(1 + 2 * a - a * (sin_lats_plus_half**2 + sin_lats_minus_half**2), k=0) + np.diag(a * (sin_lats_plus_half[:-1]**2 - 1), k=1) + np.diag(a * (sin_lats_minus_half[1:]**2 - 1), k=-1))
+        data = np.array([1 + 2 * a - a * (sin_lats_plus_half**2 + sin_lats_minus_half**2), 
+                        a * (sin_lats_plus_half[:-1]**2 - 1), 
+                        a * (sin_lats_minus_half[1:]**2 - 1)])
+        diags = np.array([0, 1, -1])
+        LHS_matrix = sp.sparse.diags(data, diags)
+        self.step_matrix = sp.sparse.linalg.splu(LHS_matrix)
 
-        self.RHS_matrix = (np.diag(1 - 2 * (1 - eta) * beta, k=0) + np.diag((1 - eta) * beta[:-1] - (1 - eta) * alpha[:-1], k=1) + np.diag((1 - eta) * beta[1:] + (1 - eta) * alpha[1:], k=-1))
-        # self.RHS_matrix[0, :] = 0.0
-        # self.RHS_matrix[-1, :] = 0.0
          
         # Print some useful information
         print('\nModel Params:')
