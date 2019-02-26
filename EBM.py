@@ -323,12 +323,12 @@ class EnergyBalanceModel():
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
             moist_data = np.load(self.EBM_PATH + '/data/moist_adiabat_data.npz')    # load data from a previous moist adiabat calculation using MetPy
             # pressures  = moist_data['pressures']
-            Tsample = moist_data['Tsample']    # the surface temp points 
-            Tdata = moist_data['Tdata']    # the resulting vertical levels temps
+            T_surf_sample = moist_data['T_surf_sample']    # the surface temp points 
+            T_data = moist_data['T_data']    # the resulting vertical levels temps
 
             pressures_flipped = np.flip(pressures, axis=0)   # sp.interpolate.RectBivariateSpline needs increasing x values
-            Tdata = np.flip(Tdata, axis=1)
-            self.interpolated_moist_adiabat = sp.interpolate.RectBivariateSpline(Tsample, pressures_flipped, Tdata)    # this returns an object that has the method .ev() to evaluate the interpolation function
+            T_data = np.flip(T_data, axis=1)
+            self.interpolated_moist_adiabat = sp.interpolate.RectBivariateSpline(T_surf_sample, pressures_flipped, T_data)    # this returns an object that has the method .ev() to evaluate the interpolation function
 
             if water_vapor_feedback == False:
                 # prescribe WV from control simulation
@@ -432,8 +432,8 @@ class EnergyBalanceModel():
                             a * (sin_lats_minus_half[1:]**2 - 1)])
             diags = np.array([0, 1, -1])
             LHS_matrix = sp.sparse.diags(data, diags)
-            # LU factorization:
-            self.step_matrix = sp.sparse.linalg.splu(LHS_matrix)
+            # LU factorization (convert to CSC first):
+            self.step_matrix = sp.sparse.linalg.splu(LHS_matrix.tocsc())
         else:
             os.sys.exit("Invalid numerical method.")
 
@@ -483,6 +483,10 @@ class EnergyBalanceModel():
         while error > self.tol and frame < frames:
             # take a step, calculate error 
             self.E, self.T, self.alb = self.take_step()
+
+            # plt.plot(self.state['air_temperature'].values[:, 200, 0], self.state['air_pressure'].values[:, 200, 0])
+            # plt.gca().invert_yaxis()
+            # plt.show()
 
             if iteration % its_per_frame == 0:
                 error = np.mean(np.abs(self.T - T_array[frame-1, :]) / (its_per_frame * self.dt))
@@ -800,32 +804,6 @@ class EnergyBalanceModel():
 
         OUTPUTS
         """
-        ### INITIAL DISTRIBUTIONS
-        print('\nPlotting Initial Dists')
-        fig, ax = plt.subplots(1, figsize=(16,10))
-        
-        # radiaiton dist
-        SW = self.S * (1 - self.init_alb)
-        LW = self.L(self.init_temp)
-        ax.plot([-1, 1], [0, 0], 'k--', lw=2)
-        ax.plot(self.sin_lats, SW, 'r', lw=2, label='SW (with albedo)', alpha=0.5)
-        ax.plot(self.sin_lats, LW, 'g', lw=2, label='LW (init)', alpha=0.5)
-        ax.plot(self.sin_lats, SW - LW, 'b', lw=2, label='SW - LW', alpha=1.0)
-        
-        ax.set_title('SW/LW Radiation (init)')
-        ax.set_xlabel('Lat')
-        ax.set_ylabel('W/m$^2$')
-        ax.legend(loc='upper right')
-        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
-        
-        plt.tight_layout()
-        
-        fname = 'init_radiation.png'
-        plt.savefig(fname, dpi=80)
-        print('{} created.'.format(fname))
-        plt.close()
-        
         ### FINAL TEMP DIST
         print('\nPlotting Final T Dist')
         
@@ -876,30 +854,34 @@ class EnergyBalanceModel():
             print('{} created.'.format(fname))
             plt.close()
         
-        ### FINAL RADIATION DIST
-        print('\nPlotting Final Radiation Dist')
+        ### RADIATION DISTS
+        print('\nPlotting Radiation Dists')
 
-        T_f = self.T_array[-1, :]
         alb_f = self.alb_array[-1, :]
         SW_f = self.S * (1 - alb_f)
+        SW_i = self.S * (1 - self.init_alb)
         LW_f = self.L_array[-1, :]
+        LW_i = self.L(self.init_temp)
         print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(SW_f - LW_f)))
 
         f, ax = plt.subplots(1, figsize=(16, 10))
-        ax.plot(self.sin_lats, SW_f, 'r', label='$S(1-\\alpha)$')
-        ax.plot(self.sin_lats, LW_f, 'b', label='OLR')
-        ax.plot(self.sin_lats, SW_f - LW_f, 'g', label='Net')
+        ax.plot(self.sin_lats, SW_f, 'r', label='Final $S(1-\\alpha)$')
+        ax.plot(self.sin_lats, SW_i, 'r--', label='Initial $S(1-\\alpha)$')
+        ax.plot(self.sin_lats, LW_f, 'b', label='Final OLR')
+        ax.plot(self.sin_lats, LW_i, 'b--', label='Initial OLR')
+        ax.plot(self.sin_lats, SW_f - LW_f, 'g', label='Final Net')
+        ax.plot(self.sin_lats, SW_i - LW_i, 'g--', label='Initial Net')
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
         ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
         ax.grid()
         ax.legend(loc='upper left')
-        ax.set_title("Final Radiation Distributions")
+        ax.set_title("Radiation Distributions")
         ax.set_xlabel("Lat")
         ax.set_ylabel("W/m$^2$")
         
         plt.tight_layout()
         
-        fname = 'final_radiation.png'
+        fname = 'radiation.png'
         plt.savefig(fname, dpi=80)
         print('{} created.'.format(fname))
         plt.close()

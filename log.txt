@@ -1035,3 +1035,16 @@ sim271: Interactive
 sim272: Prescribed
 15, 4.94, 15, -5.2086807503393624, -3.3335556802171915
 
+---
+# 2-25
+---
+I have been bad and not logged lots of things that happened. 
+The reason for this is that I have not been doing actual simulation folders but rather little isolated tests.
+Here is what I can remember:
+	- I updated the EBM with sparse matrices and a new finite difference scheme from Persson
+	- We have been testing CliMT and find it to be fairly accurate compared to MODTRAN 
+	- What we also noticed was RH = 0 does not change ITCZ sensitivity very much :(
+		- This led us to looking at my moist adiabat calculation, which is now updated in moist_adiabat_calculation.py
+	- Still no fix for our sensitivity problem. I even tried messing with diffusivity and got no change.
+
+
