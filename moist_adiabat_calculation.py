@@ -25,7 +25,8 @@ state = climt.get_default_state([], grid_state=grid)
 pressures = state['air_pressure'].values[:,0,0] 
 
 # setup sample Ts points
-N_sample_pts = 200
+N_sample_pts = 20    # test
+# N_sample_pts = 200    # full run
 minT = 217    #overflow if minT is below 217 ???
 maxT = 350
 T_surf_sample = np.linspace(minT, maxT, N_sample_pts) 
@@ -53,8 +54,8 @@ skew.ax.set_xlim(minT - 273.15, maxT - 273.15)
 skew.plot_moist_adiabats()
 plt.show()
 
-# Save data
-fname = 'data/moist_adiabat_data.npz'
-np.savez(fname, pressures=pressures, T_surf_sample=T_surf_sample, T_data=T_data)
-print('Data saved in {}.'.format(fname))
+# # Save data
+# fname = 'data/moist_adiabat_data.npz'
+# np.savez(fname, pressures=pressures, T_surf_sample=T_surf_sample, T_data=T_data)
+# print('Data saved in {}.'.format(fname))
 
