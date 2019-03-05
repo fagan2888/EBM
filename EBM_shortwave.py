@@ -221,13 +221,14 @@ class EnergyBalanceModel():
             self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
 
         # Perturb the albedo instead of the SW
-        S = S0 / 4 * np.cos(self.lats)
-        self.init_alb = 1 - (S + self.dS) * (1 - self.init_alb) / S
+        S = S0 / np.pi * np.cos(self.lats)
+        # self.init_alb = 1 - (S + self.dS) * (1 - self.init_alb) / S
+        self.init_alb += 1/0.7 * (1 - (S + self.dS) * (1 - self.init_alb) / S - self.init_alb)
         self.alb = self.init_alb
         
-        # # Debug: Plot albedo
-        # plt.plot(self.sin_lats, self.alb)
-        # plt.show()
+        # Debug: Plot albedo
+        plt.plot(self.sin_lats, self.alb)
+        plt.show()
 
 
     def outgoing_longwave(self, olr_type, RH_vert_profile=None, RH_lat_profile=None, gaussian_spread=None):
@@ -379,7 +380,16 @@ class EnergyBalanceModel():
                 # CliMT's FORTRAN code takes over here
                 shortwave_tendencies, shortwave_diagnostics = self.shortwave_radiation(self.state)
                 longwave_tendencies, longwave_diagnostics = self.longwave_radiation(self.state)
-                S = 1/4 * (shortwave_diagnostics['downwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0] - shortwave_diagnostics['upwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0])
+                S = 1/np.pi * (shortwave_diagnostics['downwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0] - shortwave_diagnostics['upwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0])
+
+                # plt.plot(self.sin_lats, 1/np.pi * shortwave_diagnostics['downwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0])
+                # plt.plot(self.sin_lats, 1/np.pi * shortwave_diagnostics['upwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0])
+                # upwelling = 1/np.pi * shortwave_diagnostics['upwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
+                # plt.plot(self.sin_lats, np.flip(upwelling) - upwelling) 
+                # plt.grid()
+                # plt.show()
+
+
                 L = longwave_diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0] 
                 return S, L
         else:
@@ -512,16 +522,16 @@ class EnergyBalanceModel():
                     print('frame = {:5d}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, T_avg, error))
                 # print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(self.S * (1 - self.alb) - L_array[frame, :])))
 
-                # Debug: Plot NEI
-                S, L = self.S_and_L(self.T)
-                f, ax = plt.subplots(1, figsize=(16,10))
-                ax.plot(self.sin_lats, S, 'g-', label="S")
-                ax.plot(self.sin_lats, S0 / np.pi * np.cos(self.lats) + self.dS, 'g--', label="old S")
-                ax.plot(self.sin_lats, L, 'r-', "L")
-                ax.plot(self.sin_lats, S - L, 'k-', label="S - L")
-                ax.plot(self.sin_lats, S0 / np.pi * np.cos(self.lats) + self.dS - L, 'k--', label="old S - L")
-                plt.legend()
-                plt.show()
+                # # Debug: Plot NEI
+                # S, L = self.S_and_L(self.T)
+                # f, ax = plt.subplots(1, figsize=(16,10))
+                # ax.plot(self.sin_lats, S, 'g-', label="S")
+                # ax.plot(self.sin_lats, S0 / np.pi * np.cos(self.lats) + self.dS, 'g--', label="old S")
+                # ax.plot(self.sin_lats, L, 'r-', label="L")
+                # ax.plot(self.sin_lats, S - L, 'k-', label="S - L")
+                # ax.plot(self.sin_lats, S0 / np.pi * np.cos(self.lats) + self.dS - L, 'k--', label="old S - L")
+                # plt.legend()
+                # plt.show()
 
                 frame += 1
 
