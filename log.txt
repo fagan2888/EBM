@@ -1047,4 +1047,10 @@ Here is what I can remember:
 		- This led us to looking at my moist adiabat calculation, which is now updated in moist_adiabat_calculation.py
 	- Still no fix for our sensitivity problem. I even tried messing with diffusivity and got no change.
 
+---
+# 3-6
+---
+Updates to the EBM_shortwave.py code so that now the EBM can run with full blown CliMT shortwave.
+I am seeing a sensitivity increase with this: M=18 went from 6 degS to 7. 
+I have noticed that I can take gigantic (dtmax_mult ~ 1e4) time steps and still get the same EFE and T_avg within 0.1 absolute error from finer simulations.
 

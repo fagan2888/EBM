@@ -179,13 +179,12 @@ class EnergyBalanceModel():
             self.perturb_spread = perturb_spread
             self.perturb_intensity = perturb_intensity
 
-            S_control = S0 / np.pi * np.cos(self.lats)
+            self.S = S0 / np.pi * np.cos(self.lats)
 
             func = lambda y: 0.5 * np.exp(-(y - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2)) * np.cos(y)
             perturb_normalizer, er = sp.integrate.quadrature(func, -np.pi/2, np.pi/2, tol=1e-16, rtol=1e-16, maxiter=1000)
 
-            dS = -perturb_intensity/perturb_normalizer * np.exp(-(self.lats - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
-            self.S = S_control + dS
+            self.dS = -perturb_intensity/perturb_normalizer * np.exp(-(self.lats - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
 
 
     def albedo(self, albedo_feedback=False, alb_ice=None, alb_water=None):
@@ -204,18 +203,18 @@ class EnergyBalanceModel():
         self.alb_ice = alb_ice
         self.alb_water = alb_water
         if albedo_feedback == True:
-            self.init_alb = alb_water * np.ones(len(self.lats))
+            self.init_alb = alb_water * np.ones(self.N_pts)
             self.init_alb[np.where(self.init_temp <= 273.16)] = alb_ice
         else:
             # From Clark:
-            # self.init_alb = 0.2725 * np.ones(len(lats))
+            self.init_alb = 0.2725 * np.ones(self.N_pts)
 
             # Using the below calculation from KiehlTrenberth1997
             # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
-            # self.init_alb = (40 / 342) * np.ones(len(self.lats))
+            # self.init_alb = (40 / 342) * np.ones(self.N_pts)
 
             # To get an Earth-like T dist (~250 at poles ~300 at EQ)
-            self.init_alb = 0.25 * np.ones(len(self.lats))
+            # self.init_alb = 0.25 * np.ones(self.N_pts)
 
         if self.albedo_feedback:
             self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
@@ -396,7 +395,7 @@ class EnergyBalanceModel():
             Returns E, T, alb arrays for next step.
         """
         # step forward using the take_step_matrix set up in self.solve()
-        E_new = self.step_matrix.solve(self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
+        E_new = self.step_matrix.solve(self.E + self.dt * g / ps * ((1 - self.alb) * self.S + self.dS - self.L(self.T)))
     
         T_new = self.T_dataset[np.searchsorted(self.E_dataset, E_new)]
 
@@ -481,13 +480,10 @@ class EnergyBalanceModel():
         iteration = 0
         frame = 0
         while error > self.tol and frame < frames:
-            # take a step, calculate error 
-            self.E, self.T, self.alb = self.take_step()
-
+            # # Debug: Plot vertical air temp
             # plt.plot(self.state['air_temperature'].values[:, 200, 0], self.state['air_pressure'].values[:, 200, 0])
             # plt.gca().invert_yaxis()
             # plt.show()
-
             if iteration % its_per_frame == 0:
                 error = np.mean(np.abs(self.T - T_array[frame-1, :]) / (its_per_frame * self.dt))
                 T_array[frame, :] = self.T
@@ -499,14 +495,17 @@ class EnergyBalanceModel():
 
                 # Print progress 
                 T_avg = np.mean(self.T)
+                self._calculate_efe()
                 if frame == 0:
-                    print('frame = {:5d}; T_avg = {:3.1f}'.format(0, T_avg))
+                    print('frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}'.format(0, np.rad2deg(self.EFE), T_avg))
                 else:
-                    print('frame = {:5d}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, T_avg, error))
+                    print('frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, np.rad2deg(self.EFE), T_avg, error))
                 # print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(self.S * (1 - self.alb) - L_array[frame, :])))
 
                 frame += 1
 
+            # take a step
+            self.E, self.T, self.alb = self.take_step()
             iteration += 1
             if self.tol == 0:
                 # never stop if tol = 0
@@ -570,15 +569,12 @@ class EnergyBalanceModel():
         OUTPUTS
             Creates floats EFE and ITCZ saved to class.
         """
-        # Get data and final dist
-        E_f = self.E_array[-1, :]
-
         # Interp and find roots
-        spl = sp.interpolate.UnivariateSpline(self.lats, E_f, k=4, s=0)
+        spl = sp.interpolate.UnivariateSpline(self.lats, self.E, k=4, s=0)
         roots = spl.derivative().roots()
         
         # Find supposed root based on actual data
-        max_index = np.argmax(E_f)
+        max_index = np.argmax(self.E)
         efe_lat = self.lats[max_index]
         
         # Pick up closest calculated root to the supposed one
@@ -858,8 +854,8 @@ class EnergyBalanceModel():
         print('\nPlotting Radiation Dists')
 
         alb_f = self.alb_array[-1, :]
-        SW_f = self.S * (1 - alb_f)
-        SW_i = self.S * (1 - self.init_alb)
+        SW_f = self.S * (1 - alb_f) + self.dS
+        SW_i = self.S * (1 - self.init_alb) + self.dS
         LW_f = self.L_array[-1, :]
         LW_i = self.L(self.init_temp)
         print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(SW_f - LW_f)))
@@ -873,6 +869,8 @@ class EnergyBalanceModel():
         ax.plot(self.sin_lats, SW_i - LW_i, 'g--', label='Initial Net')
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
         ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
+        ax.set_ylim([-200, 400])
+        ax.set_yticks(np.arange(-200, 401, 50))
         ax.grid()
         ax.legend(loc='upper left')
         ax.set_title("Radiation Distributions")

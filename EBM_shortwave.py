@@ -223,12 +223,13 @@ class EnergyBalanceModel():
         # Perturb the albedo instead of the SW
         S = S0 / np.pi * np.cos(self.lats)
         # self.init_alb = 1 - (S + self.dS) * (1 - self.init_alb) / S
-        self.init_alb += 1/0.7 * (1 - (S + self.dS) * (1 - self.init_alb) / S - self.init_alb)
+        dalb = 0.53
+        self.init_alb += 1/dalb * (1 - (S + self.dS) * (1 - self.init_alb) / S - self.init_alb)
         self.alb = self.init_alb
         
-        # Debug: Plot albedo
-        plt.plot(self.sin_lats, self.alb)
-        plt.show()
+        # # Debug: Plot albedo
+        # plt.plot(self.sin_lats, self.alb)
+        # plt.show()
 
 
     def outgoing_longwave(self, olr_type, RH_vert_profile=None, RH_lat_profile=None, gaussian_spread=None):
@@ -382,10 +383,11 @@ class EnergyBalanceModel():
                 longwave_tendencies, longwave_diagnostics = self.longwave_radiation(self.state)
                 S = 1/np.pi * (shortwave_diagnostics['downwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0] - shortwave_diagnostics['upwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0])
 
-                # plt.plot(self.sin_lats, 1/np.pi * shortwave_diagnostics['downwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0])
-                # plt.plot(self.sin_lats, 1/np.pi * shortwave_diagnostics['upwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0])
+                # # Debug: Plot dS
                 # upwelling = 1/np.pi * shortwave_diagnostics['upwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
                 # plt.plot(self.sin_lats, np.flip(upwelling) - upwelling) 
+                # plt.plot(self.sin_lats, self.dS)
+                # plt.ylim([-180, 1])
                 # plt.grid()
                 # plt.show()
 
@@ -496,14 +498,10 @@ class EnergyBalanceModel():
         iteration = 0
         frame = 0
         while error > self.tol and frame < frames:
-            # take a step, calculate error 
-            self.E, self.T, self.alb = self.take_step()
-
             # # Debug: Plot vertical air temp
             # plt.plot(self.state['air_temperature'].values[:, 200, 0], self.state['air_pressure'].values[:, 200, 0])
             # plt.gca().invert_yaxis()
             # plt.show()
-
             if iteration % its_per_frame == 0:
                 error = np.mean(np.abs(self.T - T_array[frame-1, :]) / (its_per_frame * self.dt))
                 T_array[frame, :] = self.T
@@ -516,10 +514,11 @@ class EnergyBalanceModel():
 
                 # Print progress 
                 T_avg = np.mean(self.T)
+                self._calculate_efe()
                 if frame == 0:
-                    print('frame = {:5d}; T_avg = {:3.1f}'.format(0, T_avg))
+                    print('frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}'.format(0, np.rad2deg(self.EFE), T_avg))
                 else:
-                    print('frame = {:5d}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, T_avg, error))
+                    print('frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, np.rad2deg(self.EFE), T_avg, error))
                 # print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(self.S * (1 - self.alb) - L_array[frame, :])))
 
                 # # Debug: Plot NEI
@@ -535,10 +534,14 @@ class EnergyBalanceModel():
 
                 frame += 1
 
+            # take a step
+            self.E, self.T, self.alb = self.take_step()
             iteration += 1
             if self.tol == 0:
                 # never stop if tol = 0
-                error = 1
+                error = 1 
+
+
 
         tf = clock()
         sim_time = tf - t0
@@ -598,15 +601,12 @@ class EnergyBalanceModel():
         OUTPUTS
             Creates floats EFE and ITCZ saved to class.
         """
-        # Get data and final dist
-        E_f = self.E_array[-1, :]
-
         # Interp and find roots
-        spl = sp.interpolate.UnivariateSpline(self.lats, E_f, k=4, s=0)
+        spl = sp.interpolate.UnivariateSpline(self.lats, self.E, k=4, s=0)
         roots = spl.derivative().roots()
         
         # Find supposed root based on actual data
-        max_index = np.argmax(E_f)
+        max_index = np.argmax(self.E)
         efe_lat = self.lats[max_index]
         
         # Pick up closest calculated root to the supposed one
@@ -722,107 +722,106 @@ class EnergyBalanceModel():
         return flux
 
 
-    # def log_feedbacks(self, fname_feedbacks):
-    #     """
-    #     Calculate each feedback flux and log data on the shifts.
+    def log_feedbacks(self, fname_feedbacks):
+        """
+        Calculate each feedback flux and log data on the shifts.
 
-    #     INPUTS
-    #         fname_feedbacks: string -> file to write to.
+        INPUTS
+            fname_feedbacks: string -> file to write to.
 
-    #     OUTPUTS
-    #         Creates arrays for each feedback flux saved to class.
-    #     """
-    #     print('\nCalculating feedbacks...')
+        OUTPUTS
+            Creates arrays for each feedback flux saved to class.
+        """
+        print('\nCalculating feedbacks...')
 
-    #     self.plot_fluxes = True
+        self.plot_fluxes = True
 
-    #     E_f = self.E_array[-1, :]
-    #     L_f = self.L_array[-1, :]
-    #     T_f = self.T_array[-1, :]
+        E_f = self.E_array[-1, :]
+        T_f = self.T_array[-1, :]
+        self.S_f, L_f = self.S_and_L(T_f)
 
-    #     self.S_f = self.S * (1 - self.alb_array[-1, :])
-    #     area = self._integrate_lat(1)
-    #     self.L_bar = 1 / area * self._integrate_lat(L_f)
+        area = self._integrate_lat(1)
+        self.L_bar = 1 / area * self._integrate_lat(L_f)
 
-    #     # Get CTL data
-    #     ctl_state_temp = self.ctl_data['ctl_state_temp'].T.reshape((self.N_levels, self.N_pts, 1))
-    #     pert_state_temp = np.copy(self.state['air_temperature'].values[:])
+        # Get CTL data
+        ctl_state_temp = self.ctl_data['ctl_state_temp'].T.reshape((self.N_levels, self.N_pts, 1))
+        pert_state_temp = np.copy(self.state['air_temperature'].values[:])
 
-    #     # # Debug
-    #     # for i in range(self.N_levels):
-    #     #     plt.plot(self.sin_lats, ctl_state_temp[i, :, 0])
-    #     # plt.show()
+        # # Debug: Plot ctl temps at each vertical level
+        # for i in range(self.N_levels):
+        #     plt.plot(self.sin_lats, ctl_state_temp[i, :, 0])
+        # plt.show()
 
-    #     ctl_state_q = self.RH_dist * self._humidsat(ctl_state_temp, self.state['air_pressure'].values[:] / 100)[1]
-    #     pert_state_q = np.copy(self.state['specific_humidity'].values[:])
+        ctl_state_q = self.RH_dist * self._humidsat(ctl_state_temp, self.state['air_pressure'].values[:] / 100)[1]
+        pert_state_q = np.copy(self.state['specific_humidity'].values[:])
 
-    #     self.S_ctl = self.ctl_data['S']
-    #     self.L_bar_ctl = self.ctl_data['L_bar']
+        self.S_ctl = self.ctl_data['S']
+        self.L_bar_ctl = self.ctl_data['L_bar']
 
-    #     # flux_total_ctl = self.ctl_data['flux_total']
+        # flux_total_ctl = self.ctl_data['flux_total']
 
-    #     self.T_f_ctl = ctl_state_temp[0, :, 0]
-    #     self.ctl_state_temp = ctl_state_temp
-    #     self.pert_state_temp = pert_state_temp
-    #     self.ctl_state_q = ctl_state_q
-    #     self.pert_state_q = pert_state_q
+        self.T_f_ctl = ctl_state_temp[0, :, 0]
+        self.ctl_state_temp = ctl_state_temp
+        self.pert_state_temp = pert_state_temp
+        self.ctl_state_q = ctl_state_q
+        self.pert_state_q = pert_state_q
 
-    #     dS = self.S_f - self.S_ctl
-    #     self.delta_S = - self._calculate_feedback_flux(dS)
+        dS = self.S_f - self.S_ctl
+        self.delta_S = - self._calculate_feedback_flux(dS)
 
-    #     ## Total
-    #     E_f_ctl = self.E_dataset[np.searchsorted(self.T_dataset, self.T_f_ctl)]
-    #     self.flux_total_ctl = -(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(E_f_ctl, self.dx)
-    #     self.flux_total = -(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(E_f, self.dx)
-    #     self.delta_flux_total = self.flux_total - self.flux_total_ctl
+        ## Total
+        E_f_ctl = self.E_dataset[np.searchsorted(self.T_dataset, self.T_f_ctl)]
+        self.flux_total_ctl = -(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(E_f_ctl, self.dx)
+        self.flux_total = -(D * ps / g) * (2 * np.pi * Re * np.cos(self.lats)) * (np.cos(self.lats) / Re) * np.gradient(E_f, self.dx)
+        self.delta_flux_total = self.flux_total - self.flux_total_ctl
 
-    #     # self.delta_flux_total = self.flux_total - flux_total_ctl
+        # self.delta_flux_total = self.flux_total - flux_total_ctl
 
-    #     # All LW Feedbacks
-    #     self.flux_all_fb = self._calculate_feedback_flux(L_f)
+        # All LW Feedbacks
+        self.flux_all_fb = self._calculate_feedback_flux(L_f)
         
-    #     ## Planck
-    #     # emissivity = 0.6
-    #     # L_planck = emissivity * sig * T_f**4
-    #     # self.flux_planck1 = self._calculate_feedback_flux(L_planck)
+        ## Planck
+        # emissivity = 0.6
+        # L_planck = emissivity * sig * T_f**4
+        # self.flux_planck1 = self._calculate_feedback_flux(L_planck)
 
-    #     Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts, 1) )
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts, 1) )
 
-    #     self.state['air_temperature'].values[:] =  pert_state_temp - Tgrid_diff
-    #     self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0].reshape( (self.N_pts, 1) )
-    #     self.state['specific_humidity'].values[:] = pert_state_q
-    #     tendencies, diagnostics = self.longwave_radiation(self.state)
-    #     self.L_pert_shifted_T = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
-    #     self.delta_flux_planck = self._calculate_feedback_flux(L_f - self.L_pert_shifted_T)
+        self.state['air_temperature'].values[:] =  pert_state_temp - Tgrid_diff
+        self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0].reshape( (self.N_pts, 1) )
+        self.state['specific_humidity'].values[:] = pert_state_q
+        tendencies, diagnostics = self.longwave_radiation(self.state)
+        self.L_pert_shifted_T = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
+        self.delta_flux_planck = self._calculate_feedback_flux(L_f - self.L_pert_shifted_T)
         
-    #     ## Water Vapor 
-    #     # RH_copy = self.RH_dist[:, :] 
-    #     # self.RH_dist[:, :] = 0.0
-    #     # L_f_zero_q = self.L(T_f)
-    #     # # np.savez('L_f_zero_q.npz', L_f_zero_q)
-    #     # self.flux_wv1 = self._calculate_feedback_flux(L_f - L_f_zero_q)
-    #     # self.RH_dist[:, :] = RH_copy
+        ## Water Vapor 
+        # RH_copy = self.RH_dist[:, :] 
+        # self.RH_dist[:, :] = 0.0
+        # L_f_zero_q = self.L(T_f)
+        # # np.savez('L_f_zero_q.npz', L_f_zero_q)
+        # self.flux_wv1 = self._calculate_feedback_flux(L_f - L_f_zero_q)
+        # self.RH_dist[:, :] = RH_copy
 
-    #     self.state['air_temperature'].values[:] = pert_state_temp
-    #     self.state['surface_temperature'].values[:] = pert_state_temp[0, :, 0].reshape( (self.N_pts, 1) )
-    #     self.state['specific_humidity'].values[:] = ctl_state_q
-    #     tendencies, diagnostics = self.longwave_radiation(self.state)
-    #     self.L_pert_shifted_q =  diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
-    #     self.delta_flux_wv = self._calculate_feedback_flux(L_f - self.L_pert_shifted_q)
+        self.state['air_temperature'].values[:] = pert_state_temp
+        self.state['surface_temperature'].values[:] = pert_state_temp[0, :, 0].reshape( (self.N_pts, 1) )
+        self.state['specific_humidity'].values[:] = ctl_state_q
+        tendencies, diagnostics = self.longwave_radiation(self.state)
+        self.L_pert_shifted_q =  diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
+        self.delta_flux_wv = self._calculate_feedback_flux(L_f - self.L_pert_shifted_q)
         
-    #     ## Lapse Rate
-    #     Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts, 1) )
-    #     self.state['air_temperature'].values[:] =  ctl_state_temp + Tgrid_diff
-    #     self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0].reshape( (self.N_pts, 1) )
-    #     self.state['specific_humidity'].values[:] = pert_state_q
-    #     tendencies, diagnostics = self.longwave_radiation(self.state)
-    #     self.L_pert_shifted_LR = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
-    #     self.delta_flux_lr = self._calculate_feedback_flux(L_f - self.L_pert_shifted_LR)
+        ## Lapse Rate
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctl_state_temp[0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts, 1) )
+        self.state['air_temperature'].values[:] =  ctl_state_temp + Tgrid_diff
+        self.state['surface_temperature'].values[:] = self.state['air_temperature'].values[0, :, 0].reshape( (self.N_pts, 1) )
+        self.state['specific_humidity'].values[:] = pert_state_q
+        tendencies, diagnostics = self.longwave_radiation(self.state)
+        self.L_pert_shifted_LR = diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
+        self.delta_flux_lr = self._calculate_feedback_flux(L_f - self.L_pert_shifted_LR)
 
-    #     # No feedbacks
-    #     self.flux_no_fb = self.flux_total - self.flux_all_fb
+        # No feedbacks
+        self.flux_no_fb = self.flux_total - self.flux_all_fb
 
-    #     self._calculate_shift()
+        self._calculate_shift()
 
     def save_plots(self):
         """
@@ -898,6 +897,8 @@ class EnergyBalanceModel():
         ax.plot(self.sin_lats, SW_i - LW_i, 'g--', label='Initial Net')
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
         ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
+        ax.set_ylim([-200, 400])
+        ax.set_yticks(np.arange(-200, 401, 50))
         ax.grid()
         ax.legend(loc='upper left')
         ax.set_title("Radiation Distributions")
