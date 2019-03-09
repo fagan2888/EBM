@@ -179,12 +179,15 @@ class EnergyBalanceModel():
             self.perturb_spread = perturb_spread
             self.perturb_intensity = perturb_intensity
 
-            self.S = S0 / np.pi * np.cos(self.lats)
+            S = S0 / np.pi * np.cos(self.lats)
 
             func = lambda y: 0.5 * np.exp(-(y - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2)) * np.cos(y)
             perturb_normalizer, er = sp.integrate.quadrature(func, -np.pi/2, np.pi/2, tol=1e-16, rtol=1e-16, maxiter=1000)
 
             self.dS = -perturb_intensity/perturb_normalizer * np.exp(-(self.lats - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
+
+        self.S = S + self.dS
+
 
 
     def albedo(self, albedo_feedback=False, alb_ice=None, alb_water=None):
@@ -207,14 +210,14 @@ class EnergyBalanceModel():
             self.init_alb[np.where(self.init_temp <= 273.16)] = alb_ice
         else:
             # From Clark:
-            self.init_alb = 0.2725 * np.ones(self.N_pts)
+            # self.init_alb = 0.2725 * np.ones(self.N_pts)
 
             # Using the below calculation from KiehlTrenberth1997
             # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
             # self.init_alb = (40 / 342) * np.ones(self.N_pts)
 
             # To get an Earth-like T dist (~250 at poles ~300 at EQ)
-            # self.init_alb = 0.25 * np.ones(self.N_pts)
+            self.init_alb = 0.25 * np.ones(self.N_pts)
 
         if self.albedo_feedback:
             self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
@@ -222,6 +225,18 @@ class EnergyBalanceModel():
             self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_N{}.npz'.format(self.N_pts))
 
         self.alb = self.init_alb
+
+        # S1 = self.S * (1 - self.alb) + self.dS
+        # S2 = (self.S + self.dS) * (1 - self.alb)
+        # S3 = (self.S + self.dS) 
+        # A1 = np.mean(S1[self.N_pts//2+1:] - S1[:self.N_pts//2])
+        # A2 = np.mean(S2[self.N_pts//2+1:] - S2[:self.N_pts//2])
+        # A3 = (1 - self.alb[0]) * np.mean(S3[self.N_pts//2+1:] - S3[:self.N_pts//2])
+        # area = self._integrate_lat(1)/2
+        # integ = lambda f: np.trapz( f * 2 * np.pi * Re**2 * np.ones(len(f)), dx=self.dx ) 
+        # A4 = (1-self.alb[0]) * (1/area * integ(S3[self.N_pts//2+1:]) - 1/area * integ(S3[:self.N_pts//2]))
+        # print(A1, A2, A3, A4)
+        # os.sys.exit()
 
 
     def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None, RH_vert_profile=None, RH_lat_profile=None, gaussian_spread=None):
@@ -395,7 +410,7 @@ class EnergyBalanceModel():
             Returns E, T, alb arrays for next step.
         """
         # step forward using the take_step_matrix set up in self.solve()
-        E_new = self.step_matrix.solve(self.E + self.dt * g / ps * ((1 - self.alb) * self.S + self.dS - self.L(self.T)))
+        E_new = self.step_matrix.solve(self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
     
         T_new = self.T_dataset[np.searchsorted(self.E_dataset, E_new)]
 
@@ -620,7 +635,7 @@ class EnergyBalanceModel():
             Returns integral using trapezoidal method.
         """
         if i == -1:
-            return np.trapz( f * 2 * np.pi * Re**2 * np.ones(self.lats.shape[0]), dx=self.dx ) 
+            return np.trapz( f * 2 * np.pi * Re**2 * np.ones(self.N_pts), dx=self.dx ) 
         else:
             if isinstance(f, np.ndarray):
                 return np.trapz( f[:i+1] * 2 * np.pi * Re**2, dx=self.dx ) 
@@ -854,8 +869,8 @@ class EnergyBalanceModel():
         print('\nPlotting Radiation Dists')
 
         alb_f = self.alb_array[-1, :]
-        SW_f = self.S * (1 - alb_f) + self.dS
-        SW_i = self.S * (1 - self.init_alb) + self.dS
+        SW_f = self.S * (1 - alb_f) 
+        SW_i = self.S * (1 - self.init_alb)
         LW_f = self.L_array[-1, :]
         LW_i = self.L(self.init_temp)
         print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(SW_f - LW_f)))

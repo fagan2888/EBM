@@ -206,14 +206,14 @@ class EnergyBalanceModel():
             self.init_alb[np.where(self.init_temp <= 273.16)] = alb_ice
         else:
             # From Clark:
-            # self.init_alb = 0.2725 * np.ones(len(lats))
+            # self.init_alb = 0.2725 * np.ones(self.N_pts)
 
             # Using the below calculation from KiehlTrenberth1997
             # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
-            # self.init_alb = (40 / 342) * np.ones(len(self.lats))
+            # self.init_alb = (40 / 342) * np.ones(self.N_pts)
 
             # To get an Earth-like T dist (~250 at poles ~300 at EQ)
-            self.init_alb = 0.25 * np.ones(len(self.lats))
+            self.init_alb = 0.25 * np.ones(self.N_pts)
 
         if self.albedo_feedback:
             self.ctl_data = np.load(self.EBM_PATH + '/data/control_data_alb_feedback.npz')
@@ -223,8 +223,10 @@ class EnergyBalanceModel():
         # Perturb the albedo instead of the SW
         S = S0 / np.pi * np.cos(self.lats)
         # self.init_alb = 1 - (S + self.dS) * (1 - self.init_alb) / S
-        dalb = 0.53
+        # dalb = 0.53
+        dalb = 0.70
         self.init_alb += 1/dalb * (1 - (S + self.dS) * (1 - self.init_alb) / S - self.init_alb)
+
         self.alb = self.init_alb
         
         # # Debug: Plot albedo
@@ -386,7 +388,7 @@ class EnergyBalanceModel():
                 # # Debug: Plot dS
                 # upwelling = 1/np.pi * shortwave_diagnostics['upwelling_shortwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0]
                 # plt.plot(self.sin_lats, np.flip(upwelling) - upwelling) 
-                # plt.plot(self.sin_lats, self.dS)
+                # plt.plot(self.sin_lats, self.dS * (1 - 0.25))
                 # plt.ylim([-180, 1])
                 # plt.grid()
                 # plt.show()
