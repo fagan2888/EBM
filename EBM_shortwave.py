@@ -392,6 +392,8 @@ class EnergyBalanceModel():
                 # plt.ylim([-180, 1])
                 # plt.grid()
                 # plt.show()
+                print(np.mean(S[self.N_pts//2+1:])-np.mean(S[:self.N_pts//2]))
+                os.sys.exit()
 
 
                 L = longwave_diagnostics['upwelling_longwave_flux_in_air_assuming_clear_sky'].values[-1, :, 0] 

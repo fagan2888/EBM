@@ -1051,6 +1051,14 @@ Here is what I can remember:
 # 3-6
 ---
 Updates to the EBM_shortwave.py code so that now the EBM can run with full blown CliMT shortwave.
-I am seeing a sensitivity increase with this: M=18 went from 6 degS to 7. 
 I have noticed that I can take gigantic (dtmax_mult ~ 1e4) time steps and still get the same EFE and T_avg within 0.1 absolute error from finer simulations.
+
+---
+# 3-29
+---
+We continue to investigate the discrepancy between our shifts and Clark et al's. 
+Bill noticed that it could simply be that we have different basic states: their MSE flux has a different slope than ours on the equator.
+Bill ran a CESM aqua planet simulation and gave me access to the results on savio.
+I noticed that, on top of the WV feedback, there is a RH feedback: the NH cell gets drier as the ITCZ shifts S.
+Implementing this in my RH distribution in sim273, I am finally getting better sensitivites (the best so far was a bit past 7 degrees south).
 
