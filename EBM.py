@@ -66,6 +66,7 @@ class EnergyBalanceModel():
         self.dx = 2 / N_pts
         self.sin_lats = np.linspace(-1.0 + self.dx/2, 1.0 - self.dx/2, N_pts)
         self.lats = np.arcsin(self.sin_lats)
+        self.latsdeg = np.rad2deg(self.lats)
 
         # Calculate stable dt
         diffusivity = D / Re**2 * np.cos(self.lats)**2
@@ -295,43 +296,100 @@ class EnergyBalanceModel():
 
             # Vertical RH profile
             self.RH_dist = RH * np.ones( (self.N_levels, self.N_pts, 1) )
-            if RH_vert_profile == 'steps':
-                for i in range(self.N_levels):
-                    # P (hPa)  | RH
-                    # --------------
-                    #    0-200 | 0
-                    #  200-300 | 0.8
-                    #  300-800 | 0.2
-                    # 800-1000 | 0.8
-                    if pressures[i]/100 < 200:
-                        self.RH_dist[i, :, :] = 0
-                    elif pressures[i]/100 > 300 and pressures[i]/100 < 800:
-                        self.RH_dist[i, :, :] = 0.2
-            else:
-                print("Invalid RH_vert_profile")
+            for i in range(self.N_levels):
+                # P (hPa)  | RH
+                # --------------
+                #    0-200 | 0
+                #  200-300 | 0.8
+                #  300-800 | 0.2
+                # 800-1000 | 0.8
+                if pressures[i]/100 < 200:
+                    self.RH_dist[i, :, :] = 0
+                elif pressures[i]/100 > 300 and pressures[i]/100 < 800:
+                    self.RH_dist[i, :, :] = 0.2
             self.RH_vert_profile = RH_vert_profile
 
             # Latitudinal RH profile
             gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )    # quick and dirty gaussian function
-            if RH_lat_profile == 'mid_level_gaussian':
-                spread = np.deg2rad(gaussian_spread)
-                lat_efe = 0    # the latitude (radians) of the EFE. set this as the center of the gaussian
-                midlevels = np.where( np.logical_and(pressures/100 < 800, pressures/100 > 300) )[0]    # midlevels := [800, 300] hPa
-                def shift_dist(RH_dist, lat_center):
-                    """
-                    Make the RH_lat_profile a gaussian and shift its max to the EFE.
-                    """
-                    RH_dist[midlevels, :, 0] =  np.repeat(0.2 + (RH-0.2) * gaussian(lat_center, spread, self.lats), len(midlevels)).reshape( (self.N_pts, len(midlevels)) ).T
-                    return RH_dist
-                self.RH_dist = shift_dist(self.RH_dist, lat_efe)
-            else:
-                print("Invalid RH_lat_profile")
+            lat_efe = 0    # the latitude (radians) of the EFE. set this as the center of the gaussian
+            lowerlevels = np.where(pressures/100 > 875)[0]   
+            midlevels = np.where(np.logical_and(pressures/100 < 875, pressures/100 > 200))[0]   
+            midupperlevels = np.where(np.logical_and(pressures/100 < 200, pressures/100 > 100))[0]   
+            def shift_dist(RH_dist, lat_center):
+                """
+                Make the RH_lat_profile a gaussian and shift its max to the EFE.
+                """
+                lat_center_deg = np.rad2deg(lat_center)
+
+                # Set up lower levels as three gaussians
+                width_center = 40
+                width_left = 90 + lat_center_deg - width_center/2
+                width_right = 90 - lat_center_deg - width_center/2
+
+                left = np.where(self.latsdeg < width_left - 90)[0]
+                center = np.where(np.logical_and(self.latsdeg > lat_center_deg - width_center/2, self.latsdeg < lat_center_deg + width_center/2))[0]
+                right = np.where(self.latsdeg > 90 - width_right)[0]
+
+                spread_center = 1.0*width_center
+                spread_left = 1.5*width_left
+                spread_right = 1.5*width_right
+
+                RH_dist[lowerlevels, left[0]:left[-1]+1, 0] = np.repeat( 
+                    1.0 * gaussian(np.deg2rad(-90), np.deg2rad(spread_left), self.lats[left]), 
+                    len(lowerlevels)).reshape( (len(left), len(lowerlevels)) ).T
+                RH_dist[lowerlevels, center[0]:center[-1]+1, 0] = np.repeat( 
+                    1.0 * gaussian(lat_center, np.deg2rad(spread_center), self.lats[center]), 
+                    len(lowerlevels)).reshape( (len(center), len(lowerlevels)) ).T
+                RH_dist[lowerlevels, right[0]:right[-1]+1, 0] = np.repeat( 
+                    1.0 * gaussian(np.deg2rad(90), np.deg2rad(spread_right), self.lats[right]), 
+                    len(lowerlevels)).reshape( (len(right), len(lowerlevels)) ).T
+
+                # Set up mid levels as three gaussians
+                width_center = 10
+                width_left = 90 + lat_center_deg - width_center/2
+                width_right = 90 - lat_center_deg - width_center/2
+                
+                left = np.where(self.latsdeg < width_left - 90)[0]
+                center = np.where(np.logical_and(self.latsdeg > lat_center_deg - width_center/2, self.latsdeg < lat_center_deg + width_center/2))[0]
+                right = np.where(self.latsdeg > 90 - width_right)[0]
+
+                spread_center = width_center/2
+                spread_left = width_left/2
+                spread_right = width_right/2
+
+                RH_dist[midlevels, left[0]:left[-1]+1, 0] = np.repeat( 
+                    1.0 * gaussian(np.deg2rad(-90), np.deg2rad(spread_left), self.lats[left]), 
+                    len(midlevels)).reshape( (len(left), len(midlevels)) ).T
+                RH_dist[midlevels, center[0]:center[-1]+1, 0] = np.repeat( 
+                    0.9 * gaussian(lat_center, np.deg2rad(spread_center), self.lats[center]), 
+                    len(midlevels)).reshape( (len(center), len(midlevels)) ).T
+                RH_dist[midlevels, right[0]:right[-1]+1, 0] = np.repeat( 
+                    1.0 * gaussian(np.deg2rad(90), np.deg2rad(spread_right), self.lats[right]), 
+                    len(midlevels)).reshape( (len(right), len(midlevels)) ).T
+                # # RH Feedback:
+                # RH_dist[midlevels, right[0]:right[-1]+1, 0] = np.repeat( 
+                #     0.0 * gaussian(np.deg2rad(90), np.deg2rad(spread_right), self.lats[right]), 
+                #     len(midlevels)).reshape( (len(right), len(midlevels)) ).T
+
+                # Set up upper levels as one gaussian
+                RH_dist[midupperlevels, :, 0] = np.repeat( 
+                    0.8 * gaussian(lat_center, np.deg2rad(20), self.lats), 
+                    len(midupperlevels)).reshape( (self.N_pts, len(midupperlevels)) ).T
+                return RH_dist
+            self.RH_dist = shift_dist(self.RH_dist, lat_efe)
             self.RH_lat_profile = RH_lat_profile
             self.gaussian_spread = gaussian_spread
 
             # # Debug: Plot RH dist
-            # plt.imshow(self.RH_dist[:, :, 0], extent=(-90, 90, pressures[0]/100, 0), origin='lower', aspect=.1, cmap='BrBG', vmin=0.0, vmax=1.0)
-            # plt.colorbar()
+            # f, ax = plt.subplots(1, figsize=(10,6))
+            # levels = np.arange(0, 1.05, 0.05)
+            # cf = ax.contourf(self.sin_lats, pressures/100, self.RH_dist[:, :, 0], cmap='BrBG', levels=levels)
+            # cb = plt.colorbar(cf, ax=ax, pad=0.1, fraction=0.2)
+            # cb.set_ticks(np.arange(0, 1.05, 0.1))
+            # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+            # ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
+            # ax.set_yticks(np.arange(0,1001,100))
+            # plt.gca().invert_yaxis()
             # plt.show()
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
@@ -516,6 +574,18 @@ class EnergyBalanceModel():
                 else:
                     print('frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}; |dT/dt| = {:.2E}'.format(frame, np.rad2deg(self.EFE), T_avg, error))
                 # print('Integral of (SW - LW): {:.5f} PW'.format(10**-15 * self._integrate_lat(self.S * (1 - self.alb) - L_array[frame, :])))
+
+                # # Debug: Plot RH dist
+                # f, ax = plt.subplots(1, figsize=(10,6))
+                # levels = np.arange(0, 1.05, 0.05)
+                # cf = ax.contourf(self.sin_lats, self.pressures/100, self.RH_dist[:, :, 0], cmap='BrBG', levels=levels)
+                # cb = plt.colorbar(cf, ax=ax, pad=0.1, fraction=0.2)
+                # cb.set_ticks(np.arange(0, 1.05, 0.1))
+                # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+                # ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
+                # ax.set_yticks(np.arange(0,1001,100))
+                # plt.gca().invert_yaxis()
+                # plt.show()
 
                 frame += 1
 

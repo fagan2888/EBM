@@ -4,13 +4,13 @@
 sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 
 N_pts=401
-dtmax_multiple=10.0
+dtmax_multiple=200
 max_sim_years=5
-tol=1e-10
+tol=1e-9
 
 initial_condition=legendre
-low=270
-high=305
+low=250
+high=300
 
 # albedo_feedback=True
 albedo_feedback=False
@@ -108,21 +108,30 @@ if [ "$1" == "-o" ]; then
 elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
 	
-	# olr_type=full_radiation
+	olr_type=full_radiation
 	# olr_type=full_radiation_no_wv
 	# olr_type=full_radiation_no_lr
 	# olr_type=planck
-	olr_type=linear
+	# olr_type=linear
 	# A=-572.3
 	# B=2.92
 	A=-281.67
 	B=1.8
 	emissivity=0.65
-	RH_vert_profile=steps
-	RH_lat_profile=mid_level_gaussian
-	gaussian_spread=5
 	
 	insolation_type=perturbation
+
+	i=0
+	while [ -d ${sim_dir}sim$i ];
+	do
+	    i=`echo "$i + 1" | bc`
+	done
+	echo "Making simulations in ${sim_dir}sim$i"
+
+	mkdir ${sim_dir}sim$i
+	mkdir ${sim_dir}sim${i}/tropical
+	mkdir ${sim_dir}sim${i}/extratropical
+
 	for perturb_center in 15 60; do
         if [ $perturb_center -eq 15 ]; then
             perturb_spread=4.94
@@ -130,15 +139,14 @@ elif [ "$1" == "-s" ]; then
             perturb_spread=9.89
         fi
 	    for perturb_intensity in 5 10 15 18; do
-	        i=0
-	        while [ -d ${sim_dir}sim$i ];
-	        do
-	            i=`echo "$i + 1" | bc`
-	        done
-	        
-	        echo "Making new simulation in ${sim_dir}sim$i"
-	        mkdir ${sim_dir}sim$i
-	        cd ${sim_dir}sim$i
+        	if [ $perturb_center -eq 15 ]; then
+				dir=${sim_dir}sim${i}/tropical/M$perturb_intensity
+        	else
+				dir=${sim_dir}sim${i}/extratropical/M$perturb_intensity
+        	fi
+	        echo "Making new simulation in $dir"
+	        mkdir $dir
+	        cd $dir
 	        
 	        # echo "Copying template files."
 	        sed -e 's/N_pts=/N_pts='$N_pts'/g' \
@@ -159,9 +167,6 @@ elif [ "$1" == "-s" ]; then
 	            -e 's/A=/A='$A'/g' \
 	            -e 's/B=/B='$B'/g' \
 	            -e 's/emissivity=/emissivity='$emissivity'/g' \
-	            -e 's/RH_vert_profile=/RH_vert_profile="'$RH_vert_profile'"/g' \
-	            -e 's/RH_lat_profile=/RH_lat_profile="'$RH_lat_profile'"/g' \
-	            -e 's/gaussian_spread=/gaussian_spread='$gaussian_spread'/g' \
 	            -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
 	            -e 's/frames=/frames='$frames'/g' \
 	            -e 's/fname_efe=/fname_efe="'$fname_efe'"/g' \
