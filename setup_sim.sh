@@ -6,6 +6,7 @@ sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 N_pts=401
 dtmax_multiple=200
 max_sim_years=5
+# max_sim_years=10
 tol=1e-9
 
 initial_condition=legendre
@@ -14,8 +15,7 @@ high=300
 
 # albedo_feedback=True
 albedo_feedback=False
-# alb_ice=0.3
-alb_ice=0.5
+alb_ice=0.7
 alb_water=0.1
 
 numerical_method=implicit
@@ -121,14 +121,15 @@ elif [ "$1" == "-s" ]; then
 	
 	insolation_type=perturbation
 
-	i=0
-	while [ -d ${sim_dir}sim$i ];
-	do
-	    i=`echo "$i + 1" | bc`
-	done
+	# i=0
+	# while [ -d ${sim_dir}sim$i ];
+	# do
+	#     i=`echo "$i + 1" | bc`
+	# done
+	i=274
 	echo "Making simulations in ${sim_dir}sim$i"
 
-	mkdir ${sim_dir}sim$i
+	# mkdir ${sim_dir}sim$i
 	mkdir ${sim_dir}sim${i}/tropical
 	mkdir ${sim_dir}sim${i}/extratropical
 

@@ -1077,7 +1077,47 @@ sim274 | perturbation | lat0=60 | M=10 | full_radiation |
 sim274 | perturbation | lat0=60 | M=15 | full_radiation |
 sim274 | perturbation | lat0=60 | M=18 | full_radiation |
 
+# Results 
+15, 4.94,  5, -3.3223584155869803
+15, 4.94, 10, -5.9371946735764425
+15, 4.94, 15, -8.1800252021915263
+15, 4.94, 18, -9.3515690283177424
+60, 9.89,  5, -1.0462154591205688
+60, 9.89, 10, -1.9146081166041153
+60, 9.89, 15, -2.7285023106575603
+60, 9.89, 18, -3.1153792113153997
+
 ---
 # 4-17
 ---
 sim275 has albedo experiments
+sim276 has a control run for albedo feedback (data/ctrl_alb.npz)
+sim274 has a general control run (data/ctrl.npz)
+
+# Perturbation sims with albedo feedback
+sim276 | perturbation | lat0=15 | M=5  | full_radiation | alb_feedback=True 
+sim276 | perturbation | lat0=15 | M=10 | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=15 | M=15 | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=15 | M=18 | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=60 | M=5  | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=60 | M=10 | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=60 | M=15 | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=60 | M=18 | full_radiation | alb_feedback=True
+
+# Results:
+15, 4.94,  5, -3.2927939038501104
+15, 4.94, 10, -5.8959919680603186
+15, 4.94, 15, -8.2066331824127854
+15, 4.94, 18, -9.6390512342067414
+60, 9.89,  5, -1.8827592950189780
+60, 9.89, 10, -2.9811587079640414
+60, 9.89, 15, -3.7632659700589244
+60, 9.89, 18, -4.2123948486828677
+
+Summary of today: 
+	- implemented albedo feedback
+	- ran sensitivity experiments
+	- fixed itcz width in RH
+	- fixed flux calculations for new control sims and new RH function
+	- changed transport calculation from derivative to integral
+	- savio stuff: cesm plots for M0-M18

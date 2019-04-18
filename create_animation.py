@@ -16,9 +16,9 @@ rc('ytick', labelsize=13)
 rc('ytick.major', size=5, width=1.5)
 rc('legend', fontsize=14)
 
-show = 'T'
+# show = 'T'
 # show = 'E'
-# show = 'alb'
+show = 'alb'
 # show = 'L'
 print('\nCreating Animation of {}'.format(show))
 
