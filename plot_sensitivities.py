@@ -34,7 +34,7 @@ def get_data(filename, location):
 ################################################################################
 ### SENSITIVITY COMPARISONS
 ################################################################################
-# lat_itcz = scaling * lat_efe
+# Clark et al. 2018 scaling: lat_itcz = scaling * lat_efe
 scaling = 0.64 
 
 # two plots: tropics and extratropics perturbations
@@ -45,44 +45,50 @@ ax1 = axes[0]; ax2 = axes[1]
 # (see matplotlib.colors.CSS4_COLORS in a terminal to see all the names)
 files = {
         'sensitivity_full_radiation.dat': ['CliMT', 'black'],
-        'sensitivity_full_radiation_no_wv.dat': ['CliMT No WV Feedback', 'green'],
-        'sensitivity_full_radiation_no_lr.dat': ['CliMT No LR Feedback', 'violet'],
+        'sensitivity_full_radiation_alb.dat': ['CliMT With Albedo Feedback', 'grey'],
+        # 'sensitivity_full_radiation_no_wv.dat': ['CliMT No WV Feedback', 'green'],
+        # 'sensitivity_full_radiation_no_lr.dat': ['CliMT No LR Feedback', 'violet'],
         # 'sensitivity_planck.dat': ['Planck Radiation ($\\epsilon=0.65$)', 'red'],
         # 'sensitivity_linear.dat': ['Linear Radiation ($A=-572.3, B=2.92$)', 'brown'],
         # 'sensitivity_linear1.dat': ['Linear Radiation ($A=-281.7, B=1.8$)', 'pink'],
         }
 color_dict = mcolors.CSS4_COLORS
 
-# do the Clark data separately (it doesn't need scaling and also uses markeredgewidth
+# do the Clark data separately (it needs scaling and also uses markeredgewidth
 centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_no_wvf.dat', 'tropics')
-ax1.plot(intensities, itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Prescribed WV (Clark et al.)', markerfacecolor='w', markeredgewidth=1.5)
+ax1.plot(intensities, 1/scaling * itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Prescribed WV (Clark et al.)', markerfacecolor='w', markeredgewidth=1.5)
 centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_wvf.dat', 'tropics')
-ax1.plot(intensities, itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Interactive WV (Clark et al.)')
+ax1.plot(intensities, 1/scaling * itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Interactive WV (Clark et al.)')
 
 centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_no_wvf.dat', 'extratropics')
-ax2.plot(intensities, itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Prescribed WV (Clark et al.)', markerfacecolor='w', markeredgewidth=1.5)
+ax2.plot(intensities, 1/scaling * itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Prescribed WV (Clark et al.)', markerfacecolor='w', markeredgewidth=1.5)
 centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_wvf.dat', 'extratropics')
-ax2.plot(intensities, itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Interactive WV (Clark et al.)')
+ax2.plot(intensities, 1/scaling * itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Interactive WV (Clark et al.)')
+
+# CESM
+centers, spreads, intensities, EFEs = get_data("sensitivity_cesm2.dat", "tropics")
+ax1.plot(intensities, EFEs, marker='o', color=color_dict["blue"], linestyle='', label="CESM2")
 
 # plot all the data
 for f in files:
     for i, location in enumerate(['tropics', 'extratropics']):
         centers, spreads, intensities, EFEs = get_data(f, location)
-        axes[i].plot(intensities, scaling * EFEs, marker='o', color=color_dict[files[f][1]], linestyle='', label=files[f][0])
+        axes[i].plot(intensities, EFEs, marker='o', color=color_dict[files[f][1]], linestyle='', label=files[f][0])
 
 ax1.set_xlim(3, 20)
 ax1.set_xticks([5, 10, 15, 18])
-ax1.set_ylim(-10, 0)
-ax1.set_yticklabels(['10$^\\circ$S', '8$^\\circ$S', '6$^\\circ$S', '4$^\\circ$S', '2$^\\circ$S', 'EQ'])
+ax1.set_ylim(-16, 0)
+ax1.set_yticks(np.arange(-16, 1, 2))
+ax1.set_yticklabels(['16$^\\circ$S', '14$^\\circ$S', '12$^\\circ$S', '10$^\\circ$S', '8$^\\circ$S', '6$^\\circ$S', '4$^\\circ$S', '2$^\\circ$S', 'EQ'])
 ax1.set_title('Tropics')
-ax1.set_xlabel('M (W/m$^2$)')
-ax1.set_ylabel('ITCZ Location')
+ax1.set_xlabel('M [W/m$^2$]')
+ax1.set_ylabel('EFE Latitude')
 
 ax2.set_xlim(3, 20)
 ax2.set_xticks([5, 10, 15, 18])
 ax2.legend(loc='lower right')
 ax2.set_title('Extratropics')
-ax2.set_xlabel('M (W/m$^2$)')
+ax2.set_xlabel('M [W/m$^2$]')
 
 plt.tight_layout()
 

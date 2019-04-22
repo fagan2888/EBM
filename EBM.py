@@ -322,7 +322,6 @@ class EnergyBalanceModel():
 
             # Latitudinal RH profile
             gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )    # quick and dirty gaussian function
-            lat_efe = 0    # the latitude (radians) of the EFE. set this as the center of the gaussian
             lowerlevels = np.where(pressures/100 > 875)[0]   
             midlevels = np.where(np.logical_and(pressures/100 < 875, pressures/100 > 200))[0]   
             midupperlevels = np.where(np.logical_and(pressures/100 < 200, pressures/100 > 100))[0]   
@@ -389,6 +388,7 @@ class EnergyBalanceModel():
                     len(midupperlevels)).reshape( (self.N_pts, len(midupperlevels)) ).T
                 return RH_dist
             self.generate_RH_dist = generate_RH_dist 
+            lat_efe = 0    # the latitude (radians) of the EFE. set this as the center of the gaussian
             self.RH_dist = self.generate_RH_dist(lat_efe)
 
             # # Debug: Plot RH dist
@@ -416,8 +416,8 @@ class EnergyBalanceModel():
             if water_vapor_feedback == False:
                 # prescribe WV from control simulation
                 T_control = self.ctrl_data["ctrl_state_temp"][0, :, 0]    # control surface temp
-                Tgrid_control = np.repeat(T_control, self.N_levels).reshape( (self.N_pts, self.N_levels, 1) )    # turn it into a grid of copies for interpolated_moist_adiabat
-                air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, self.state["air_pressure"].values[:]).T    # some weird .T here
+                Tgrid_control = np.repeat(T_control, self.N_levels).reshape( (self.N_pts, self.N_levels) )
+                air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
                 self.state["specific_humidity"].values[:] = self.RH_dist * self._humidsat(air_temp, self.state["air_pressure"].values[:] / 100)[1]    # q = RH * q_sat
 
             self.pressures = pressures
@@ -435,14 +435,27 @@ class EnergyBalanceModel():
                 self.state["surface_temperature"].values[:] = T.reshape((self.N_pts, 1))
                 if lapse_rate_feedback == False:
                     # Retain LR from control simulations by just shifting all levels by difference at surface
-                    dT = np.repeat(T - self.ctrl_data["ctrl_state_temp"][0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts, 1) )
-                    self.state["air_temperature"].values[:] = self.ctrl_data["ctrl_state_temp"][:].reshape( (self.N_levels, self.N_pts, 1) ) + dT
+                    Tgrid_diff = np.repeat(T - self.ctrl_data["ctrl_state_temp"][0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
+                    self.state["air_temperature"].values[:] = self.ctrl_data["ctrl_state_temp"][:] + Tgrid_diff
+                    # # Debug: Show air temps
+                    # plt.plot(self.state["air_temperature"].values[:, 2*self.N_pts//3, 0], pressures)
+                    # plt.plot(self.ctrl_data["ctrl_state_temp"][:, 2*self.N_pts//3, 0], pressures)
+                    # plt.gca().invert_yaxis()
+                    # plt.show()
+                    # # Debug: Show air temps
+                    # for i in range(self.N_levels):
+                    #     plt.plot(self.sin_lats, self.state["air_temperature"].values[i, :, 0])
+                    # plt.show()
                 else:
                     # Create a 2D array of the T vals and pass to self.interpolated_moist_adiabat
                     #   note: shape of "air_temperature" is (lons, lats, press) 
                     Tgrid = np.repeat(T, self.N_levels).reshape( (self.N_pts, self.N_levels) )
                     self.state["air_temperature"].values[:] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
-
+                    # # Debug: Show air temps
+                    # plt.plot(self.state["air_temperature"].values[:, 2*self.N_pts//3, 0], pressures)
+                    # plt.plot(self.ctrl_data["ctrl_state_temp"][:, 2*self.N_pts//3, 0], pressures)
+                    # plt.gca().invert_yaxis()
+                    # plt.show()
                     # # Debug: Show air temps
                     # for i in range(self.N_levels):
                     #     plt.plot(self.sin_lats, self.state["air_temperature"].values[i, :, 0])
@@ -669,7 +682,7 @@ class EnergyBalanceModel():
         INPUTS
 
         OUTPUTS
-            Creates floats EFE and ITCZ saved to class.
+            Creates float EFE saved to class.
         """
         # Interp and find roots
         spl = sp.interpolate.UnivariateSpline(self.lats, self.E, k=4, s=0)
@@ -684,7 +697,6 @@ class EnergyBalanceModel():
         closest_root = roots[min_error_index]
 
         self.EFE = closest_root
-        self.ITCZ = 0.64 * self.EFE 
 
 
     def log_efe(self, fname_efe):
@@ -703,9 +715,9 @@ class EnergyBalanceModel():
 
         with open(fname_efe, "a") as f:
             if self.insolation_type == "perturbation":
-                data = "{:2d}, {:2.2f}, {:2d}, {:2.16f}, {:2.16f}".format(self.perturb_center, self.perturb_spread, self.perturb_intensity, np.rad2deg(self.EFE), np.rad2deg(self.ITCZ))
+                data = "{:2d}, {:2.2f}, {:2d}, {:2.16f}".format(self.perturb_center, self.perturb_spread, self.perturb_intensity, np.rad2deg(self.EFE))
             else:
-                data = "{:2d}, {:2.2f}, {:2d}, {:2.16f}, {:2.16f}".format(0, 0, 0, np.rad2deg(self.EFE), np.rad2deg(self.ITCZ))
+                data = "{:2d}, {:2.2f}, {:2d}, {:2.16f}".format(0, 0, 0, np.rad2deg(self.EFE))
             f.write(data + "\n")
         print("Logged '{}' in {}".format(data, fname_efe))
 
@@ -841,17 +853,11 @@ class EnergyBalanceModel():
         self.flux_total = -self._calculate_feedback_flux(self.S_f - L_f)
         self.delta_flux_total = self.flux_total - self.flux_total_ctrl
 
-        # self.delta_flux_total = self.flux_total - flux_total_ctrl
-
         # All LW Feedbacks
         self.flux_all_fb = self._calculate_feedback_flux(L_f)
         
         ## Planck
-        # emissivity = 0.6
-        # L_planck = emissivity * sig * T_f**4
-        # self.flux_planck1 = self._calculate_feedback_flux(L_planck)
-
-        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts, 1) )
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
         self.state["air_temperature"].values[:] = pert_state_temp - Tgrid_diff
         self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, 0].reshape( (self.N_pts, 1) )
         self.state["specific_humidity"].values[:] = pert_state_q
@@ -860,13 +866,6 @@ class EnergyBalanceModel():
         self.delta_flux_planck = self._calculate_feedback_flux(L_f - self.L_pert_shifted_T)
         
         ## Water Vapor 
-        # RH_copy = self.RH_dist[:, :] 
-        # self.RH_dist[:, :] = 0.0
-        # L_f_zero_q = self.L(T_f)
-        # # np.savez("L_f_zero_q.npz", L_f_zero_q)
-        # self.flux_wv1 = self._calculate_feedback_flux(L_f - L_f_zero_q)
-        # self.RH_dist[:, :] = RH_copy
-
         self.state["air_temperature"].values[:] = pert_state_temp
         self.state["surface_temperature"].values[:] = pert_state_temp[0, :, 0].reshape( (self.N_pts, 1) )
         self.state["specific_humidity"].values[:] = ctrl_state_q
@@ -875,7 +874,7 @@ class EnergyBalanceModel():
         self.delta_flux_wv = self._calculate_feedback_flux(L_f - self.L_pert_shifted_q)
         
         ## Lapse Rate
-        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape( (self.N_levels, self.N_pts, 1) )
+        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
         self.state["air_temperature"].values[:] =  ctrl_state_temp + Tgrid_diff
         self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, 0].reshape( (self.N_pts, 1) )
         self.state["specific_humidity"].values[:] = pert_state_q
@@ -883,10 +882,96 @@ class EnergyBalanceModel():
         self.L_pert_shifted_LR = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
         self.delta_flux_lr = self._calculate_feedback_flux(L_f - self.L_pert_shifted_LR)
 
+        # ## Albedo
+        # self.state["air_temperature"].values[:] = pert_state_temp[:]
+        # self.state["surface_temperature"].values[:] = pert_state_temp[0, :, 0].reshape( (self.N_pts, 1) )
+        # self.state["specific_humidity"].values[:] = pert_state_q
+        # tendencies, diagnostics = self.longwave_radiation(self.state)
+        # self.L_pert_shifted_alb = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
+        # self.delta_flux_alb = self._calculate_feedback_flux(L_f - self.L_pert_shifted_alb)
+
         # No feedbacks
         self.flux_no_fb = self.flux_total - self.flux_all_fb
 
         self._calculate_shift()
+
+    def predict_efe(self):
+        dT = self.T - self.T_f_ctrl
+        lambda_pl = -3.15
+        lambda_wv = 1.8
+        lambda_lr = -0.84
+
+        # # Feedback contributions
+        # f, ax = plt.subplots(1, figsize=(16, 10))
+        # ax.plot(self.sin_lats, dT, "k")
+        # ax.plot(self.sin_lats, lambda_pl * dT, "r")
+        # ax.plot(self.sin_lats, lambda_wv * dT, "m")
+        # ax.plot(self.sin_lats, lambda_lr * dT, "y")
+        # ax.set_xlabel("Lat")
+        # ax.set_ylabel("T (K)")
+        # ax.grid(c="k", ls="--", lw=1, alpha=0.4)
+        # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        # ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
+        # plt.tight_layout()
+        # plt.show()
+
+        # Predicted Delta Feedback fluxes
+        flux = -self._calculate_feedback_flux(dT)
+        flux_pl = -self._calculate_feedback_flux(lambda_pl * dT)
+        flux_wv = -self._calculate_feedback_flux(lambda_wv * dT)
+        flux_lr = -self._calculate_feedback_flux(lambda_lr * dT)
+        f, ax = plt.subplots(1, figsize=(16, 10))
+        ax.plot(self.sin_lats, flux, "k")
+        ax.plot(self.sin_lats, self.delta_flux_total, "k--")
+        ax.plot(self.sin_lats, flux_pl, "r")
+        ax.plot(self.sin_lats, self.delta_flux_planck, "r--")
+        ax.plot(self.sin_lats, flux_wv, "m")
+        ax.plot(self.sin_lats, self.delta_flux_wv, "m--")
+        ax.plot(self.sin_lats, flux_lr, "y")
+        ax.plot(self.sin_lats, self.delta_flux_lr, "y--")
+        ax.plot(np.sin(self.EFE), 0,  "Xr")
+        ax.set_xlabel("Lat")
+        ax.set_ylabel("Transport [PW]")
+        ax.grid(c="k", ls="--", lw=1, alpha=0.4)
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
+        plt.tight_layout()
+        plt.show()
+        
+        # Predicted Flux
+        f, ax = plt.subplots(1, figsize=(16, 10))
+        ax.plot(self.sin_lats, self.flux_total_ctrl + flux, "k")
+        ax.plot(self.sin_lats, self.flux_total, "k--")
+        ax.plot(np.sin(self.EFE), 0,  "Xr")
+        ax.set_xlabel("Lat")
+        ax.set_ylabel("Transport [PW]")
+        ax.grid(c="k", ls="--", lw=1, alpha=0.4)
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
+        plt.tight_layout()
+        plt.show()
+
+        # Predicted Shift
+        dS = self.S_f - self.S_ctrl
+        dL_bar = self.L_bar - self.L_bar_ctrl
+
+        I_equator = self.N_pts//2 
+        numerator = self.flux_total_ctrl[I_equator] + self._integrate_lat(dS - dL_bar, I_equator) + flux_pl[I_equator] + flux_wv[I_equator] + flux_lr[I_equator]
+        denominator = 0 
+
+        spl = sp.interpolate.UnivariateSpline(self.lats, self.flux_total_ctrl, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE)
+        spl = sp.interpolate.UnivariateSpline(self.lats, flux_pl, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE)
+        spl = sp.interpolate.UnivariateSpline(self.lats, flux_wv, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE)
+        spl = sp.interpolate.UnivariateSpline(self.lats, flux_lr, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE)
+
+        shift = np.rad2deg(numerator / denominator)
+        print("Shift with Feedbacks: {:2.2f}".format(shift))
+        print("\tNum / Denom = {}/{}".format(numerator, denominator))
+
 
     def save_plots(self):
         """
@@ -921,12 +1006,12 @@ class EnergyBalanceModel():
         
         
         if self.plot_efe:
-            ### FIND ITCZ
+            ### FIND EFE
             print("\nPlotting EFE")
             
             self._calculate_efe()
             E_f = self.E_array[-1, :]
-            print("EFE = {:.5f}; ITCZ = {:.5f}".format(np.rad2deg(self.EFE), np.rad2deg(self.ITCZ)))
+            print("EFE = {:.5f}".format(np.rad2deg(self.EFE)))
             
             f, ax = plt.subplots(1, figsize=(16, 10))
             ax.plot(self.sin_lats, E_f / 1000, "c", lw=4)
@@ -991,7 +1076,7 @@ class EnergyBalanceModel():
             ax.plot(self.sin_lats, self.delta_flux_wv, "m", label="WV: $L_p - L$; $q$ from $ctrl$")
             ax.plot(self.sin_lats, self.delta_flux_lr, "y", label="LR: $L_p - L$; $LR$ from $ctrl$")
             ax.plot(self.sin_lats, self.delta_S, "c", label="$\\delta S$")
-            ax.plot(self.sin_lats, self.delta_S + self.delta_flux_planck + self.delta_flux_wv + self.delta_flux_lr, "k--", label="$\\delta S + \\sum F_i$")
+            ax.plot(self.sin_lats, self.delta_S + self.delta_flux_planck + self.delta_flux_wv + self.delta_flux_lr, "k--", label="$\\delta S + \\sum \\delta F_i$")
             # ax.plot(self.sin_lats, self.flux_no_fb, "g", label="Flux Without Feedbacks")
             # ax.plot(self.sin_lats, self.flux_total - self.flux_planck - self.flux_wv, "g--", label="Flux Without Planck and WV")
             # ax.plot(self.sin_lats, self.flux_all_fb, "c", label="All LW Feedbacks")
@@ -1015,7 +1100,7 @@ class EnergyBalanceModel():
             print("{} created.".format(fname))
             plt.close()
 
-            ### L"s
+            ### L'
             print("\nPlotting L Differences")
 
             L_f = self.L_array[-1, :]
@@ -1040,7 +1125,7 @@ class EnergyBalanceModel():
             print("{} created.".format(fname))
             plt.close()
             
-            ### T"
+            ### T'
             print("\nPlotting Ts Difference")
 
             L_f = self.L_array[-1, :]

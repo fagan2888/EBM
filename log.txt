@@ -1121,3 +1121,15 @@ Summary of today:
 	- fixed flux calculations for new control sims and new RH function
 	- changed transport calculation from derivative to integral
 	- savio stuff: cesm plots for M0-M18
+
+---
+# 4-21
+---
+Fixed flux calculations in EBM.py. Issues with reshaping arrays again now that the control data is a different shape.
+Conducted experiment with M=5:
+15, 4.94,  5, -3.3212228067989180 | no alb
+15, 4.94,  5, -3.4099646410717042 | no lr, no alb
+15, 4.94,  5, -1.7117388809106620 | no wv, no alb
+15, 4.94,  5, -3.2908123235786739 | all
+15, 4.94,  5, -3.7038847713630689 | no lr
+15, 4.94,  5, -1.6862651582233983 | no wv
