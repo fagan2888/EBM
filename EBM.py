@@ -762,7 +762,8 @@ class EnergyBalanceModel():
         denominator = 0
 
         spl = sp.interpolate.UnivariateSpline(self.lats, self.flux_total, k=4, s=0)
-        denominator -= spl.derivative()(self.EFE)
+        # denominator -= spl.derivative()(self.EFE)
+        denominator -= spl.derivative()(0)
 
         shift = np.rad2deg(numerator / denominator)
         print("Simple Taylor Shift: {:2.2f}".format(shift))
@@ -831,7 +832,9 @@ class EnergyBalanceModel():
         pert_state_temp = np.copy(self.state["air_temperature"].values[:])
 
         ctrl_state_RH_dist = self.generate_RH_dist(0)
-        ctrl_state_q = ctrl_state_RH_dist * self._humidsat(ctrl_state_temp, self.state["air_pressure"].values[:] / 100)[1]
+        ctrl_state_qstar = self._humidsat(ctrl_state_temp, self.state["air_pressure"].values[:] / 100)[1]
+        ctrl_state_q = ctrl_state_RH_dist * ctrl_state_qstar
+        pert_state_RH_dist = self.generate_RH_dist(self.EFE)
         pert_state_q = np.copy(self.state["specific_humidity"].values[:])
 
         self.S_ctrl = self.ctrl_data["S"]
@@ -844,9 +847,9 @@ class EnergyBalanceModel():
         self.pert_state_temp = pert_state_temp
         self.ctrl_state_q = ctrl_state_q
         self.pert_state_q = pert_state_q
-
-        dS = self.S_f - self.S_ctrl
-        self.delta_S = - self._calculate_feedback_flux(dS)
+        
+        ## dS
+        self.delta_S = -self._calculate_feedback_flux(self.dS)
 
         ## Total
         E_f_ctrl = self.E_dataset[np.searchsorted(self.T_dataset, self.T_f_ctrl)]
@@ -882,13 +885,8 @@ class EnergyBalanceModel():
         self.L_pert_shifted_LR = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
         self.delta_flux_lr = self._calculate_feedback_flux(L_f - self.L_pert_shifted_LR)
 
-        # ## Albedo
-        # self.state["air_temperature"].values[:] = pert_state_temp[:]
-        # self.state["surface_temperature"].values[:] = pert_state_temp[0, :, 0].reshape( (self.N_pts, 1) )
-        # self.state["specific_humidity"].values[:] = pert_state_q
-        # tendencies, diagnostics = self.longwave_radiation(self.state)
-        # self.L_pert_shifted_alb = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-        # self.delta_flux_alb = self._calculate_feedback_flux(L_f - self.L_pert_shifted_alb)
+        ## Albedo
+        self.delta_flux_alb = -self._calculate_feedback_flux(self.S_f - self.dS - self.S_ctrl)
 
         # No feedbacks
         self.flux_no_fb = self.flux_total - self.flux_all_fb
@@ -916,19 +914,19 @@ class EnergyBalanceModel():
         # plt.show()
 
         # Predicted Delta Feedback fluxes
-        flux = -self._calculate_feedback_flux(dT)
         flux_pl = -self._calculate_feedback_flux(lambda_pl * dT)
         flux_wv = -self._calculate_feedback_flux(lambda_wv * dT)
         flux_lr = -self._calculate_feedback_flux(lambda_lr * dT)
         f, ax = plt.subplots(1, figsize=(16, 10))
-        ax.plot(self.sin_lats, flux, "k")
-        ax.plot(self.sin_lats, self.delta_flux_total, "k--")
-        ax.plot(self.sin_lats, flux_pl, "r")
-        ax.plot(self.sin_lats, self.delta_flux_planck, "r--")
-        ax.plot(self.sin_lats, flux_wv, "m")
-        ax.plot(self.sin_lats, self.delta_flux_wv, "m--")
-        ax.plot(self.sin_lats, flux_lr, "y")
-        ax.plot(self.sin_lats, self.delta_flux_lr, "y--")
+        ax.plot(self.sin_lats, self.delta_S + flux_pl + flux_wv + flux_lr, "k--")
+        ax.plot(self.sin_lats, self.delta_flux_total, "k")
+        ax.plot(self.sin_lats, flux_pl, "r--")
+        ax.plot(self.sin_lats, self.delta_flux_planck, "r")
+        ax.plot(self.sin_lats, flux_wv, "m--")
+        ax.plot(self.sin_lats, self.delta_flux_wv, "m")
+        ax.plot(self.sin_lats, flux_lr, "y--")
+        ax.plot(self.sin_lats, self.delta_flux_lr, "y")
+        ax.plot(self.sin_lats, self.delta_S, "c")
         ax.plot(np.sin(self.EFE), 0,  "Xr")
         ax.set_xlabel("Lat")
         ax.set_ylabel("Transport [PW]")
@@ -940,8 +938,8 @@ class EnergyBalanceModel():
         
         # Predicted Flux
         f, ax = plt.subplots(1, figsize=(16, 10))
-        ax.plot(self.sin_lats, self.flux_total_ctrl + flux, "k")
-        ax.plot(self.sin_lats, self.flux_total, "k--")
+        ax.plot(self.sin_lats, self.flux_total_ctrl + self.delta_S + flux_pl + flux_wv + flux_lr, "k--")
+        ax.plot(self.sin_lats, self.flux_total, "k")
         ax.plot(np.sin(self.EFE), 0,  "Xr")
         ax.set_xlabel("Lat")
         ax.set_ylabel("Transport [PW]")
@@ -1070,19 +1068,13 @@ class EnergyBalanceModel():
             print("\nPlotting Fluxes")
 
             f, ax = plt.subplots(1, figsize=(16, 10))
-            # ax.plot(self.sin_lats, self.flux_total, "k", label="Total")
             ax.plot(self.sin_lats, self.delta_flux_total, "k", label="Total: $F_p - F_{ctrl}$")
             ax.plot(self.sin_lats, self.delta_flux_planck,  "r", label="Planck: $L_p - L$; $T_s$ from $ctrl$")
             ax.plot(self.sin_lats, self.delta_flux_wv, "m", label="WV: $L_p - L$; $q$ from $ctrl$")
             ax.plot(self.sin_lats, self.delta_flux_lr, "y", label="LR: $L_p - L$; $LR$ from $ctrl$")
+            ax.plot(self.sin_lats, self.delta_flux_alb, "g", label="AL: $S_p - \\delta S - S_c$")
             ax.plot(self.sin_lats, self.delta_S, "c", label="$\\delta S$")
-            ax.plot(self.sin_lats, self.delta_S + self.delta_flux_planck + self.delta_flux_wv + self.delta_flux_lr, "k--", label="$\\delta S + \\sum \\delta F_i$")
-            # ax.plot(self.sin_lats, self.flux_no_fb, "g", label="Flux Without Feedbacks")
-            # ax.plot(self.sin_lats, self.flux_total - self.flux_planck - self.flux_wv, "g--", label="Flux Without Planck and WV")
-            # ax.plot(self.sin_lats, self.flux_all_fb, "c", label="All LW Feedbacks")
-            # ax.plot(self.sin_lats, self.flux_planck + self.flux_wv, "c--", label="Planck + Total WV")
-            # ax.plot(self.sin_lats, self.flux_no_fb + self.flux_all_fb, "c", label="No FB + All FB")
-            # ax.plot(self.sin_lats, self.flux_no_fb + self.flux_wv + self.flux_planck, "c--", label="No FB + (Planck + Total WV)")
+            ax.plot(self.sin_lats, self.delta_S + self.delta_flux_planck + self.delta_flux_wv + self.delta_flux_lr + self.delta_flux_alb, "k--", label="$\\delta S + \\sum \\delta F_i$")
             ax.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
 
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))

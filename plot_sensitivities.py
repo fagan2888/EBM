@@ -44,8 +44,8 @@ ax1 = axes[0]; ax2 = axes[1]
 # dictionary of 'file' : ['label', 'color'] elements
 # (see matplotlib.colors.CSS4_COLORS in a terminal to see all the names)
 files = {
-        'sensitivity_full_radiation.dat': ['CliMT', 'black'],
-        'sensitivity_full_radiation_alb.dat': ['CliMT With Albedo Feedback', 'grey'],
+        # 'sensitivity_full_radiation.dat': ['CliMT', 'black'],
+        'sensitivity_full_radiation_no_al.dat': ['CliMT No AL Feedback', 'grey'],
         # 'sensitivity_full_radiation_no_wv.dat': ['CliMT No WV Feedback', 'green'],
         # 'sensitivity_full_radiation_no_lr.dat': ['CliMT No LR Feedback', 'violet'],
         # 'sensitivity_planck.dat': ['Planck Radiation ($\\epsilon=0.65$)', 'red'],
@@ -75,8 +75,8 @@ for f in files:
         centers, spreads, intensities, EFEs = get_data(f, location)
         axes[i].plot(intensities, EFEs, marker='o', color=color_dict[files[f][1]], linestyle='', label=files[f][0])
 
-ax1.set_xlim(3, 20)
-ax1.set_xticks([5, 10, 15, 18])
+ax1.set_xlim(0, 20)
+ax1.set_xticks([1, 3, 5, 10, 15, 18])
 ax1.set_ylim(-16, 0)
 ax1.set_yticks(np.arange(-16, 1, 2))
 ax1.set_yticklabels(['16$^\\circ$S', '14$^\\circ$S', '12$^\\circ$S', '10$^\\circ$S', '8$^\\circ$S', '6$^\\circ$S', '4$^\\circ$S', '2$^\\circ$S', 'EQ'])
@@ -84,8 +84,8 @@ ax1.set_title('Tropics')
 ax1.set_xlabel('M [W/m$^2$]')
 ax1.set_ylabel('EFE Latitude')
 
-ax2.set_xlim(3, 20)
-ax2.set_xticks([5, 10, 15, 18])
+ax2.set_xlim(0, 20)
+ax2.set_xticks([1, 3, 5, 10, 15, 18])
 ax2.legend(loc='lower right')
 ax2.set_title('Extratropics')
 ax2.set_xlabel('M [W/m$^2$]')
