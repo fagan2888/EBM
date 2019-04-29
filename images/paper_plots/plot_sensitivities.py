@@ -68,6 +68,8 @@ ax2.plot(intensities, 1/scaling * itczs, color=color_dict['darkorange'], marker=
 # CESM
 centers, spreads, intensities, EFEs = get_data("sensitivity_cesm2.dat", "tropics")
 ax1.plot(intensities, EFEs, marker='o', color=color_dict["blue"], linestyle='', label="CESM2")
+centers, spreads, intensities, EFEs = get_data("sensitivity_cesm2.dat", "extratropics")
+ax2.plot(intensities, EFEs, marker='o', color=color_dict["blue"], linestyle='', label="CESM2")
 
 # plot all the data
 for f in files:
