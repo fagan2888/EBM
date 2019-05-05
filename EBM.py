@@ -39,8 +39,7 @@ rc("legend", fontsize=15)
 ps  = 98000    #Pa = kg/m/s2
 cp  = 1005     #J/kg/K
 g   = 9.81     #m/s2
-# D   = 1.06e6   #m2/s
-D   = 1e6
+D   = 1.06e6   #m2/s
 Re  = 6.371e6  #m
 RH  = 0.8      #0-1
 S0  = 1365     #J/m2/s

@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# sim_dir=~/my-scratch/EBM_sims/
-sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
+sim_dir=~/my-scratch/EBM_sims/
+# sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 
 N_pts=401
 dtmax_multiple=200
-# max_sim_years=5
-max_sim_years=10
+max_sim_years=5
+# max_sim_years=10
 tol=1e-9
 
 initial_condition=legendre
 low=250
 high=300
 
-albedo_feedback=True
-# albedo_feedback=False
+# albedo_feedback=True
+albedo_feedback=False
 alb_ice=0.7
 alb_water=0.1
 
@@ -173,12 +173,12 @@ elif [ "$1" == "-s" ]; then
 	            -e 's/fname_feedbacks=/fname_feedbacks="'$fname_feedbacks'"/g' \
 	            ${EBM_PATH}/simulation.py > simulation.py
 	        
-	        # sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job
+	        sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job
 	        cp -p ${EBM_PATH}/EBM.py .
 	        
 	        # echo "Running job."
-	        # sbatch run_EBM.job
-			python -u simulation.py > out0 &
+	        sbatch run_EBM.job
+			# python -u simulation.py > out0 &
 	        
 	        # echo "Logging simulation."
 	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | "
