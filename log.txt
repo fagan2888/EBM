@@ -1133,3 +1133,59 @@ Conducted experiment with M=5:
 15, 4.94,  5, -3.2908123235786739 | all
 15, 4.94,  5, -3.7038847713630689 | no lr
 15, 4.94,  5, -1.6862651582233983 | no wv
+
+---
+# 4-29
+---
+# No WV
+sim277 | perturbation | lat0=15 | M=5  | full_radiation_no_wv |
+sim277 | perturbation | lat0=15 | M=10 | full_radiation_no_wv |
+sim277 | perturbation | lat0=15 | M=15 | full_radiation_no_wv |
+sim277 | perturbation | lat0=15 | M=18 | full_radiation_no_wv |
+sim277 | perturbation | lat0=60 | M=5  | full_radiation_no_wv |
+sim277 | perturbation | lat0=60 | M=10 | full_radiation_no_wv |
+sim277 | perturbation | lat0=60 | M=15 | full_radiation_no_wv |
+sim277 | perturbation | lat0=60 | M=18 | full_radiation_no_wv |
+15, 4.94,  5, -1.6892825603082215
+15, 4.94, 10, -3.3198826732336402
+15, 4.94, 15, -5.0219214999893804
+15, 4.94, 18, -6.0040788142376886
+60, 9.89,  5, -0.3777696896198366
+60, 9.89, 10, -0.7040511993887014
+60, 9.89, 15, -0.9746084422365825
+60, 9.89, 18, -1.1233508297010446
+# No LR
+sim278 | perturbation | lat0=15 | M=5  | full_radiation_no_lr |
+sim278 | perturbation | lat0=15 | M=10 | full_radiation_no_lr |
+sim278 | perturbation | lat0=15 | M=15 | full_radiation_no_lr |
+sim278 | perturbation | lat0=15 | M=18 | full_radiation_no_lr |
+sim278 | perturbation | lat0=60 | M=5  | full_radiation_no_lr |
+sim278 | perturbation | lat0=60 | M=10 | full_radiation_no_lr |
+sim278 | perturbation | lat0=60 | M=15 | full_radiation_no_lr |
+sim278 | perturbation | lat0=60 | M=18 | full_radiation_no_lr |
+15, 4.94,  5, -3.6907066090066034
+15, 4.94, 10, -6.9703231430260999
+15, 4.94, 15, -8.2925050120734927 #froze
+15, 4.94, 18, -9.4468432029463134 #froze
+60, 9.89,  5, -2.4798183813759938
+60, 9.89, 10, -3.6817427414056905
+60, 9.89, 15, -4.5537667291730219
+60, 9.89, 18, -5.1045066135826609
+
+---
+# 5-1
+---
+Tropical M = 18 runs with different D in sim279:
+D   | EFE 
+--- | --- 
+1e0 | -0.6588934146321173
+1e1 | -0.6586095086603067
+1e2 | -0.6679028748718897
+1e3 | -0.8886624807445799
+1e4 | -3.2303113843686146
+1e5 | -8.6676274752345748
+1e6 | -9.3722829625362944 # close to normal
+1e7 | -9.2013377970207735
+1e8 | -9.3886056092815764
+1e9 | -9.5978189574587134
+

@@ -24,15 +24,14 @@ import os
 ################################################################################
 rc("animation", html="html5")
 rc("lines", linewidth=4, markersize=10)
-rc("axes", titlesize=20, labelsize=16, xmargin=0.01, ymargin=0.01, 
-        linewidth=1.5)
+rc("axes", titlesize=30, labelsize=25, xmargin=0.01, ymargin=0.01, linewidth=1.5)
 rc("axes.spines", top=False, right=False)
 rc("grid", c="k", ls="--", lw=1, alpha=0.4)
-rc("xtick", labelsize=13)
+rc("xtick", labelsize=20)
 rc("xtick.major", size=5, width=1.5)
-rc("ytick", labelsize=13)
+rc("ytick", labelsize=20)
 rc("ytick.major", size=5, width=1.5)
-rc("legend", fontsize=18)
+rc("legend", fontsize=15)
 
 ################################################################################
 ### CONSTANTS 
@@ -40,7 +39,8 @@ rc("legend", fontsize=18)
 ps  = 98000    #Pa = kg/m/s2
 cp  = 1005     #J/kg/K
 g   = 9.81     #m/s2
-D   = 1.06e6   #m2/s
+# D   = 1.06e6   #m2/s
+D   = 1e6
 Re  = 6.371e6  #m
 RH  = 0.8      #0-1
 S0  = 1365     #J/m2/s
@@ -61,7 +61,7 @@ class EnergyBalanceModel():
     EBM_PATH = os.environ["EBM_PATH"]
     # EBM_PATH = "/home/hpeter/ResearchBoos/EBM_files/EBM"
     
-    def __init__(self, N_pts=100, dtmax_multiple=1.0, max_sim_years=2, tol=0.001):
+    def __init__(self, N_pts=401, dtmax_multiple=1e3, max_sim_years=5, tol=1e-8):
         # Setup grid
         self.N_pts = N_pts
         self.dx = 2 / N_pts
@@ -775,7 +775,7 @@ class EnergyBalanceModel():
         print("\tNum / Denom = {}/{}".format(numerator, denominator))
 
         # Method 2: Use feedbacks relative to control
-        numerator = self.flux_total_ctrl[I_equator] + self._integrate_lat(dS - dL_bar, I_equator) + self.delta_flux_pl[I_equator] + self.delta_flux_wv[I_equator] + self.delta_flux_lr[I_equator]
+        numerator = self.flux_total_ctrl[I_equator] + self._integrate_lat(dS - dL_bar, I_equator) + self.delta_flux_pl[I_equator] + self.delta_flux_wv[I_equator] + self.delta_flux_lr[I_equator] + self.delta_flux_alb[I_equator]
         denominator = 0 
 
         spl = sp.interpolate.UnivariateSpline(self.lats, self.flux_total_ctrl, k=4, s=0)
@@ -785,6 +785,8 @@ class EnergyBalanceModel():
         spl = sp.interpolate.UnivariateSpline(self.lats, self.delta_flux_wv, k=4, s=0)
         denominator -= spl.derivative()(self.EFE)
         spl = sp.interpolate.UnivariateSpline(self.lats, self.delta_flux_lr, k=4, s=0)
+        denominator -= spl.derivative()(self.EFE)
+        spl = sp.interpolate.UnivariateSpline(self.lats, self.delta_flux_alb, k=4, s=0)
         denominator -= spl.derivative()(self.EFE)
 
         shift = np.rad2deg(numerator / denominator)
@@ -1062,8 +1064,8 @@ class EnergyBalanceModel():
         ax.grid()
         ax.legend(loc="upper left")
         ax.set_title("Radiation Distributions")
-        ax.set_xlabel("Lat")
-        ax.set_ylabel("W/m$^2$")
+        ax.set_xlabel("Latitude")
+        ax.set_ylabel("Energy Flux [W/m$^2]$")
         
         plt.tight_layout()
         

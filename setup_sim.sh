@@ -5,16 +5,16 @@ sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 
 N_pts=401
 dtmax_multiple=200
-max_sim_years=5
-# max_sim_years=10
+# max_sim_years=5
+max_sim_years=10
 tol=1e-9
 
 initial_condition=legendre
 low=250
 high=300
 
-# albedo_feedback=True
-albedo_feedback=False
+albedo_feedback=True
+# albedo_feedback=False
 alb_ice=0.7
 alb_water=0.1
 
@@ -108,9 +108,9 @@ if [ "$1" == "-o" ]; then
 elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
 	
-	olr_type=full_radiation
+	# olr_type=full_radiation
 	# olr_type=full_radiation_no_wv
-	# olr_type=full_radiation_no_lr
+	olr_type=full_radiation_no_lr
 	# olr_type=planck
 	# olr_type=linear
 	# A=-572.3
@@ -121,15 +121,14 @@ elif [ "$1" == "-s" ]; then
 	
 	insolation_type=perturbation
 
-	# i=0
-	# while [ -d ${sim_dir}sim$i ];
-	# do
-	#     i=`echo "$i + 1" | bc`
-	# done
-	i=274
+	i=0
+	while [ -d ${sim_dir}sim$i ];
+	do
+	    i=`echo "$i + 1" | bc`
+	done
 	echo "Making simulations in ${sim_dir}sim$i"
 
-	# mkdir ${sim_dir}sim$i
+	mkdir ${sim_dir}sim$i
 	mkdir ${sim_dir}sim${i}/tropical
 	mkdir ${sim_dir}sim${i}/extratropical
 
