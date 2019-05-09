@@ -28,7 +28,10 @@ sim_dir_pairs = [
                   # ['sim223','sim231', 'M=15'],
                   # ['sim224','sim232', 'M=18'],
                   # ['sim271','sim272', 'M=15'],
-                  ['sim271','test', 'M=15'],
+                  # ['sim276/tropical/M5','sim277/tropical/M5', 'M=5'],
+                  # ['sim276/tropical/M10','sim277/tropical/M10', 'M=10'],
+                  ['sim276/tropical/M15','sim277/tropical/M15', 'M=15'],
+                  # ['sim276/tropical/M18','sim277/tropical/M18', 'M=18'],
                 ]
 
 # forcing_type = "ExtraTropical"
@@ -90,8 +93,8 @@ for sim_dir_pair in sim_dir_pairs:
     # Vertically integrate q
     g = 9.81
     dp = pressures[0] - pressures[1]
-    q_wvf_column = np.sum(q_wvf, axis=1) * dp / g 
-    q_no_wvf_column = np.sum(q_no_wvf, axis=1) * dp / g
+    q_wvf_column = np.sum(q_wvf, axis=0) * dp / g 
+    q_no_wvf_column = np.sum(q_no_wvf, axis=0) * dp / g
     
     ax1.plot(sin_lats, L_wvf, label=sim_dir_pair[2] + ": Interactive")
     ax1.plot(sin_lats, L_no_wvf, label=sim_dir_pair[2] + ": Prescribed")
@@ -154,8 +157,8 @@ for sim_dir_pair in sim_dir_pairs:
     # Vertically integrate q
     g = 9.81
     dp = pressures[0] - pressures[1]
-    q_wvf_column = np.sum(q_wvf, axis=1) * dp / g 
-    q_no_wvf_column = np.sum(q_no_wvf, axis=1) * dp / g
+    q_wvf_column = np.sum(q_wvf, axis=0) * dp / g 
+    q_no_wvf_column = np.sum(q_no_wvf, axis=0) * dp / g
     
     ax1.plot(sin_lats, L_wvf - L_no_wvf, label=sim_dir_pair[2])
     ax2.plot(sin_lats, q_wvf_column - q_no_wvf_column,  label=sim_dir_pair[2])
@@ -214,8 +217,8 @@ for sim_dir_pair in sim_dir_pairs:
     # Vertically integrate q
     g = 9.81
     dp = pressures[0] - pressures[1]
-    q_wvf_column = np.sum(q_wvf, axis=1) * dp / g 
-    q_no_wvf_column = np.sum(q_no_wvf, axis=1) * dp / g
+    q_wvf_column = np.sum(q_wvf, axis=0) * dp / g 
+    q_no_wvf_column = np.sum(q_no_wvf, axis=0) * dp / g
     
     # Compute difference in pointwise asymmetries (see Clark et al.)
     L = asym(L_wvf) - asym(L_no_wvf)

@@ -7,15 +7,16 @@ from scipy.integrate import quadrature
 from matplotlib import animation, rc
 from matplotlib import colors as mcolors
 
-rc('animation', html='html5')
-rc('lines', linewidth=2, color='b', markersize=10)
-rc('axes', titlesize=20, labelsize=16, xmargin=0.05, ymargin=0.05, linewidth=2)
-rc('axes.spines', top=False, right=False)
-rc('xtick', labelsize=13)
-rc('xtick.major', size=8, width=2)
-rc('ytick', labelsize=13)
-rc('ytick.major', size=8, width=2)
-rc('legend', fontsize=9)
+rc("animation", html="html5")
+rc("lines", linewidth=4, markersize=10)
+rc("axes", titlesize=30, labelsize=25, xmargin=0.01, ymargin=0.01, linewidth=1.5)
+rc("axes.spines", top=False, right=False)
+rc("grid", c="k", ls="--", lw=1, alpha=0.4)
+rc("xtick", labelsize=20)
+rc("xtick.major", size=5, width=1.5)
+rc("ytick", labelsize=20)
+rc("ytick.major", size=5, width=1.5)
+rc("legend", fontsize=10)
 
 
 def get_data(filename, location):
@@ -46,8 +47,11 @@ ax1 = axes[0]; ax2 = axes[1]
 files = {
         'sensitivity_full_radiation.dat': ['CliMT', 'k'],
         'sensitivity_full_radiation_no_al.dat': ['CliMT No AL Feedback', 'g'],
+        'sensitivity_full_radiation_no_al_rh.dat': ['CliMT No AL Feedback, Test RH Feedback', 'r'],
         'sensitivity_full_radiation_no_wv.dat': ['CliMT No WV Feedback', 'm'],
-        'sensitivity_full_radiation_no_lr.dat': ['CliMT No LR Feedback', 'y'],
+        # 'sensitivity_full_radiation_no_lr.dat': ['CliMT No LR Feedback', 'y'],
+        # 'sensitivity_full_radiation_no_wv_no_al.dat': ['CliMT No WV/AL Feedback', 'm'],
+        # 'sensitivity_full_radiation_no_lr_no_al.dat': ['CliMT No LR/AL Feedback', 'y'],
         # 'sensitivity_planck.dat': ['Planck Radiation ($\\epsilon=0.65$)', 'red'],
         # 'sensitivity_linear.dat': ['Linear Radiation ($A=-572.3, B=2.92$)', 'brown'],
         # 'sensitivity_linear1.dat': ['Linear Radiation ($A=-281.7, B=1.8$)', 'pink'],
@@ -83,13 +87,14 @@ ax1.set_xticks([1, 3, 5, 10, 15, 18])
 ax1.set_ylim(-16, 0)
 ax1.set_yticks(np.arange(-16, 1, 2))
 ax1.set_yticklabels(['16$^\\circ$S', '14$^\\circ$S', '12$^\\circ$S', '10$^\\circ$S', '8$^\\circ$S', '6$^\\circ$S', '4$^\\circ$S', '2$^\\circ$S', 'EQ'])
+# ax1.legend(loc='lower left')
 ax1.set_title('Tropics')
 ax1.set_xlabel('M [W/m$^2$]')
 ax1.set_ylabel('EFE Latitude')
 
 ax2.set_xlim(0, 20)
 ax2.set_xticks([1, 3, 5, 10, 15, 18])
-ax2.legend(loc='lower right')
+ax2.legend(loc='lower left')
 ax2.set_title('Extratropics')
 ax2.set_xlabel('M [W/m$^2$]')
 
@@ -97,6 +102,7 @@ plt.tight_layout()
 
 fname = 'sensitivities.png'
 plt.savefig(fname, dpi=120)
+plt.show()
 print('{} created.'.format(fname))
 plt.close()
 

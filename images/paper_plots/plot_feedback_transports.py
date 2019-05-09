@@ -4,17 +4,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
 
+rc("animation", html="html5")
 rc("lines", linewidth=4, markersize=10)
-rc("axes", titlesize=20, labelsize=16, xmargin=0.01, ymargin=0.01, linewidth=1.5)
+rc("axes", titlesize=30, labelsize=25, xmargin=0.01, ymargin=0.01, linewidth=1.5)
 rc("axes.spines", top=False, right=False)
 rc("grid", c="k", ls="--", lw=1, alpha=0.4)
-rc("xtick", labelsize=13)
+rc("xtick", labelsize=20)
 rc("xtick.major", size=5, width=1.5)
-rc("ytick", labelsize=13)
+rc("ytick", labelsize=20)
 rc("ytick.major", size=5, width=1.5)
-rc("legend", fontsize=18)
+rc("legend", fontsize=15)
 
-data = np.load("feedback_transports.npz")
+# data = np.load("feedback_transports_all.npz")
+# data = np.load("feedback_transports_no_al.npz")
+# data = np.load("feedback_transports_no_lr.npz")
+# data = np.load("feedback_transports_no_wv.npz")
 delta_flux_total = data["delta_flux_total"]
 delta_flux_pl = data["delta_flux_pl"]
 delta_flux_wv = data["delta_flux_wv"]
@@ -36,8 +40,7 @@ ax.plot(np.sin(EFE), 0,  "Xr", label="EFE")
 
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
-ax.set_ylim([-6, 6])
-ax.set_yticks(np.arange(-6, 7, 1))
+ax.set_yticks(np.arange(-2.0, 2.5, 0.5))
 ax.grid()
 ax.legend(loc="upper left")
 ax.set_xlabel("Latitude")

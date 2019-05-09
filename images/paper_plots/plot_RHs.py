@@ -4,15 +4,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
 
+rc("animation", html="html5")
 rc("lines", linewidth=4, markersize=10)
-rc("axes", titlesize=20, labelsize=16, xmargin=0.01, ymargin=0.01, linewidth=1.5)
+rc("axes", titlesize=30, labelsize=25, xmargin=0.01, ymargin=0.01, linewidth=1.5)
 rc("axes.spines", top=False, right=False)
 rc("grid", c="k", ls="--", lw=1, alpha=0.4)
-rc("xtick", labelsize=13)
+rc("xtick", labelsize=20)
 rc("xtick.major", size=5, width=1.5)
-rc("ytick", labelsize=13)
+rc("ytick", labelsize=20)
 rc("ytick.major", size=5, width=1.5)
-rc("legend", fontsize=18)
+rc("legend", fontsize=15)
 
 def plot_RH(ax, sin_lats, pressures, RH):
     levels = np.arange(0, 1.05, 0.05)
