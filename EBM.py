@@ -284,6 +284,7 @@ class EnergyBalanceModel():
 
             # Latitudinal RH profile
             gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )    # quick and dirty gaussian function
+            # gaussian = lambda mu, sigma, lat: np.exp( -(np.sin(lat) - np.sin(mu))**2 / (2 * np.sin(sigma)**2) )    # quick and dirty gaussian function
             lowerlevels = np.where(pressures/100 > 875)[0]   
             midlevels = np.where(np.logical_and(pressures/100 < 875, pressures/100 > 200))[0]   
             midupperlevels = np.where(np.logical_and(pressures/100 < 200, pressures/100 > 100))[0]   
@@ -291,62 +292,39 @@ class EnergyBalanceModel():
                 """
                 Make the RH_lat_profile a gaussian and shift its max to the EFE.
                 """
-                lat_center_deg = np.rad2deg(lat_center)
-
                 RH_dist = np.zeros((self.N_levels, self.N_pts, 1))
-                # Set up lower levels as three gaussians
-                width_center = 40
-                width_left = 90 + lat_center_deg - width_center/2
-                width_right = 90 - lat_center_deg - width_center/2
 
-                left = np.where(self.latsdeg < width_left - 90)[0]
-                center = np.where(np.logical_and(self.latsdeg > lat_center_deg - width_center/2, self.latsdeg < lat_center_deg + width_center/2))[0]
-                right = np.where(self.latsdeg > 90 - width_right)[0]
-
-                spread_center = 1.0*width_center
-                spread_left = 1.5*width_left
-                spread_right = 1.5*width_right
-
-                RH_dist[lowerlevels, left[0]:left[-1]+1, 0] = np.repeat( 
-                    1.0 * gaussian(np.deg2rad(-90), np.deg2rad(spread_left), self.lats[left]), 
-                    len(lowerlevels)).reshape( (len(left), len(lowerlevels)) ).T
-                RH_dist[lowerlevels, center[0]:center[-1]+1, 0] = np.repeat( 
-                    1.0 * gaussian(lat_center, np.deg2rad(spread_center), self.lats[center]), 
-                    len(lowerlevels)).reshape( (len(center), len(lowerlevels)) ).T
-                RH_dist[lowerlevels, right[0]:right[-1]+1, 0] = np.repeat( 
-                    1.0 * gaussian(np.deg2rad(90), np.deg2rad(spread_right), self.lats[right]), 
-                    len(lowerlevels)).reshape( (len(right), len(lowerlevels)) ).T
+                # Set up lower levels as constant
+                RH_dist[lowerlevels, :, 0] = 0.9 
 
                 # Set up mid levels as three gaussians
-                width_center = 10
-                width_left = 90 + lat_center_deg - width_center/2
-                width_right = 90 - lat_center_deg - width_center/2
+                width_center = np.sin(np.deg2rad(30))
+                width_left = 1 + np.sin(lat_center) - width_center/2
+                width_right = 1 - np.sin(lat_center) - width_center/2
                 
-                left = np.where(self.latsdeg < width_left - 90)[0]
-                center = np.where(np.logical_and(self.latsdeg > lat_center_deg - width_center/2, self.latsdeg < lat_center_deg + width_center/2))[0]
-                right = np.where(self.latsdeg > 90 - width_right)[0]
+                left = np.where(self.sin_lats < width_left - 1)[0]
+                center = np.where(np.logical_and(self.sin_lats > np.sin(lat_center) - width_center/2, self.sin_lats < np.sin(lat_center) + width_center/2))[0]
+                right = np.where(self.sin_lats > 1 - width_right)[0]
 
-                spread_center = width_center/4
-                spread_left = width_left/2
-                spread_right = width_right/2
+                spread_center = 1/8*width_center
+                spread_left = 1/4*width_left
+                spread_right = 1/4*width_right
 
                 RH_dist[midlevels, left[0]:left[-1]+1, 0] = np.repeat( 
-                    1.0 * gaussian(np.deg2rad(-90), np.deg2rad(spread_left), self.lats[left]), 
+                    0.2 + 0.7 * gaussian(-1, spread_left, self.sin_lats[left]), 
                     len(midlevels)).reshape( (len(left), len(midlevels)) ).T
                 RH_dist[midlevels, center[0]:center[-1]+1, 0] = np.repeat( 
-                    0.9 * gaussian(lat_center, np.deg2rad(spread_center), self.lats[center]), 
+                    0.2 + 0.6 * gaussian(np.sin(lat_center), spread_center, self.sin_lats[center]), 
                     len(midlevels)).reshape( (len(center), len(midlevels)) ).T
                 RH_dist[midlevels, right[0]:right[-1]+1, 0] = np.repeat( 
-                    1.0 * gaussian(np.deg2rad(90), np.deg2rad(spread_right), self.lats[right]), 
+                    0.2 + 0.7 * gaussian(1, spread_right, self.sin_lats[right]), 
                     len(midlevels)).reshape( (len(right), len(midlevels)) ).T
                 # # RH Feedback:
-                # RH_dist[midlevels, right[0]:right[-1]+1, 0] = np.repeat( 
-                #     0.0 * gaussian(np.deg2rad(90), np.deg2rad(spread_right), self.lats[right]), 
-                #     len(midlevels)).reshape( (len(right), len(midlevels)) ).T
+                # RH_dist[midlevels, right[0]:right[-1]+1, 0] = 0.2 
 
                 # Set up upper levels as one gaussian
                 RH_dist[midupperlevels, :, 0] = np.repeat( 
-                    0.8 * gaussian(lat_center, np.deg2rad(20), self.lats), 
+                    0.6 * gaussian(np.sin(lat_center), np.sin(np.deg2rad(20)), self.sin_lats), 
                     len(midupperlevels)).reshape( (self.N_pts, len(midupperlevels)) ).T
                 return RH_dist
             self.generate_RH_dist = generate_RH_dist 
@@ -367,6 +345,21 @@ class EnergyBalanceModel():
             # ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
             # ax.set_yticks(np.arange(0,1001,100))
             # plt.gca().invert_yaxis()
+            # plt.show()
+
+            # # Debug: Plot RH 
+            # f, ax = plt.subplots(1, figsize=(16,8))
+            # I = 0
+            # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "b", label="{:3.0f} hPa".format(pressures[I]/100))
+            # I = 14
+            # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "r", label="{:3.0f} hPa".format(pressures[I]/100))
+            # I = 23
+            # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "y", label="{:3.0f} hPa".format(pressures[I]/100))
+            # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+            # ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
+            # ax.set_ylim([0, 1])
+            # ax.legend(loc="upper left")
+            # ax.grid()
             # plt.show()
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
@@ -619,7 +612,7 @@ class EnergyBalanceModel():
 
         OUTPUTS
         """
-        np.savez("simulation_data.npz", T=self.T_array, L=self.L_array, alb=self.alb_array)
+        np.savez("simulation_data.npz", T=self.T_array, L=self.L_array, alb=self.alb_array, sin_lats=self.sin_lats)
 
 
     def _calculate_efe(self):

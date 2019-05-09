@@ -1235,3 +1235,9 @@ From now on, no albedo feedback means albeado from this ctrl sim.
 
 sim276 now contains a plot of dh_vs_dT, looking at just how nonlinear h(T) is.
 L_basic.csv created from sim276 ctrl.
+
+---
+# 5-9
+---
+Redid sim282 ctrl with RH dist updated (see sim283).
+
