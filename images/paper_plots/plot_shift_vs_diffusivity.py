@@ -15,7 +15,8 @@ rc("ytick", labelsize=20)
 rc("ytick.major", size=5, width=1.5)
 rc("legend", fontsize=15)
 
-data = np.loadtxt("analytical_ebm_shifts.dat")
+# data = np.loadtxt("analytical_ebm_shifts_Lplanck.dat")
+data = np.loadtxt("analytical_ebm_shifts_Lmebm.dat")
 ratios_analytical = data[:, 0]
 shifts_analytical = data[:, 1]
 

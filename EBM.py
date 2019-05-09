@@ -158,7 +158,7 @@ class EnergyBalanceModel():
         elif initial_condition == "legendre":
             self.init_temp = 2/3*high + 1/3*low - 2/3 * (high-low) * 1/2 * (3 * self.sin_lats**2 - 1)
         elif initial_condition == "load_data":
-            self.init_temp = np.load("T_array.npz")["arr_0"][-1, :]
+            self.init_temp = np.load("simulation_data.npz")["T"][-1, :]
 
 
     def insolation(self, insolation_type, perturb_center=None, perturb_spread=None, perturb_intensity=None):
@@ -226,7 +226,7 @@ class EnergyBalanceModel():
 
             # To get an Earth-like T dist (~250 at poles ~300 at EQ)
             # self.init_alb = 0.25 * np.ones(self.N_pts)
-            self.init_alb = self.ctrl["alb"]
+            self.init_alb = self.ctrl_data["alb"]
 
         self.alb = self.init_alb
 
@@ -522,11 +522,8 @@ class EnergyBalanceModel():
         
         # Setup arrays to save data in
         T_array = np.zeros((frames, self.lats.shape[0]))
-        E_array = np.zeros((frames, self.lats.shape[0]))
         alb_array = np.zeros((frames, self.lats.shape[0]))
         L_array = np.zeros((frames, self.lats.shape[0]))
-        if "full_radiation" in self.olr_type:
-            q_array = np.zeros((frames, self.N_levels, self.N_pts))
         
         self.T = self.init_temp
         self.E = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
@@ -542,11 +539,8 @@ class EnergyBalanceModel():
             if iteration % its_per_frame == 0:
                 error = np.mean(np.abs(self.T - T_array[frame-1, :]) / (its_per_frame * self.dt))
                 T_array[frame, :] = self.T
-                E_array[frame, :] = self.E
                 L_array[frame, :] = self.L(self.T)
                 alb_array[frame, :] = self.alb
-                if "full_radiation" in self.olr_type:
-                    q_array[frame, :, :] = self.state["specific_humidity"].values[:, :, 0]
 
                 # Print progress 
                 T_avg = np.mean(self.T)
@@ -580,15 +574,18 @@ class EnergyBalanceModel():
         tf = clock()
         sim_time = tf - t0
 
+        self.T_f = self.T
+        self.E_f = self.E
+        self.L_f = self.L(self.T_f)
+        self.alb_f = self.alb
+        self.S_f = self.S * (1 - self.alb_f)
+
         # Truncate arrays
         if iteration-1 % its_per_frame == 0:
             frame += 1
         T_array = T_array[:frame, :]
-        E_array = E_array[:frame, :]
         alb_array = alb_array[:frame, :]
         L_array = L_array[:frame, :]
-        if "full_radiation" in self.olr_type:
-            q_array = q_array[:frame, :]
 
         # Print exit messages
         print("Equilibrium reached in {:8.5f} days ({} iterations).".format(iteration * self.dt / self.secs_in_day, iteration))
@@ -600,11 +597,8 @@ class EnergyBalanceModel():
 
         # Save arrays to class
         self.T_array = T_array
-        self.E_array = E_array
         self.alb_array = alb_array
         self.L_array = L_array
-        if "full_radiation" in self.olr_type:
-            self.q_array = q_array
 
         # Save control simulations
         if self.perturb_intensity == 0 and self.olr_type == "full_radiation":
@@ -612,10 +606,7 @@ class EnergyBalanceModel():
             S = self.S*(1 - self.alb)
             L_bar = 1/self._integrate_lat(1) * self._integrate_lat(self.L(self.T))
             ctrl_state_temp = self.state["air_temperature"].values[:]
-            if self.albedo_feedback:
-                fname = "ctrl_alb.npz"
-            else:
-                fname = "ctrl.npz"
+            fname = "ctrl.npz"
             np.savez(fname, S=S, L_bar=L_bar, flux_total=flux_total, ctrl_state_temp=ctrl_state_temp, alb=self.alb)
             print("{} created".format(fname))
 
@@ -628,12 +619,7 @@ class EnergyBalanceModel():
 
         OUTPUTS
         """
-        np.savez("T_array.npz", self.T_array)
-        np.savez("E_array.npz", self.E_array)
-        np.savez("L_array.npz", self.L_array)
-        np.savez("alb_array.npz", self.alb_array)
-        if "full_radiation" in self.olr_type:
-            np.savez("q_array.npz", self.q_array)
+        np.savez("simulation_data.npz", T=self.T_array, L=self.L_array, alb=self.alb_array)
 
 
     def _calculate_efe(self):
@@ -779,13 +765,8 @@ class EnergyBalanceModel():
 
         self.plot_fluxes = True
 
-        E_f = self.E_array[-1, :]
-        L_f = self.L_array[-1, :]
-        T_f = self.T_array[-1, :]
-
-        self.S_f = self.S * (1 - self.alb_array[-1, :])
         area = self._integrate_lat(1)
-        self.L_bar = 1 / area * self._integrate_lat(L_f)
+        self.L_bar = 1 / area * self._integrate_lat(self.L_f)
 
         # Get ctrl data
         ctrl_state_temp = self.ctrl_data["ctrl_state_temp"]
@@ -814,11 +795,11 @@ class EnergyBalanceModel():
 
         ## Total
         E_f_ctrl = self.E_dataset[np.searchsorted(self.T_dataset, self.T_f_ctrl)]
-        self.flux_total = -self._calculate_feedback_flux(self.S_f - L_f)
+        self.flux_total = -self._calculate_feedback_flux(self.S_f - self.L_f)
         self.delta_flux_total = self.flux_total - self.flux_total_ctrl
 
         # All LW Feedbacks
-        self.flux_all_fb = self._calculate_feedback_flux(L_f)
+        self.flux_all_fb = self._calculate_feedback_flux(self.L_f)
         
         ## Planck
         Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
@@ -827,7 +808,7 @@ class EnergyBalanceModel():
         self.state["specific_humidity"].values[:] = pert_state_q
         tendencies, diagnostics = self.longwave_radiation(self.state)
         self.L_pert_shifted_T = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-        self.delta_flux_pl = self._calculate_feedback_flux(L_f - self.L_pert_shifted_T)
+        self.delta_flux_pl = self._calculate_feedback_flux(self.L_f - self.L_pert_shifted_T)
         
         ## Water Vapor 
         self.state["air_temperature"].values[:] = pert_state_temp
@@ -835,7 +816,7 @@ class EnergyBalanceModel():
         self.state["specific_humidity"].values[:] = ctrl_state_q
         tendencies, diagnostics = self.longwave_radiation(self.state)
         self.L_pert_shifted_q =  diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-        self.delta_flux_wv = self._calculate_feedback_flux(L_f - self.L_pert_shifted_q)
+        self.delta_flux_wv = self._calculate_feedback_flux(self.L_f - self.L_pert_shifted_q)
         
         ## Lapse Rate
         Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
@@ -844,13 +825,10 @@ class EnergyBalanceModel():
         self.state["specific_humidity"].values[:] = pert_state_q
         tendencies, diagnostics = self.longwave_radiation(self.state)
         self.L_pert_shifted_LR = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-        self.delta_flux_lr = self._calculate_feedback_flux(L_f - self.L_pert_shifted_LR)
+        self.delta_flux_lr = self._calculate_feedback_flux(self.L_f - self.L_pert_shifted_LR)
 
         ## Albedo
-        # plt.plot(self.sin_lats, (self.S - self.dS)*(1 - self.alb))
-        # plt.plot(self.sin_lats, self.S_ctrl)
-        # plt.show()
-        self.delta_flux_alb = -self._calculate_feedback_flux((self.S - self.dS)*(1 - self.alb) - self.S_ctrl)
+        self.delta_flux_alb = -self._calculate_feedback_flux((self.S - self.dS)*(1 - self.alb_f) - self.S_ctrl)
 
         # No feedbacks
         self.flux_no_fb = self.flux_total - self.flux_all_fb
@@ -858,7 +836,7 @@ class EnergyBalanceModel():
         self._calculate_shift()
 
     def predict_efe(self):
-        dT = self.T - self.T_f_ctrl
+        dT = self.T_f - self.T_f_ctrl
         lambda_pl = -3.15
         lambda_wv = 1.8
         lambda_lr = -0.84
@@ -950,15 +928,15 @@ class EnergyBalanceModel():
         ### FINAL TEMP DIST
         print("\nPlotting Final T Dist")
         
-        T_avg = np.mean(self.T_array[-1,:])
+        T_avg = np.mean(self.T_f)
         print("Mean T: {:.2f} K".format(T_avg))
 
         f, ax = plt.subplots(1, figsize=(16,10))
-        ax.plot(self.sin_lats, self.T_array[-1, :], "k")
+        ax.plot(self.sin_lats, self.T_f, "k")
         ax.text(0, T_avg, "Mean T = {:.2f} K".format(T_avg), size=16)
         ax.set_title("Final Temperature Distribution")
-        ax.set_xlabel("Lat")
-        ax.set_ylabel("T (K)")
+        ax.set_xlabel("Latitude")
+        ax.set_ylabel("$T_s$ [K]")
         ax.grid()
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
         ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
@@ -976,19 +954,19 @@ class EnergyBalanceModel():
             print("\nPlotting EFE")
             
             self._calculate_efe()
-            E_f = self.E_array[-1, :]
             print("EFE = {:.5f}".format(np.rad2deg(self.EFE)))
             
             f, ax = plt.subplots(1, figsize=(16, 10))
-            ax.plot(self.sin_lats, E_f / 1000, "c", lw=4)
-            ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(E_f)/1000], "r")
-            ax.text(np.sin(self.EFE) + 0.1, np.average(E_f)/1000, "EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)), size=16)
+            ax.plot(self.sin_lats, self.E_f / 1000, "c", lw=4)
+            ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(self.E_f)/1000], "r")
+            ax.text(np.sin(self.EFE) + 0.1, np.average(self.E_f)/1000, "EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)), size=16)
             ax.set_title("Final Energy Distribution")
-            ax.set_xlabel("Lat")
-            ax.set_ylabel("E (kJ / kg)")
-            ax.set_ylim([np.min(E_f)/1000 - 1, np.max(E_f)/1000 + 1])
+            ax.set_xlabel("Latitude")
+            ax.set_ylabel("MSE [kJ / kg]")
+            ax.set_ylim([np.min(self.E_f)/1000 - 1, np.max(self.E_f)/1000 + 1])
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
+            ax.grid()
             
             plt.tight_layout()
             
@@ -1000,20 +978,17 @@ class EnergyBalanceModel():
         ### RADIATION DISTS
         print("\nPlotting Radiation Dists")
 
-        alb_f = self.alb_array[-1, :]
-        SW_f = self.S * (1 - alb_f) 
-        SW_i = self.S * (1 - self.init_alb)
-        LW_f = self.L_array[-1, :]
-        LW_i = self.L(self.init_temp)
-        print("Integral of (SW - LW): {:.5f} PW".format(10**-15 * self._integrate_lat(SW_f - LW_f)))
+        S_i = self.S * (1 - self.init_alb)
+        L_i = self.L(self.init_temp)
+        print("Integral of (S - L): {:.5f} PW".format(10**-15 * self._integrate_lat(self.S_f - self.L_f)))
 
         f, ax = plt.subplots(1, figsize=(16, 10))
-        ax.plot(self.sin_lats, SW_f, "r", label="Final $S(1-\\alpha)$")
-        ax.plot(self.sin_lats, SW_i, "r--", label="Initial $S(1-\\alpha)$")
-        ax.plot(self.sin_lats, LW_f, "b", label="Final OLR")
-        ax.plot(self.sin_lats, LW_i, "b--", label="Initial OLR")
-        ax.plot(self.sin_lats, SW_f - LW_f, "g", label="Final Net")
-        ax.plot(self.sin_lats, SW_i - LW_i, "g--", label="Initial Net")
+        ax.plot(self.sin_lats, self.S_f, "r", label="Final $S(1-\\alpha)$")
+        ax.plot(self.sin_lats, S_i, "r--", label="Initial $S(1-\\alpha)$")
+        ax.plot(self.sin_lats, self.L_f, "b", label="Final OLR")
+        ax.plot(self.sin_lats, L_i, "b--", label="Initial OLR")
+        ax.plot(self.sin_lats, self.S_f - self.L_f, "g", label="Final Net")
+        ax.plot(self.sin_lats, S_i - L_i, "g--", label="Initial Net")
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
         ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
         ax.set_ylim([-200, 400])
@@ -1050,8 +1025,8 @@ class EnergyBalanceModel():
             ax.grid()
             ax.legend()
             ax.set_title("Flux Distributions")
-            ax.set_xlabel("Lat")
-            ax.set_ylabel("PW")
+            ax.set_xlabel("Latitude")
+            ax.set_ylabel("Transport [PW]")
             
             plt.tight_layout()
             
@@ -1060,164 +1035,49 @@ class EnergyBalanceModel():
             print("{} created.".format(fname))
             plt.close()
 
-            np.savez("feedback_transports.npz", EFE=self.EFE, sin_lats=self.sin_lats, delta_flux_total=self.delta_flux_total, delta_flux_pl=self.delta_flux_pl, delta_flux_wv=self.delta_flux_wv, delta_flux_lr=self.delta_flux_lr, delta_flux_alb=self.delta_flux_alb, delta_S=self.delta_S)
+            # np.savez("feedback_transports.npz", EFE=self.EFE, sin_lats=self.sin_lats, delta_flux_total=self.delta_flux_total, delta_flux_pl=self.delta_flux_pl, delta_flux_wv=self.delta_flux_wv, delta_flux_lr=self.delta_flux_lr, delta_flux_alb=self.delta_flux_alb, delta_S=self.delta_S)
 
-            ### L'
-            print("\nPlotting L Differences")
-
-            L_f = self.L_array[-1, :]
+            ### Differences
+            print("\nPlotting Differences")
 
             f, ax = plt.subplots(1, figsize=(16, 10))
-            ax.plot(self.sin_lats, L_f - self.L_pert_shifted_T, "r",  label="Planck: $L_p - L$; $T_s$ from $ctrl$")
-            ax.plot(self.sin_lats, L_f - self.L_pert_shifted_q, "m",  label="WV: $L_p - L$; $q$ from $ctrl$")
-            ax.plot(self.sin_lats, L_f - self.L_pert_shifted_LR, "y", label="LR: $L_p - L$; $LR$ from $ctrl$")
+            ax.plot(self.sin_lats, self.L_f - self.L_pert_shifted_T, "r",  label="Planck: $L_p - L$; $T_s$ from $ctrl$")
+            ax.plot(self.sin_lats, self.L_f - self.L_pert_shifted_q, "m",  label="WV: $L_p - L$; $q$ from $ctrl$")
+            ax.plot(self.sin_lats, self.L_f - self.L_pert_shifted_LR, "y", label="LR: $L_p - L$; $LR$ from $ctrl$")
+            ax.plot(self.sin_lats, (self.S - self.dS)*(1 - self.alb_f) - self.S_ctrl, "g", label="AL: $(S_p - \\delta S)(1 - \\alpha_p) - S_c(1 - \\alpha_c)$")
 
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
             ax.grid()
             ax.legend()
-            ax.set_title("$L$ Differences")
-            ax.set_xlabel("Lat")
-            ax.set_ylabel("W/m$^2$")
+            ax.set_title("Differences")
+            ax.set_xlabel("Latitude")
+            ax.set_ylabel("Perturbation [W/m$^2]$")
             
             plt.tight_layout()
             
-            fname = "L_diffs.png"
+            fname = "diffs.png"
             plt.savefig(fname, dpi=80)
             print("{} created.".format(fname))
             plt.close()
             
-            ### T'
-            print("\nPlotting Ts Difference")
+            # ### T'
+            # print("\nPlotting Ts Difference")
 
-            L_f = self.L_array[-1, :]
-
-            f, ax = plt.subplots(1, figsize=(16, 10))
-            ax.plot(self.sin_lats, self.T - self.T_f_ctrl, "k",  label="$T_p - T_{ctrl}$")
-
-            ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-            ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
-            ax.grid()
-            ax.legend()
-            ax.set_title("$T$ Difference")
-            ax.set_xlabel("Lat")
-            ax.set_ylabel("K")
-            
-            plt.tight_layout()
-            
-            fname = "Ts_diff.png"
-            plt.savefig(fname, dpi=80)
-            print("{} created.".format(fname))
-            plt.close()
-
-            # ### Vertical T
-            # print("\nPlotting Vertical T")
-
-            # lat = 15
-            # lat_index = int((lat + 90) / self.dlat)
             # f, ax = plt.subplots(1, figsize=(16, 10))
-            # ax.plot(self.pert_state_temp[0, lat_index, :], self.pressures/100, "b",  label="$T_p(z)$")
-            # ax.plot(self.ctrl_state_temp[0, lat_index, :],  self.pressures/100, "r",  label="$T_{ctrl}(z)$")
+            # ax.plot(self.sin_lats, self.T_f - self.T_f_ctrl, "k",  label="$T_p - T_{ctrl}$")
 
+            # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+            # ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
             # ax.grid()
             # ax.legend()
-            # ax.set_title("$T(z)$ at 15$^\\circ$ Lat")
-            # ax.set_xlabel("K")
-            # ax.set_ylabel("hPa")
-            # ax.invert_yaxis()
-            
-            # plt.tight_layout()
-            
-            # fname = "vertical_T.png"
-            # plt.savefig(fname, dpi=80)
-            # print("{} created.".format(fname))
-            # plt.close()
-
-            # ### Diff in q
-            # print("\nPlotting Difference in q")
-
-            # f, ax = plt.subplots(1, figsize=(16, 10))
-            
-            # im = ax.imshow(self.pert_state_q[:, :].T - self.ctrl_state_q[:, :].T, extent=(-90, 90, 0, 1000), aspect=0.1, cmap="Blues", origin="upper")
-            # cb = plt.colorbar(im, ax=ax)
-            # cb.set_label("g / g")
-
-            # ax.grid()
-            # ax.set_title("Difference in $q$")
-            # ax.set_xticks([-90, -60, -30, 0, 30, 60, 90])
+            # ax.set_title("$T$ Difference")
             # ax.set_xlabel("Lat")
-            # ax.set_ylabel("hPa")
-            # ax.invert_yaxis()
+            # ax.set_ylabel("K")
             
             # plt.tight_layout()
             
-            # fname = "qdiff.png"
+            # fname = "Ts_diff.png"
             # plt.savefig(fname, dpi=80)
             # print("{} created.".format(fname))
             # plt.close()
-
-
-        
-        # ### LW vs. T
-        # print("\nPlotting LW vs. T")
-        # f, ax = plt.subplots(1, figsize=(16, 10))
-        # ax.set_title("Relationship Between T$_s$ and OLR")
-        # ax.set_xlabel("T$_s$ (K)")
-        # ax.set_ylabel("OLR (W/m$^2$)")
-        
-        # func = lambda t, a, b: a + b*t
-        
-        # x_data = self.T_array.flatten()
-        # y_data = self.L_array.flatten()
-        
-        # popt, pcov = sp.optimize.curve_fit(func, x_data, y_data)
-        # print("A: {:.2f} W/m2, B: {:.2f} W/m2/K".format(popt[0], popt[1]))
-        
-        # xvals = np.linspace(np.min(x_data), np.max(x_data), 1000)
-        # yvals = func(xvals, *popt)
-        
-        # ax.plot(x_data, y_data, "co", ms=2, label="data points: "{}"".format(self.olr_type))
-        # ax.plot(xvals, func(xvals, *popt), "k--", label="linear fit")
-        # ax.text(np.min(xvals) + 0.1 * (np.max(xvals)-np.min(xvals)), np.mean(yvals), s="A = {:.2f},\nB = {:.2f}".format(popt[0], popt[1]), size=16)
-        # ax.legend()
-        
-        # plt.tight_layout()
-        
-        # fname = "OLR_vs_T_fit_{}.png".format(self.olr_type)
-        # plt.savefig(fname, dpi=80)
-        # print("{} created.".format(fname))
-        # plt.close()
-        
-        #if self.olr_type in ["full_wvf", "full_no_wvf"]:
-        #    ### VERTICAL AIR TEMP
-        #    air_temp = self.state["air_temperature"].values[0, :, :]
-        #    pressures = self.state["air_pressure"].values[0, 0, :]
-        #    for i in range(air_temp.shape[1]):
-        #        plt.plot(self.lats, air_temp[:, i], "k-", lw=1.0)
-        #    plt.plot(self.lats, air_temp[:, 0], "r-")
-        #    plt.xlabel("latitude")
-        #    plt.ylabel("temp")
-
-        #    plt.figure()
-        #    lat = 45
-        #    plt.plot(air_temp[int(lat/self.dlat), :], pressures/100, "k-", label="{}$^\\circ$ lat".format(lat))
-        #    plt.gca().invert_yaxis()
-        #    plt.legend()
-        #    plt.xlabel("temp")
-        #    plt.ylabel("pressure")
-        #    
-        #    
-        #    ### VERTICAL MOISTURE
-        #    sp_hum = self.state["air_temperature"].values[0, :, :]
-        #    for i in range(sp_hum.shape[1]):
-        #        plt.plot(self.lats, sp_hum[:, i], "k-", lw=1.0)
-        #    plt.plot(self.lats, sp_hum[:, 0], "r-")
-        #    plt.xlabel("latitude")
-        #    plt.ylabel("sp hum")
-
-        #    plt.figure()
-        #    lat = 45
-        #    plt.plot(sp_hum[int(lat/self.dlat), :], pressures/100, "k-", label="{}$^\\circ$ lat".format(lat))
-        #    plt.gca().invert_yaxis()
-        #    plt.legend()
-        #    plt.xlabel("sp hum")

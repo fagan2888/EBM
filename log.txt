@@ -1226,3 +1226,12 @@ sim281 | perturbation | lat0=60 | M=18 | full_radiation_no_lr |
 60, 9.89, 10, -2.0093203796588659
 60, 9.89, 15, -2.8442026769920590
 60, 9.89, 18, -3.3434543521386542
+
+---
+# 5-8
+---
+sim282 contains ctrl simulation with albedo feedback. 
+From now on, no albedo feedback means albeado from this ctrl sim.
+
+sim276 now contains a plot of dh_vs_dT, looking at just how nonlinear h(T) is.
+L_basic.csv created from sim276 ctrl.
