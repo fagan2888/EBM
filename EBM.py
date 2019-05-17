@@ -211,7 +211,7 @@ class EnergyBalanceModel():
             def reset_alb(T):
                 alb = np.ones(self.N_pts)
                 alb[:] = self.alb_water
-                alb[np.where(T <= 273.16)] = alb_ice
+                alb[np.where(T <= 273.16 - 10)] = alb_ice
                 return alb
 
             self.init_alb = reset_alb(self.init_temp)
@@ -534,6 +534,7 @@ class EnergyBalanceModel():
                 T_array[frame, :] = self.T
                 L_array[frame, :] = self.L(self.T)
                 alb_array[frame, :] = self.alb
+                # print("Mean alb: {:0.2f}".format(np.mean(self.alb)))
 
                 # Print progress 
                 T_avg = np.mean(self.T)

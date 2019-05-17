@@ -5,18 +5,20 @@ sim_dir=~/my-scratch/EBM_sims/
 
 N_pts=401
 dtmax_multiple=200
-max_sim_years=5
-# max_sim_years=10
+# dtmax_multiple=1e3
+# max_sim_years=5
+max_sim_years=10
+# tol=1e-8
 tol=1e-9
 
 initial_condition=legendre
 low=250
 high=300
 
-# albedo_feedback=True
-albedo_feedback=False
-alb_ice=0.7
-alb_water=0.1
+albedo_feedback=True
+# albedo_feedback=False
+alb_ice=0.6
+alb_water=0.2
 
 numerical_method=implicit
 frames=100
@@ -108,27 +110,28 @@ if [ "$1" == "-o" ]; then
 elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
 	
-	# olr_type=full_radiation
+	olr_type=full_radiation
 	# olr_type=full_radiation_no_wv
-	olr_type=full_radiation_no_lr
+	# olr_type=full_radiation_no_lr
 	# olr_type=planck
 	# olr_type=linear
 	# A=-572.3
 	# B=2.92
-	A=-281.67
-	B=1.8
-	emissivity=0.65
+	A=None
+	B=None
+	emissivity=None
 	
 	insolation_type=perturbation
 
-	i=0
-	while [ -d ${sim_dir}sim$i ];
-	do
-	    i=`echo "$i + 1" | bc`
-	done
-	echo "Making simulations in ${sim_dir}sim$i"
+	i=282
+	# i=0
+	# while [ -d ${sim_dir}sim$i ];
+	# do
+	#     i=`echo "$i + 1" | bc`
+	# done
+	# echo "Making simulations in ${sim_dir}sim$i"
 
-	mkdir ${sim_dir}sim$i
+	# mkdir ${sim_dir}sim$i
 	mkdir ${sim_dir}sim${i}/tropical
 	mkdir ${sim_dir}sim${i}/extratropical
 

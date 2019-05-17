@@ -4,8 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from cycler import cycler
 from scipy.integrate import quadrature
-from matplotlib import animation, rc
-from matplotlib import colors as mcolors
+from matplotlib import rc
 
 rc("animation", html="html5")
 rc("lines", linewidth=4, markersize=10)
@@ -16,7 +15,7 @@ rc("xtick", labelsize=20)
 rc("xtick.major", size=5, width=1.5)
 rc("ytick", labelsize=20)
 rc("ytick.major", size=5, width=1.5)
-rc("legend", fontsize=10)
+rc("legend", fontsize=15)
 
 
 def get_data(filename, location):
@@ -39,48 +38,58 @@ def get_data(filename, location):
 scaling = 0.64 
 
 # two plots: tropics and extratropics perturbations
-f, axes = plt.subplots(1, 2, figsize=(10,6), sharey=True)
+f, axes = plt.subplots(1, 2, figsize=(16, 10), sharey=True)
 ax1 = axes[0]; ax2 = axes[1]
 
-# dictionary of 'file' : ['label', 'color'] elements
-# (see matplotlib.colors.CSS4_COLORS in a terminal to see all the names)
+# dictionary of 'file' : ['label', 'color', 'marker'] elements
 files = {
-        'sensitivity_full_radiation.dat': ['CliMT', 'k'],
-        'sensitivity_full_radiation_no_al.dat': ['CliMT No AL Feedback', 'g'],
-        'sensitivity_full_radiation_no_al_rh.dat': ['CliMT No AL Feedback, Test RH Feedback', 'r'],
-        'sensitivity_full_radiation_no_wv.dat': ['CliMT No WV Feedback', 'm'],
-        # 'sensitivity_full_radiation_no_lr.dat': ['CliMT No LR Feedback', 'y'],
+        'sensitivity_full_radiation.dat': ['CliMT', 'k', 'o'],
+        'sensitivity_full_radiation_no_al.dat': ['CliMT No AL Feedback', 'g', '*'],
+        'sensitivity_full_radiation_no_al_rh.dat': ['CliMT No AL Feedback, Test RH Feedback', 'c', 'X'],
+        'sensitivity_full_radiation_no_wv.dat': ['CliMT No WV Feedback', 'm', 'v'],
+        'sensitivity_full_radiation_no_lr.dat': ['CliMT No LR Feedback', 'y', 's'],
         # 'sensitivity_full_radiation_no_wv_no_al.dat': ['CliMT No WV/AL Feedback', 'm'],
         # 'sensitivity_full_radiation_no_lr_no_al.dat': ['CliMT No LR/AL Feedback', 'y'],
         # 'sensitivity_planck.dat': ['Planck Radiation ($\\epsilon=0.65$)', 'red'],
         # 'sensitivity_linear.dat': ['Linear Radiation ($A=-572.3, B=2.92$)', 'brown'],
         # 'sensitivity_linear1.dat': ['Linear Radiation ($A=-281.7, B=1.8$)', 'pink'],
         }
-color_dict = mcolors.CSS4_COLORS
 
-# do the Clark data separately (it needs scaling and also uses markeredgewidth
+# do the Clark data separately (it needs scaling)
+color = 'k'
+alpha = 0.5
+linestyle = '-'
+markersize = 8
+linewidth = 1
+marker = 'o'
 centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_no_wvf.dat', 'tropics')
-ax1.plot(intensities, 1/scaling * itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Prescribed WV (Clark et al.)', markerfacecolor='w', markeredgewidth=1.5, markersize=15)
-centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_wvf.dat', 'tropics')
-ax1.plot(intensities, 1/scaling * itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Interactive WV (Clark et al.)', markersize=15)
-
+ax1.plot(intensities, 1/scaling * itczs, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (Clark et al.)', markersize=markersize)
 centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_no_wvf.dat', 'extratropics')
-ax2.plot(intensities, 1/scaling * itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Prescribed WV (Clark et al.)', markerfacecolor='w', markeredgewidth=1.5, markersize=15)
+ax2.plot(intensities, 1/scaling * itczs, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (Clark et al.)', markersize=markersize)
+
+marker = 'v'
+centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_wvf.dat', 'tropics')
+ax1.plot(intensities, 1/scaling * itczs, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Interactive WV (Clark et al.)', markersize=markersize)
 centers, spreads, intensities, itczs = get_data('perturbed_efe_clark_wvf.dat', 'extratropics')
-ax2.plot(intensities, 1/scaling * itczs, color=color_dict['darkorange'], marker='o', linestyle='', label='Interactive WV (Clark et al.)', markersize=15)
+ax2.plot(intensities, 1/scaling * itczs, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Interactive WV (Clark et al.)', markersize=markersize)
 
 # CESM
+color = 'k'
+alpha = 1.0
+linestyle = '-'
+markersize = 8
+linewidth = 1
+marker = 'o'
 centers, spreads, intensities, EFEs = get_data("sensitivity_cesm2.dat", "tropics")
-ax1.plot(intensities, EFEs, marker='o', color=color_dict["blue"], linestyle='', label="CESM2", markersize=15)
+ax1.plot(intensities, EFEs, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
 centers, spreads, intensities, EFEs = get_data("sensitivity_cesm2.dat", "extratropics")
-ax2.plot(intensities, EFEs, marker='o', color=color_dict["blue"], linestyle='', label="CESM2", markersize=15)
+ax2.plot(intensities, EFEs, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
 
 # plot all the data
 for f in files:
     for i, location in enumerate(['tropics', 'extratropics']):
         centers, spreads, intensities, EFEs = get_data(f, location)
-        # axes[i].plot(intensities, EFEs, marker='o', color=color_dict[files[f][1]], linestyle='', label=files[f][0])
-        axes[i].plot(intensities, EFEs, marker='o', color=files[f][1], linestyle='', label=files[f][0])
+        axes[i].plot(intensities, EFEs, marker=files[f][2], color=files[f][1], linestyle='', label=files[f][0], markersize=15)
 
 ax1.set_xlim(0, 20)
 ax1.set_xticks([1, 3, 5, 10, 15, 18])
@@ -91,12 +100,15 @@ ax1.set_yticklabels(['16$^\\circ$S', '14$^\\circ$S', '12$^\\circ$S', '10$^\\circ
 ax1.set_title('Tropics')
 ax1.set_xlabel('M [W/m$^2$]')
 ax1.set_ylabel('EFE Latitude')
+ax1.grid()
 
 ax2.set_xlim(0, 20)
 ax2.set_xticks([1, 3, 5, 10, 15, 18])
+ax2.set_ylim(-16, 0)
 ax2.legend(loc='lower left')
 ax2.set_title('Extratropics')
 ax2.set_xlabel('M [W/m$^2$]')
+ax2.grid()
 
 plt.tight_layout()
 

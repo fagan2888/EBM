@@ -1241,3 +1241,32 @@ L_basic.csv created from sim276 ctrl.
 ---
 Redid sim282 ctrl with RH dist updated (see sim283).
 
+---
+# 5-10
+---
+Fixed albedo feedback with Bill. 
+sim282 has the new ctrl: ice when temp is below -10 C and alb_ice=0.6 alb_water=0.2.
+
+Some test runs:
+sim282 | perturbation | lat0=15 | M=5  | full_radiation |
+sim282 | perturbation | lat0=15 | M=10 | full_radiation |
+sim282 | perturbation | lat0=15 | M=15 | full_radiation |
+sim282 | perturbation | lat0=15 | M=18 | full_radiation |
+sim282 | perturbation | lat0=60 | M=5  | full_radiation |
+sim282 | perturbation | lat0=60 | M=10 | full_radiation |
+sim282 | perturbation | lat0=60 | M=15 | full_radiation |
+sim282 | perturbation | lat0=60 | M=18 | full_radiation |
+
+15, 4.94,  5, -3.2050882382576305
+15, 4.94, 10, -5.7005734827005616
+15, 4.94, 15, -7.9610151525075024
+15, 4.94, 18, -9.1398858739564446
+60, 9.89,  5, -1.3029473667640126
+60, 9.89, 10, -2.2685687835387363
+60, 9.89, 15, -3.0867986684966655
+60, 9.89, 18, -3.5117191297638888
+
+---
+# 5-17
+---
+sim284 has linearlization of water vapor tests.
