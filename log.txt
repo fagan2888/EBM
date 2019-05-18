@@ -1270,3 +1270,68 @@ sim282 | perturbation | lat0=60 | M=18 | full_radiation |
 # 5-17
 ---
 sim284 has linearlization of water vapor tests.
+
+sim282 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=True
+15, 4.94,  5, -3.2279970146752697
+15, 4.94, 10, -5.7154205658695139
+15, 4.94, 15, -7.9737030143798036
+15, 4.94, 18, -9.1496195053420557
+60, 9.89,  5, -1.3497029510533458
+60, 9.89, 10, -2.2806979209943554
+60, 9.89, 15, -3.0996598238737909
+60, 9.89, 18, -3.4975394794278225
+sim282 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=False
+15, 4.94,  5, -3.1186568032477457
+15, 4.94, 10, -5.6612381093080497
+15, 4.94, 15, -7.8006253177681746
+15, 4.94, 18, -8.9294846039253244
+60, 9.89,  5, -0.8393744970383180
+60, 9.89, 10, -1.6267602766437042
+60, 9.89, 15, -2.2744762367154876
+60, 9.89, 18, -2.7230421341768101
+sim282 | perturbation | lat0=15 | M=5  | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=10 | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=15 | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=18 | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=5  | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=10 | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=15 | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=18 | full_radiation_no_wv | albedo_feedback=True
+15, 4.94,  5, -1.6901812610168361
+15, 4.94, 10, -3.1954516908459087
+15, 4.94, 15, -4.6144527285078869
+15, 4.94, 18, -5.4050645596918807
+60, 9.89,  5, -0.3625061526901177
+60, 9.89, 10, -0.6836147680025617
+60, 9.89, 15, -0.9610977496974509
+60, 9.89, 18, -1.1232427335411004
+sim282 | perturbation | lat0=15 | M=5 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=10 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=15 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=18 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=5 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=10 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=15 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=18 | full_radiation_no_lr | albedo_feedback=True
+15, 4.94,  5, -3.4521498890249789
+15, 4.94, 10, -6.1875087102426960
+15, 4.94, 15, -8.5256943683746620
+15, 4.94, 18, -9.7307430487609778
+60, 9.89,  5, -1.5131130688593966
+60, 9.89, 10, -2.5561877830353001
+60, 9.89, 15, -3.5377615325286280
+60, 9.89, 18, -3.9685127184505822

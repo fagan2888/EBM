@@ -110,9 +110,9 @@ if [ "$1" == "-o" ]; then
 elif [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
 	
-	olr_type=full_radiation
+	# olr_type=full_radiation
 	# olr_type=full_radiation_no_wv
-	# olr_type=full_radiation_no_lr
+	olr_type=full_radiation_no_lr
 	# olr_type=planck
 	# olr_type=linear
 	# A=-572.3
@@ -184,7 +184,7 @@ elif [ "$1" == "-s" ]; then
 			# python -u simulation.py > out0 &
 	        
 	        # echo "Logging simulation."
-	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | "
+	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | albedo_feedback=$albedo_feedback"
 	        echo "Adding line to log.txt: $log"
 	        echo $log >> ${EBM_PATH}/log.txt 
 	        
