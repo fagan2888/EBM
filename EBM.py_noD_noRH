@@ -68,55 +68,20 @@ class EnergyBalanceModel():
         self.lats = np.arcsin(self.sin_lats)
         self.latsdeg = np.rad2deg(self.lats)
 
+        # Calculate stable dt
+        diffusivity = D / Re**2 * np.cos(self.lats)**2
+        dtmax_diff = 0.5 * self.dx**2 / np.max(diffusivity)
+        velocity = D / Re**2 * np.sin(self.lats)
+        dtmax_cfl = self.dx / np.max(velocity)
+        self.dtmax = np.min([dtmax_diff, dtmax_cfl])
+        self.dt = dtmax_multiple * self.dtmax
+
         # Create useful constants
         self.max_sim_years = max_sim_years
         self.secs_in_min = 60 
         self.secs_in_hour = 60  * self.secs_in_min 
         self.secs_in_day = 24  * self.secs_in_hour 
         self.secs_in_year = 365 * self.secs_in_day 
-
-        # Create non-constant Diffusivity
-        cesm2_data = np.load("D_cesm2.npz")
-        sin_lats_cesm2 = cesm2_data["sin_lats"]
-        D_cesm2 = cesm2_data["D"]
-        x = np.arcsin(sin_lats_cesm2)
-        y = Re**2 / ps * g * D_cesm2
-
-        # x = np.deg2rad(np.array([-90, 0, 90]))
-        # y = np.array([D, D, D])
-
-        # x = np.deg2rad(np.array([-90, -60, -35, -20, 0, 20, 35, 60, 90]))
-        # y = Re**2 * g / ps * np.array([2e-5, 3e-4, 4e-4, 2e-4, 5e-5, 2e-4, 4e-4, 3e-4, 2e-5])
-
-        # x = np.deg2rad(np.array([-90, -40, 0, 40, 90]))
-        # y = Re**2 * g / ps * np.array([2e-5, 2e-4, 4e-4, 2e-4, 2e-5])
-
-        f = sp.interpolate.interp1d(x, y, kind="quadratic")
-        self.D = f(self.lats)
-        print(np.mean(ps / g * self.D / Re**2))
-
-        self.sin_lats_plus_half = self.sin_lats + self.dx/2
-        self.sin_lats_minus_half = self.sin_lats - self.dx/2
-        self.D_plus_half = f(self.sin_lats_plus_half)
-        self.D_minus_half = f(self.sin_lats_minus_half)
-        
-        # # Debug: Plot D
-        # f, ax = plt.subplots(1, figsize=(10,6))
-        # ax.plot(self.sin_lats, ps / g * self.D / Re**2)
-        # ax.set_ylim([0, 0.001])
-        # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        # ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
-        # ax.grid()
-        # plt.show()
-
-        # Calculate stable dt
-        diffusivity = self.D / Re**2 * np.cos(self.lats)**2
-        dtmax_diff = 0.5 * self.dx**2 / np.max(diffusivity)
-        velocity = self.D / Re**2 * np.sin(self.lats)
-        dtmax_cfl = self.dx / np.max(velocity)
-        self.dtmax = np.min([dtmax_diff, dtmax_cfl])
-        self.dt = dtmax_multiple * self.dtmax
-        # self.dt = np.min([dtmax_multiple * self.dtmax, self.secs_in_day])
 
         # Cut off iterations
         self.max_iters = int(self.max_sim_years * self.secs_in_year / self.dt)
@@ -332,44 +297,30 @@ class EnergyBalanceModel():
                 # Set up lower levels as constant
                 RH_dist[lowerlevels, :, 0] = 0.9 
 
-                # Set up mid levels as four gaussians
+                # Set up mid levels as three gaussians
                 width_center = np.sin(np.deg2rad(30))
                 width_left = 1 + np.sin(lat_center) - width_center/2
                 width_right = 1 - np.sin(lat_center) - width_center/2
                 
-                left = np.where(self.sin_lats <= width_left - 1)[0]
-                centerL = np.where(np.logical_and(self.sin_lats > np.sin(lat_center) - width_center/2, self.sin_lats <= np.sin(lat_center)))[0]
-                centerR = np.where(np.logical_and(self.sin_lats > np.sin(lat_center), self.sin_lats < np.sin(lat_center) + width_center/2))[0]
-                right = np.where(self.sin_lats >= 1 - width_right)[0]
+                left = np.where(self.sin_lats < width_left - 1)[0]
+                center = np.where(np.logical_and(self.sin_lats > np.sin(lat_center) - width_center/2, self.sin_lats < np.sin(lat_center) + width_center/2))[0]
+                right = np.where(self.sin_lats > 1 - width_right)[0]
 
-                spread_centerL = 1/8*width_center
-                spread_centerR = 1/8*width_center
+                spread_center = 1/8*width_center
                 spread_left = 1/4*width_left
                 spread_right = 1/4*width_right
 
-                ## RH Feedback:
-                RH_min_ctrl = 0.14
-                slope_L = -0.0186219739292365
-                slope_R = 0.0111731843575419
-
-                RH_L_max = 0.9
-                RH_R_max = 0.9
-                RH_C_max = 0.8
-                RH_L_min = 0.14 + slope_L*np.rad2deg(lat_center)
-                RH_R_min = np.max([0.14 + slope_R*np.rad2deg(lat_center), 0])
-
                 RH_dist[midlevels, left[0]:left[-1]+1, 0] = np.repeat( 
-                    RH_L_min + (RH_L_max - RH_L_min) * gaussian(-1, spread_left, self.sin_lats[left]), 
+                    0.2 + 0.7 * gaussian(-1, spread_left, self.sin_lats[left]), 
                     len(midlevels)).reshape( (len(left), len(midlevels)) ).T
-                RH_dist[midlevels, centerL[0]:centerL[-1]+1, 0] = np.repeat( 
-                    RH_L_min + (RH_C_max - RH_L_min) * gaussian(np.sin(lat_center), spread_centerL, self.sin_lats[centerL]), 
-                    len(midlevels)).reshape( (len(centerL), len(midlevels)) ).T
-                RH_dist[midlevels, centerR[0]:centerR[-1]+1, 0] = np.repeat( 
-                    RH_R_min + (RH_C_max - RH_R_min) * gaussian(np.sin(lat_center), spread_centerR, self.sin_lats[centerR]), 
-                    len(midlevels)).reshape( (len(centerR), len(midlevels)) ).T
+                RH_dist[midlevels, center[0]:center[-1]+1, 0] = np.repeat( 
+                    0.2 + 0.6 * gaussian(np.sin(lat_center), spread_center, self.sin_lats[center]), 
+                    len(midlevels)).reshape( (len(center), len(midlevels)) ).T
                 RH_dist[midlevels, right[0]:right[-1]+1, 0] = np.repeat( 
-                    RH_R_min + (RH_R_max - RH_R_min) * gaussian(1, spread_right, self.sin_lats[right]), 
+                    0.2 + 0.7 * gaussian(1, spread_right, self.sin_lats[right]), 
                     len(midlevels)).reshape( (len(right), len(midlevels)) ).T
+                # # RH Feedback:
+                # RH_dist[midlevels, right[0]:right[-1]+1, 0] = 0.2 
 
                 # Set up upper levels as one gaussian
                 RH_dist[midupperlevels, :, 0] = np.repeat( 
@@ -377,7 +328,7 @@ class EnergyBalanceModel():
                     len(midupperlevels)).reshape( (self.N_pts, len(midupperlevels)) ).T
                 return RH_dist
             self.generate_RH_dist = generate_RH_dist 
-            lat_efe = 0   # the latitude (radians) of the EFE. set this as the center of the gaussian
+            lat_efe = 0    # the latitude (radians) of the EFE. set this as the center of the gaussian
             self.RH_dist = self.generate_RH_dist(lat_efe)
 
             # np.savez("RH_M0_mebm.npz", RH=self.RH_dist, lats=self.lats, pressures=pressures)
@@ -398,12 +349,12 @@ class EnergyBalanceModel():
 
             # # Debug: Plot RH 
             # f, ax = plt.subplots(1, figsize=(16,8))
-            # # I = 0
-            # # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "b", label="{:3.0f} hPa".format(pressures[I]/100))
+            # I = 0
+            # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "b", label="{:3.0f} hPa".format(pressures[I]/100))
             # I = 14
             # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "r", label="{:3.0f} hPa".format(pressures[I]/100))
-            # # I = 23
-            # # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "y", label="{:3.0f} hPa".format(pressures[I]/100))
+            # I = 23
+            # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "y", label="{:3.0f} hPa".format(pressures[I]/100))
             # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             # ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
             # ax.set_ylim([0, 1])
@@ -527,11 +478,12 @@ class EnergyBalanceModel():
         self.numerical_method = numerical_method
         
         if numerical_method == "implicit":
-            C_plus_half = self.D_plus_half / Re**2 * self.dt / self.dx**2 * (1 - self.sin_lats_plus_half**2)
-            C_minus_half = self.D_minus_half / Re**2 * self.dt / self.dx**2 * (1 - self.sin_lats_minus_half**2)
-            data = np.array([1 + C_plus_half + C_minus_half, 
-                            -C_plus_half[:-1], 
-                            -C_minus_half[1:]])
+            a = D / Re**2 * self.dt / self.dx**2
+            sin_lats_plus_half = self.sin_lats + self.dx/2
+            sin_lats_minus_half = self.sin_lats - self.dx/2
+            data = np.array([1 + 2 * a - a * (sin_lats_plus_half**2 + sin_lats_minus_half**2), 
+                            a * (sin_lats_plus_half[:-1]**2 - 1), 
+                            a * (sin_lats_minus_half[1:]**2 - 1)])
             diags = np.array([0, 1, -1])
             LHS_matrix = sp.sparse.diags(data, diags)
             # LU factorization (convert to CSC first):
@@ -602,17 +554,6 @@ class EnergyBalanceModel():
                 # ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
                 # ax.set_yticks(np.arange(0,1001,100))
                 # plt.gca().invert_yaxis()
-                # plt.show()
-
-                # # Debug: Plot RH 
-                # f, ax = plt.subplots(1, figsize=(16,8))
-                # I = 14
-                # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "r", label="{:3.0f} hPa".format(self.pressures[I]/100))
-                # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-                # ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
-                # ax.set_ylim([0, 1])
-                # ax.legend(loc="upper left")
-                # ax.grid()
                 # plt.show()
 
                 frame += 1

@@ -1337,3 +1337,9 @@ sim282 | perturbation | lat0=60 | M=18 | full_radiation_no_lr | albedo_feedback=
 60, 9.89, 18, -3.9685127184505822
 sim282 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True | RH_feedback=True
 15, 4.94, 18, -15.8985401957816226
+
+---
+# 5-18
+---
+sim285 contains new numerical scheme and tests with non-constant diffusivity.
+sim286 is scratchwork for implimenting an RH feedback.
