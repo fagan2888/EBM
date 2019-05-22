@@ -16,23 +16,9 @@ import scipy.integrate, scipy.sparse, scipy.optimize, scipy.interpolate
 import climt
 from time import clock
 import matplotlib.pyplot as plt
-from matplotlib import animation, rc
 import os
 
-################################################################################
-### STYLES
-################################################################################
-rc("animation", html="html5")
-rc("lines", linewidth=4, markersize=10)
-rc("axes", titlesize=30, labelsize=25, xmargin=0.01, ymargin=0.01, linewidth=1.5)
-rc("axes.spines", top=False, right=False)
-rc("grid", c="k", ls="--", lw=1, alpha=0.4)
-rc("xtick", labelsize=20)
-rc("xtick.major", size=5, width=1.5)
-rc("ytick", labelsize=20)
-rc("ytick.major", size=5, width=1.5)
-rc("legend", fontsize=15)
-
+    
 ################################################################################
 ### CONSTANTS 
 ################################################################################
@@ -47,6 +33,14 @@ R   = 287.058  #J/kg/K
 Lv  = 2257000  #J/kg
 sig = 5.67e-8  #J/s/m2/K4
 
+# This is the path to the folder that contains control sims, moist adiabat data, etc.
+# Either set it as a path in your OS environment or write it here manually.
+EBM_PATH = os.environ["EBM_PATH"]
+# EBM_PATH = "/home/hpeter/ResearchBoos/EBM_files/EBM"
+
+# Styles:
+plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
+
 ################################################################################
 ### CLASS 
 ################################################################################
@@ -54,11 +48,6 @@ class EnergyBalanceModel():
     """
     Diffusive moist static energy balance model.
     """
-    
-    # This is the path to the folder that contains control sims, moist adiabat data, etc.
-    # Either set it as a path in your OS environment or write it here manually.
-    EBM_PATH = os.environ["EBM_PATH"]
-    # EBM_PATH = "/home/hpeter/ResearchBoos/EBM_files/EBM"
     
     def __init__(self, N_pts=401, dtmax_multiple=1e3, max_sim_years=5, tol=1e-8):
         # Setup grid
@@ -241,7 +230,7 @@ class EnergyBalanceModel():
         self.albedo_feedback = albedo_feedback
         self.alb_ice = alb_ice
         self.alb_water = alb_water
-        self.ctrl_data = np.load(self.EBM_PATH + "/data/ctrl.npz")
+        self.ctrl_data = np.load(EBM_PATH + "/data/ctrl.npz")
         if albedo_feedback == True:
             def reset_alb(T):
                 alb = np.ones(self.N_pts)
@@ -412,7 +401,7 @@ class EnergyBalanceModel():
             # plt.show()
 
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
-            moist_data = np.load(self.EBM_PATH + "/data/moist_adiabat_data.npz")    # load data from a previous moist adiabat calculation using MetPy
+            moist_data = np.load(EBM_PATH + "/data/moist_adiabat_data.npz")    # load data from a previous moist adiabat calculation using MetPy
             # pressures  = moist_data["pressures"]
             T_surf_sample = moist_data["T_surf_sample"]    # the surface temp points 
             T_data = moist_data["T_data"]    # the resulting vertical levels temps
@@ -985,14 +974,14 @@ class EnergyBalanceModel():
         print("Mean T: {:.2f} K".format(T_avg))
 
         f, ax = plt.subplots(1, figsize=(16,10))
-        ax.plot(self.sin_lats, self.T_f, "k")
-        ax.text(0, T_avg, "Mean T = {:.2f} K".format(T_avg), size=16)
+        ax.plot(self.sin_lats, self.T_f, "k", label="Mean T = {:.2f} K".format(T_avg))
         ax.set_title("Final Temperature Distribution")
         ax.set_xlabel("Latitude")
         ax.set_ylabel("$T_s$ [K]")
         ax.grid()
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
         ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
+        ax.legend()
         
         plt.tight_layout()
         
@@ -1011,8 +1000,7 @@ class EnergyBalanceModel():
             
             f, ax = plt.subplots(1, figsize=(16, 10))
             ax.plot(self.sin_lats, self.E_f / 1000, "c", lw=4)
-            ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(self.E_f)/1000], "r")
-            ax.text(np.sin(self.EFE) + 0.1, np.average(self.E_f)/1000, "EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)), size=16)
+            ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(self.E_f)/1000], "r", label="EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)))
             ax.set_title("Final Energy Distribution")
             ax.set_xlabel("Latitude")
             ax.set_ylabel("MSE [kJ / kg]")
@@ -1020,6 +1008,7 @@ class EnergyBalanceModel():
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
             ax.grid()
+            ax.legend()
             
             plt.tight_layout()
             

@@ -1,0 +1,22 @@
+lines.linewidth : 4
+lines.markersize : 10
+axes.titlesize : 30 
+axes.labelsize : 25  
+# axes.xmargin : 0.01  
+axes.xmargin : 0  
+axes.ymargin : 0.01  
+axes.linewidth : 1.5
+# axes.spines.top : False  
+# axes.spines.right : False
+grid.color : black  
+grid.linestyle : --  
+grid.linewidth : 1  
+grid.alpha : 0.4
+xtick.labelsize : 20
+xtick.major.size : 8  
+xtick.major.width : 1.5
+ytick.labelsize : 20
+ytick.major.size : 8
+ytick.major.width : 1.5
+legend.fontsize : 15
+font.family : FreeSerif
