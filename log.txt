@@ -1350,3 +1350,21 @@ sim286 is scratchwork for implimenting an RH feedback.
 RH feedback parameterized by linear fit of CESM funs created and merged.
 D directly from CESM (and smoothed) implemented and merged.
 Plotting fixes.
+
+Simulations with RH feedback:
+sim282 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=True
+15, 4.94,  5, -5.4051484508544752
+15, 4.94, 10, -9.7075427450869416
+15, 4.94, 15, -14.0200822931963067
+15, 4.94, 18, -14.9858557839959268
+60, 9.89,  5, -2.3092610489626892
+60, 9.89, 10, -3.9796890824613445
+60, 9.89, 15, -5.3644139688206858
+60, 9.89, 18, -5.9843362661152684

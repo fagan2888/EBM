@@ -888,7 +888,7 @@ class EnergyBalanceModel():
         # No feedbacks
         self.flux_no_fb = self.flux_total - self.flux_all_fb
 
-        self._calculate_shift()
+        # self._calculate_shift()
 
     def predict_efe(self):
         dT = self.T_f - self.T_f_ctrl

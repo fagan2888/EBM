@@ -30,7 +30,7 @@ fname_feedbacks=feedbacks.log
 if [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
 	
-	# olr_type=full_radiation
+	olr_type=full_radiation
 	# olr_type=full_radiation_no_rh
 	A=None
 	B=None
@@ -71,7 +71,7 @@ if [ "$1" == "-s" ]; then
 	            -e 's/dtmax_multiple=/dtmax_multiple='$dtmax_multiple'/g' \
 	            -e 's/max_sim_years=/max_sim_years='$max_sim_years'/g' \
 	            -e 's/tol=/tol='$tol'/g' \
-	            -e 's/diffusivity=/diffusivity='$diffusivity'/g' \
+	            -e 's/diffusivity=/diffusivity="'$diffusivity'"/g' \
 	            -e 's/initial_condition=/initial_condition="'$initial_condition'"/g' \
 	            -e 's/low=/low='$low'/g' \
 	            -e 's/high=/high='$high'/g' \
