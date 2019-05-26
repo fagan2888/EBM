@@ -1343,3 +1343,10 @@ sim282 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True |
 ---
 sim285 contains new numerical scheme and tests with non-constant diffusivity.
 sim286 is scratchwork for implimenting an RH feedback.
+
+---
+# 5-25
+---
+RH feedback parameterized by linear fit of CESM funs created and merged.
+D directly from CESM (and smoothed) implemented and merged.
+Plotting fixes.

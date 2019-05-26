@@ -2,23 +2,16 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import rc
+import os
 
-rc("lines", linewidth=4, markersize=10)
-rc("axes", titlesize=20, labelsize=16, xmargin=0.01, ymargin=0.01, linewidth=1.5)
-rc("axes.spines", top=False, right=False)
-rc("grid", c="k", ls="--", lw=1, alpha=0.4)
-rc("xtick", labelsize=13)
-rc("xtick.major", size=5, width=1.5)
-rc("ytick", labelsize=13)
-rc("ytick.major", size=5, width=1.5)
-rc("legend", fontsize=18)
+EBM_PATH = os.environ["EBM_PATH"]
+plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 
 def plot_RH(ax, sin_lats, pressures, RH):
     levels = np.arange(0, 1.05, 0.05)
     cf = ax.contourf(sin_lats, pressures, RH, cmap="BrBG", levels=levels)
     ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-    ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
+    ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
     ax.set_yticks(np.arange(0,1001,100))
     ax.invert_yaxis()
     return cf
@@ -73,7 +66,7 @@ cb = plt.colorbar(cf, ax=ax, cax=cax, orientation="horizontal")
 cb.set_ticks(np.arange(0, 1.05, 0.1))
 cb.set_label("RH")
 
-fname = "RH_distributions.png"
+fname = "RH_dists.png"
 plt.savefig(fname)
 plt.show()
 

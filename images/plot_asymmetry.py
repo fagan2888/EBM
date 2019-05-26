@@ -2,17 +2,10 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import rc
+import os
 
-rc('lines', linewidth=4, markersize=8)
-rc('axes', titlesize=20, labelsize=16, xmargin=0.02, ymargin=0.02, linewidth=2)
-rc('axes.spines', top=False, right=False)
-rc('xtick', labelsize=13)
-rc('xtick.major', size=8, width=2)
-rc('ytick', labelsize=13)
-rc('ytick.major', size=8, width=2)
-rc('legend', fontsize=13)
-
+EBM_PATH = os.environ["EBM_PATH"]
+plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 
 def asym(A):
     ''' returns pointwise asymmetry in A assuming A is a 1D array '''
