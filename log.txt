@@ -1368,3 +1368,21 @@ sim282 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=True
 60, 9.89, 10, -3.9796890824613445
 60, 9.89, 15, -5.3644139688206858
 60, 9.89, 18, -5.9843362661152684
+
+Simulations with CESM2 Diffusivity:
+sim282 | perturbation | lat0=15 | M=5  | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=15 | M=10 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=15 | M=15 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=15 | M=18 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=60 | M=5  | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=60 | M=10 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=60 | M=15 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=60 | M=18 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+15, 4.94,  5, -1.7382237372483460
+15, 4.94, 10, -3.2454223608076496
+15, 4.94, 15, -4.6656764181445185
+15, 4.94, 18, -5.5163654905021797
+60, 9.89,  5, -0.7734878085443578
+60, 9.89, 10, -1.3958206521309160
+60, 9.89, 15, -1.9330901658413082
+60, 9.89, 18, -2.2324836405008890
