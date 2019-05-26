@@ -546,7 +546,8 @@ class EnergyBalanceModel():
         print("tolerance:        |dT/dt| < {:.2E}".format(self.tol))
         print("frames:           {}".format(frames))
         
-        print("\nInsolation Type:   {}".format(self.insolation_type))
+        print("\nDiffusivity Type:  {}".format(self.diffusivity))
+        print("Insolation Type:   {}".format(self.insolation_type))
         if self.insolation_type == "perturbation":
             print("\tlat0 = {:.0f}, M = {:.0f}, sigma = {:.2f}".format(
                 self.perturb_center, self.perturb_intensity, self.perturb_spread))
