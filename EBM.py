@@ -665,7 +665,7 @@ class EnergyBalanceModel():
         np.savez("simulation_data.npz", T=self.T_array, L=self.L_array, alb=self.alb_array, sin_lats=self.sin_lats)
         # Save control simulations
         if control:
-            flux_total = -self._calculate_feedback_flux(self.S * (1 - self.alb) - self.L(self.T))
+            flux_total = self._calculate_flux(self.S * (1 - self.alb) - self.L(self.T), force_zero=True)
             L_bar = 1/self._integrate_lat(1) * self._integrate_lat(self.L(self.T))
             ctrl_state_temp = self.state["air_temperature"].values[:]
             fname = "ctrl.npz"
@@ -737,7 +737,37 @@ class EnergyBalanceModel():
             else:
                 return  2 * np.pi * Re**2 * np.trapz(f[:i+1], dx=self.dx) 
         else:
-            return 2 * np.pi * Re**2 * np.trapz(f * np.ones(self.N_pts), dx=self.dx) 
+            if i == -1:
+                return  2 * np.pi * Re**2 * np.trapz(f * np.ones(self.N_pts), dx=self.dx) 
+            else:
+                return  2 * np.pi * Re**2 * np.trapz(f * np.ones(self.N_pts)[:i+1], dx=self.dx) 
+
+
+    def _calculate_flux(self, f, force_zero=False):
+        """
+        Perform integral calculation to get F = integral of f - f_bar 
+        or just F = integral of f
+
+        INPUTS
+            f: array 
+            force_zero: boolean
+
+        OUTPUTS
+            Returns flux array
+        """
+        if force_zero:
+            area = self._integrate_lat(1)
+            f_bar = 1 / area * self._integrate_lat(f)
+        if isinstance(f, np.ndarray):
+            flux = np.zeros(f.shape)
+        else:
+            flux = np.zeros(self.N_pts)
+        for i in range(self.N_pts):
+            if force_zero:
+                flux[i] = self._integrate_lat(f - f_bar, i)
+            else:
+                flux[i] = self._integrate_lat(f, i)
+        return flux
 
 
     def _calculate_shift(self):
@@ -761,15 +791,13 @@ class EnergyBalanceModel():
         print("\t- {:1.2E} / {:1.2E}".format(numerator, denominator))
 
         # Method 2: Use feedbacks relative to control
-        dalb = self.alb_f - self.alb_ctrl
-        dL_bar = self.L_bar - self.L_bar_ctrl
-        
-        numerator = self.flux_total_ctrl[I_equator] + self._integrate_lat(self.dS*(1 - self.alb_f) - self.S_ctrl*dalb - dL_bar, I_equator) + self.delta_flux_pl[I_equator] + self.delta_flux_wv[I_equator] + self.delta_flux_lr[I_equator] + self.delta_flux_alb[I_equator]
+        numerator = self.flux_total_ctrl[I_equator] + self.delta_flux_dS[I_equator] + self.delta_flux_pl[I_equator] + self.delta_flux_wv[I_equator] + self.delta_flux_lr[I_equator] + self.delta_flux_alb[I_equator]
 
-        numerator += self.delta_flux_dS[I_equator]
 
         denominator = 0 
         spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.flux_total_ctrl, k=4, s=0)
+        denominator += spl.derivative()(0)
+        spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.delta_flux_dS, k=4, s=0)
         denominator += spl.derivative()(0)
         spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.delta_flux_pl, k=4, s=0)
         denominator += spl.derivative()(0)
@@ -780,32 +808,16 @@ class EnergyBalanceModel():
         spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.delta_flux_alb, k=4, s=0)
         denominator += spl.derivative()(0)
 
-        spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.delta_flux_dS, k=4, s=0)
-        denominator += spl.derivative()(0)
-        spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.flux_no_fb, k=4, s=0)
-        denominator += spl.derivative()(0)
+        # A = 1/self._integrate_lat(1)*self._integrate_lat(self.dS*(1-self.alb_f) - self.S_ctrl*(self.alb_f - self.alb_ctrl))
+        # self.weird_int = self._calculate_flux(A - (self.L_bar - self.L_bar_ctrl))
+        # print(weird_int[I_equator]/denominator)
+        # spl = sp.interpolate.UnivariateSpline(self.sin_lats, weird_int, k=4, s=0)
+        # denominator += spl.derivative()(0)
+        # print(spl.derivative()(0))
 
         shift = -np.rad2deg(np.arcsin(numerator / denominator))
         print("Shift with Feedbacks: {:2.2f}".format(shift))
         print("\t- {:1.2E} / {:1.2E}".format(numerator, denominator))
-
-
-    def _calculate_feedback_flux(self, L_flux):
-        """
-        Perform integral calculation to get F_i = - integral of L - L_i 
-
-        INPUTS
-            L_flux: array -> OLR due to some flux
-
-        OUTPUTS
-            Returns flux array (in PW)
-        """
-        area = self._integrate_lat(1)
-        L_flux_bar = 1 / area * self._integrate_lat(L_flux)
-        flux = np.zeros(L_flux.shape)
-        for i in range(L_flux.shape[0]):
-            flux[i] = -self._integrate_lat(L_flux - L_flux_bar, i)
-        return flux
 
 
     def log_feedbacks(self, fname_feedbacks):
@@ -846,132 +858,142 @@ class EnergyBalanceModel():
         self.pert_state_temp = pert_state_temp
         self.ctrl_state_q = ctrl_state_q
         self.pert_state_q = pert_state_q
+
+        self.state["air_temperature"].values[:] = ctrl_state_temp 
+        self.state["surface_temperature"].values[:] = ctrl_state_temp[0, :, :]
+        self.state["specific_humidity"].values[:] = ctrl_state_q
+        tendencies, diagnostics = self.longwave_radiation(self.state)
+        self.L_ctrl = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
+        self.flux_all_fb_ctrl = -self._calculate_flux(self.L_ctrl, force_zero=True)
         
         ## dS
-        self.delta_flux_dS = -self._calculate_feedback_flux(self.dS*(1 - self.alb_f))
+        self.delta_flux_dS = self._calculate_flux(self.dS*(1 - self.alb_f), force_zero=True)
 
         ## Total
-        E_f_ctrl = self.E_dataset[np.searchsorted(self.T_dataset, self.T_f_ctrl)]
-        self.flux_total = -self._calculate_feedback_flux(self.S_f*(1 - self.alb_f) - self.L_f)
+        self.flux_total = self._calculate_flux(self.S_f*(1 - self.alb_f) - self.L_f, force_zero=True)
+        # self.flux_total = self._calculate_flux(self.S_f*(1 - self.alb_f) - self.L_f)
+        # self.flux_total_ctrl = self._calculate_flux(self.S_ctrl*(1 - self.alb_ctrl) - self.L_ctrl)
         self.delta_flux_total = self.flux_total - self.flux_total_ctrl
 
         # All LW Feedbacks
-        self.flux_all_fb = self._calculate_feedback_flux(self.L_f)
+        self.flux_all_fb = -self._calculate_flux(self.L_f, force_zero=True)
         
         ## Planck
         Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
         self.state["air_temperature"].values[:] = pert_state_temp - Tgrid_diff
-        self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, 0].reshape( (self.N_pts, 1) )
+        self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, :]
         self.state["specific_humidity"].values[:] = pert_state_q
         tendencies, diagnostics = self.longwave_radiation(self.state)
         self.L_pert_shifted_T = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-        self.delta_flux_pl = self._calculate_feedback_flux(self.L_f - self.L_pert_shifted_T)
+        self.delta_flux_pl = -self._calculate_flux(self.L_f - self.L_pert_shifted_T, force_zero=True)
         
         ## Water Vapor 
         self.state["air_temperature"].values[:] = pert_state_temp
-        self.state["surface_temperature"].values[:] = pert_state_temp[0, :, 0].reshape( (self.N_pts, 1) )
+        self.state["surface_temperature"].values[:] = pert_state_temp[0, :, :]
         self.state["specific_humidity"].values[:] = ctrl_state_q
         tendencies, diagnostics = self.longwave_radiation(self.state)
         self.L_pert_shifted_q =  diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-        self.delta_flux_wv = self._calculate_feedback_flux(self.L_f - self.L_pert_shifted_q)
+        self.delta_flux_wv = -self._calculate_flux(self.L_f - self.L_pert_shifted_q, force_zero=True)
         
         ## Lapse Rate
         Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
         self.state["air_temperature"].values[:] =  ctrl_state_temp + Tgrid_diff
-        self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, 0].reshape( (self.N_pts, 1) )
+        self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, :]
         self.state["specific_humidity"].values[:] = pert_state_q
         tendencies, diagnostics = self.longwave_radiation(self.state)
         self.L_pert_shifted_LR = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-        self.delta_flux_lr = self._calculate_feedback_flux(self.L_f - self.L_pert_shifted_LR)
+        self.delta_flux_lr = -self._calculate_flux(self.L_f - self.L_pert_shifted_LR, force_zero=True)
 
         ## Albedo
-        self.delta_flux_alb = -self._calculate_feedback_flux(self.S_ctrl*(1 - self.alb_f) - self.S_ctrl*(1 - self.alb_ctrl))
+        self.delta_flux_alb = -self._calculate_flux(self.S_ctrl*(self.alb_f - self.alb_ctrl), force_zero=True)
 
         # No feedbacks
         self.flux_no_fb = self.flux_total - self.flux_all_fb
+        self.flux_no_fb_ctrl = self.flux_total_ctrl - self.flux_all_fb_ctrl
+        self.delta_flux_no_fb = self.flux_no_fb - self.flux_no_fb_ctrl
 
         self._calculate_shift()
 
-    def predict_efe(self):
-        dT = self.T_f - self.T_f_ctrl
-        lambda_pl = -3.15
-        lambda_wv = 1.8
-        lambda_lr = -0.84
+    # def predict_efe(self):
+    #     dT = self.T_f - self.T_f_ctrl
+    #     lambda_pl = -3.15
+    #     lambda_wv = 1.8
+    #     lambda_lr = -0.84
 
-        # # Feedback contributions
-        # f, ax = plt.subplots(1, figsize=(16, 10))
-        # ax.plot(self.sin_lats, dT, "k")
-        # ax.plot(self.sin_lats, lambda_pl * dT, "r")
-        # ax.plot(self.sin_lats, lambda_wv * dT, "m")
-        # ax.plot(self.sin_lats, lambda_lr * dT, "y")
-        # ax.set_xlabel("Lat")
-        # ax.set_ylabel("T (K)")
-        # ax.grid(c="k", ls="--", lw=1, alpha=0.4)
-        # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-        # plt.tight_layout()
-        # plt.show()
+    #     # # Feedback contributions
+    #     # f, ax = plt.subplots(1, figsize=(16, 10))
+    #     # ax.plot(self.sin_lats, dT, "k")
+    #     # ax.plot(self.sin_lats, lambda_pl * dT, "r")
+    #     # ax.plot(self.sin_lats, lambda_wv * dT, "m")
+    #     # ax.plot(self.sin_lats, lambda_lr * dT, "y")
+    #     # ax.set_xlabel("Lat")
+    #     # ax.set_ylabel("T (K)")
+    #     # ax.grid(c="k", ls="--", lw=1, alpha=0.4)
+    #     # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+    #     # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+    #     # plt.tight_layout()
+    #     # plt.show()
 
-        # Predicted Delta Feedback fluxes
-        flux_pl = -self._calculate_feedback_flux(lambda_pl * dT)
-        flux_wv = -self._calculate_feedback_flux(lambda_wv * dT)
-        flux_lr = -self._calculate_feedback_flux(lambda_lr * dT)
-        f, ax = plt.subplots(1, figsize=(16, 10))
-        ax.plot(self.sin_lats, 10**-15 * self.delta_flux_total, "k", label="Total")
-        ax.plot(self.sin_lats, 10**-15 * (self.delta_flux_dS + flux_pl + flux_wv + flux_lr), "k--", label="Linear $\\delta S + \\sum \\delta F_i$")
-        ax.plot(self.sin_lats, 10**-15 * flux_pl, "r--", label="Linear PL")
-        ax.plot(self.sin_lats, 10**-15 * self.delta_flux_pl, "r", label="PL")
-        ax.plot(self.sin_lats, 10**-15 * flux_wv, "m--", label="Linear WV")
-        ax.plot(self.sin_lats, 10**-15 * self.delta_flux_wv, "m", label="WV")
-        ax.plot(self.sin_lats, 10**-15 * flux_lr, "y--", label="Linear LR")
-        ax.plot(self.sin_lats, 10**-15 * self.delta_flux_lr, "y", label="LR")
-        ax.plot(self.sin_lats, 10**-15 * self.delta_flux_dS, "c", label="$\\delta S$")
-        ax.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
-        ax.set_xlabel("Latitude")
-        ax.set_ylabel("Transport [PW]")
-        ax.grid()
-        ax.legend()
-        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-        plt.tight_layout()
-        plt.savefig("linear_feedback_transport.png")
-        plt.show()
+    #     # Predicted Delta Feedback fluxes
+    #     flux_pl = self._calculate_flux(lambda_pl * dT, force_zero=True)
+    #     flux_wv = self._calculate_flux(lambda_wv * dT, force_zero=True)
+    #     flux_lr = self._calculate_flux(lambda_lr * dT, force_zero=True)
+    #     f, ax = plt.subplots(1, figsize=(16, 10))
+    #     ax.plot(self.sin_lats, 10**-15 * self.delta_flux_total, "k", label="Total")
+    #     ax.plot(self.sin_lats, 10**-15 * (self.delta_flux_dS + flux_pl + flux_wv + flux_lr), "k--", label="Linear $\\delta S + \\sum \\delta F_i$")
+    #     ax.plot(self.sin_lats, 10**-15 * flux_pl, "r--", label="Linear PL")
+    #     ax.plot(self.sin_lats, 10**-15 * self.delta_flux_pl, "r", label="PL")
+    #     ax.plot(self.sin_lats, 10**-15 * flux_wv, "m--", label="Linear WV")
+    #     ax.plot(self.sin_lats, 10**-15 * self.delta_flux_wv, "m", label="WV")
+    #     ax.plot(self.sin_lats, 10**-15 * flux_lr, "y--", label="Linear LR")
+    #     ax.plot(self.sin_lats, 10**-15 * self.delta_flux_lr, "y", label="LR")
+    #     ax.plot(self.sin_lats, 10**-15 * self.delta_flux_dS, "c", label="$\\delta S$")
+    #     ax.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
+    #     ax.set_xlabel("Latitude")
+    #     ax.set_ylabel("Transport [PW]")
+    #     ax.grid()
+    #     ax.legend()
+    #     ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+    #     ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+    #     plt.tight_layout()
+    #     plt.savefig("linear_feedback_transport.png")
+    #     plt.show()
         
-        # Predicted Flux
-        f, ax = plt.subplots(1, figsize=(16, 10))
-        ax.plot(self.sin_lats, 10**-15 * (self.flux_total_ctrl + self.delta_flux_dS + flux_pl + flux_wv + flux_lr), "k--", label="Linear $F$")
-        ax.plot(self.sin_lats, 10**-15 * self.flux_total, "k", label="$F$")
-        ax.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
-        ax.set_xlabel("Lat")
-        ax.set_ylabel("Transport [PW]")
-        ax.grid()
-        ax.legend()
-        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-        plt.tight_layout()
-        plt.savefig("linear_transport.png")
-        plt.show()
+    #     # Predicted Flux
+    #     f, ax = plt.subplots(1, figsize=(16, 10))
+    #     ax.plot(self.sin_lats, 10**-15 * (self.flux_total_ctrl + self.delta_flux_dS + flux_pl + flux_wv + flux_lr), "k--", label="Linear $F$")
+    #     ax.plot(self.sin_lats, 10**-15 * self.flux_total, "k", label="$F$")
+    #     ax.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
+    #     ax.set_xlabel("Lat")
+    #     ax.set_ylabel("Transport [PW]")
+    #     ax.grid()
+    #     ax.legend()
+    #     ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+    #     ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+    #     plt.tight_layout()
+    #     plt.savefig("linear_transport.png")
+    #     plt.show()
 
-        # Predicted Shift
-        dS = self.S_f - self.S_ctrl
-        dL_bar = self.L_bar - self.L_bar_ctrl
+    #     # Predicted Shift
+    #     dS = self.S_f - self.S_ctrl
+    #     dL_bar = self.L_bar - self.L_bar_ctrl
 
-        I_equator = self.N_pts//2 
-        numerator = self.flux_total_ctrl[I_equator] + self._integrate_lat(dS - dL_bar, I_equator) + flux_pl[I_equator] + flux_wv[I_equator] + flux_lr[I_equator]
-        denominator = 0 
+    #     I_equator = self.N_pts//2 
+    #     numerator = self.flux_total_ctrl[I_equator] + self._integrate_lat(dS - dL_bar, I_equator) + flux_pl[I_equator] + flux_wv[I_equator] + flux_lr[I_equator]
+    #     denominator = 0 
 
-        spl = sp.interpolate.UnivariateSpline(self.lats, self.flux_total_ctrl, k=4, s=0)
-        denominator -= spl.derivative()(0)
-        spl = sp.interpolate.UnivariateSpline(self.lats, flux_pl, k=4, s=0)
-        denominator -= spl.derivative()(0)
-        spl = sp.interpolate.UnivariateSpline(self.lats, flux_wv, k=4, s=0)
-        denominator -= spl.derivative()(0)
-        spl = sp.interpolate.UnivariateSpline(self.lats, flux_lr, k=4, s=0)
-        denominator -= spl.derivative()(0)
+    #     spl = sp.interpolate.UnivariateSpline(self.lats, self.flux_total_ctrl, k=4, s=0)
+    #     denominator -= spl.derivative()(0)
+    #     spl = sp.interpolate.UnivariateSpline(self.lats, flux_pl, k=4, s=0)
+    #     denominator -= spl.derivative()(0)
+    #     spl = sp.interpolate.UnivariateSpline(self.lats, flux_wv, k=4, s=0)
+    #     denominator -= spl.derivative()(0)
+    #     spl = sp.interpolate.UnivariateSpline(self.lats, flux_lr, k=4, s=0)
+    #     denominator -= spl.derivative()(0)
 
-        shift = np.rad2deg(numerator / denominator)
-        print("Shift with Feedbacks: {:2.2f}".format(shift))
-        print("\tNum / Denom = {}/{}".format(numerator, denominator))
+    #     shift = np.rad2deg(numerator / denominator)
+    #     print("Shift with Feedbacks: {:2.2f}".format(shift))
+    #     print("\tNum / Denom = {}/{}".format(numerator, denominator))
 
 
     def save_plots(self):
@@ -1072,11 +1094,11 @@ class EnergyBalanceModel():
             height = ratio*width
             f, (ax1, ax2) = plt.subplots(1, 2, figsize=(width, height))
 
-            ax1.plot(self.sin_lats, self.L_f - self.L_pert_shifted_T, "r",  label="PL")
-            ax1.plot(self.sin_lats, self.L_f - self.L_pert_shifted_q, "m",  label="WV")
-            ax1.plot(self.sin_lats, self.L_f - self.L_pert_shifted_LR, "y", label="LR")
-            ax1.plot(self.sin_lats, self.S_ctrl*(1 - self.alb_f) - self.S_ctrl*(1 - self.alb_ctrl), "g", label="AL")
-            ax1.plot(self.sin_lats, self.dS*(1-self.alb_f), "c", label="S'")
+            ax1.plot(self.sin_lats, -(self.L_f - self.L_pert_shifted_T), "r",  label="PL")
+            ax1.plot(self.sin_lats, -(self.L_f - self.L_pert_shifted_q), "m",  label="WV")
+            ax1.plot(self.sin_lats, -(self.L_f - self.L_pert_shifted_LR), "y", label="LR")
+            ax1.plot(self.sin_lats, -(self.S_ctrl*(self.alb_f - self.alb_ctrl)), "g", label="AL")
+            ax1.plot(self.sin_lats, self.dS*(1-self.alb_f), "c", label="Forcing")
 
             ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax1.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
@@ -1084,15 +1106,15 @@ class EnergyBalanceModel():
             ax1.legend()
             ax1.set_title("(a) Feedback Differences", pad=10)
             ax1.set_xlabel("Latitude")
-            ax1.set_ylabel("$L - L_i$ [W/m$^2$]")
+            ax1.set_ylabel("$-(L' - L_i')$ [W/m$^2$]")
 
             ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_total, "k", label="Total")
             ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_pl,  "r", label="PL")
             ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_wv, "m", label="WV")
             ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_lr, "y", label="LR")
             ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_alb, "g", label="AL")
-            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_dS, "c", label="$S'$")
-            ax2.plot(self.sin_lats, 10**-15 * (self.delta_flux_dS + self.delta_flux_pl + self.delta_flux_wv + self.delta_flux_lr + self.delta_flux_alb), "k--", label="$S' + \\sum F_i'$")
+            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_dS, "c", label="$\mathcal{S}\,'$")
+            ax2.plot(self.sin_lats, 10**-15 * (self.delta_flux_dS + self.delta_flux_pl + self.delta_flux_wv + self.delta_flux_lr + self.delta_flux_alb), "k--", label="$S' + \\sum \mathcal{T}_i'$")
             ax2.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
 
             ax2.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
@@ -1101,7 +1123,7 @@ class EnergyBalanceModel():
             ax2.legend()
             ax2.set_title("(b) Feedback Transports", pad=10)
             ax2.set_xlabel("Latitude")
-            ax2.set_ylabel("$\int (L - L_i) dx$ [PW]")
+            ax2.set_ylabel("$\mathcal{T}_i\,'$ [PW]")
             
             plt.tight_layout()
             
