@@ -14,7 +14,7 @@ model.outgoing_longwave(olr_type=, A=, B=, emissivity=)
 
 model.solve(numerical_method=, frames=)
 
-model.save_data()
+model.save_data(control=)
 
 model.log_efe(fname_efe=)
 

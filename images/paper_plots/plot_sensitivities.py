@@ -24,7 +24,10 @@ def get_data(filename, location):
     return centers, spreads, intensities, efes
 
 # two plots: tropics and extratropics perturbations
-f, axes = plt.subplots(1, 2, figsize=(16, 10), sharey=True)
+ratio = 16/20
+width = 15
+height = width * ratio
+f, axes = plt.subplots(1, 2, figsize=(width, height), sharey=True)
 ax1 = axes[0]; ax2 = axes[1]
 
 # dictionary of 'file' : ['label', 'color', 'marker'] elements
@@ -34,6 +37,7 @@ files = {
         'sensitivity_full_radiation_no_wv.dat': ['MEBM No WV Feedback', 'm', 'v'],
         'sensitivity_full_radiation_no_lr.dat': ['MEBM No LR Feedback', 'y', 's'],
         'sensitivity_full_radiation_rh.dat': ['MEBM Parameterized RH Feedback', 'c', '^'],
+        'sensitivity_full_radiation_D_cesm2.dat': ['MEBM $D$ from CESM2', 'r', 'P'],
         # 'sensitivity_full_radiation_no_wv_no_al.dat': ['CliMT No WV/AL Feedback', 'm'],
         # 'sensitivity_full_radiation_no_lr_no_al.dat': ['CliMT No LR/AL Feedback', 'y'],
         # 'sensitivity_planck.dat': ['Planck Radiation ($\\epsilon=0.65$)', 'red'],

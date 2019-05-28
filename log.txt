@@ -1386,3 +1386,11 @@ sim282 | perturbation | lat0=60 | M=18 | full_radiation_no_rh | albedo_feedback=
 60, 9.89, 10, -1.3958206521309160
 60, 9.89, 15, -1.9330901658413082
 60, 9.89, 18, -2.2324836405008890
+
+---
+# 5-27
+---
+Updated EBM.py:
+	- saves ctrl.npz in save_data() method
+	- made S incoming SW without albedo everywhere
+	- fixed taylor expansion to have dS in it and also delta_flux_no_fb

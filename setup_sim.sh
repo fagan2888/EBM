@@ -25,6 +25,8 @@ alb_water=0.2
 numerical_method=implicit
 frames=100
 
+control=False
+
 fname_efe=itcz.log
 fname_feedbacks=feedbacks.log
 
@@ -89,6 +91,7 @@ if [ "$1" == "-s" ]; then
 	            -e 's/emissivity=/emissivity='$emissivity'/g' \
 	            -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
 	            -e 's/frames=/frames='$frames'/g' \
+	            -e 's/control=/control='$control'/g' \
 	            -e 's/fname_efe=/fname_efe="'$fname_efe'"/g' \
 	            -e 's/fname_feedbacks=/fname_feedbacks="'$fname_feedbacks'"/g' \
 	            ${EBM_PATH}/simulation.py > simulation.py
