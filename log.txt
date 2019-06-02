@@ -1394,3 +1394,28 @@ Updated EBM.py:
 	- saves ctrl.npz in save_data() method
 	- made S incoming SW without albedo everywhere
 	- fixed taylor expansion to have dS in it and also delta_flux_no_fb
+
+
+---
+# 6-1
+---
+Non-const D simulations: (sim285)
+
+D_ref: const
+	15, 4.94, 10, -5.7154493817314371 
+	15, 4.94, 15, -7.9738692248957577 
+	15, 4.94, 18, -9.1496963439513355 
+	60, 9.89, 18, -3.5577134370377146 
+
+D_pole: higher D at poles, lower at EQ
+	15, 4.94, 10, -5.3563556800204211 
+	15, 4.94, 15, -7.2114957148140073 
+	15, 4.94, 18, -10.966301478042911 (AL creep)
+	60, 9.89, 18, -4.4938771487395535 
+
+D_EQ: higher D at EQ, lower at Poles
+	15, 4.94, 15, -9.6813176050273775 
+	15, 4.94, 10, -7.0940836553790367 
+	15, 4.94, 18, -11.143412960437846 
+	60, 9.89, 18, -3.3232239168426223 
+

@@ -1094,11 +1094,12 @@ class EnergyBalanceModel():
             height = ratio*width
             f, (ax1, ax2) = plt.subplots(1, 2, figsize=(width, height))
 
-            ax1.plot(self.sin_lats, -(self.L_f - self.L_pert_shifted_T), "r",  label="PL")
-            ax1.plot(self.sin_lats, -(self.L_f - self.L_pert_shifted_q), "m",  label="WV")
-            ax1.plot(self.sin_lats, -(self.L_f - self.L_pert_shifted_LR), "y", label="LR")
-            ax1.plot(self.sin_lats, -(self.S_ctrl*(self.alb_f - self.alb_ctrl)), "g", label="AL")
-            ax1.plot(self.sin_lats, self.dS*(1-self.alb_f), "c", label="Forcing")
+            ax1.plot(self.sin_lats, self.dS*(1-self.alb_f), "c", label="$S'$")
+            ax1.plot(self.sin_lats, -(self.L_f - self.L_pert_shifted_T), "r",  label="$-L_{PL}'$")
+            ax1.plot(self.sin_lats, -(self.L_f - self.L_pert_shifted_q), "m",  label="$-L_{WV}'$")
+            ax1.plot(self.sin_lats, -(self.L_f - self.L_pert_shifted_LR), "y", label="$-L_{LR}'$")
+            ax1.plot(self.sin_lats, -(self.S_ctrl*(self.alb_f - self.alb_ctrl)), "g", label="$-S_{AL}'$")
+            ax1.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
 
             ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax1.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
@@ -1106,15 +1107,15 @@ class EnergyBalanceModel():
             ax1.legend()
             ax1.set_title("(a) Feedback Differences", pad=10)
             ax1.set_xlabel("Latitude")
-            ax1.set_ylabel("$-(L' - L_i')$ [W/m$^2$]")
+            ax1.set_ylabel("Energy Perturbation [W m$^{-2}$]")
 
-            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_total, "k", label="Total")
-            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_pl,  "r", label="PL")
-            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_wv, "m", label="WV")
-            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_lr, "y", label="LR")
-            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_alb, "g", label="AL")
             ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_dS, "c", label="$\mathcal{S}\,'$")
-            ax2.plot(self.sin_lats, 10**-15 * (self.delta_flux_dS + self.delta_flux_pl + self.delta_flux_wv + self.delta_flux_lr + self.delta_flux_alb), "k--", label="$S' + \\sum \mathcal{T}_i'$")
+            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_pl,  "r", label="$\mathcal{T}_{PL}\,'$")
+            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_wv, "m", label="$\mathcal{T}_{WV}\,'$")
+            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_lr, "y", label="$\mathcal{T}_{LR}\,'$")
+            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_alb, "g", label="$\mathcal{T}_{AL}\,'$")
+            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_total, "k", label="$\mathcal{T}\,'$")
+            ax2.plot(self.sin_lats, 10**-15 * (self.delta_flux_dS + self.delta_flux_pl + self.delta_flux_wv + self.delta_flux_lr + self.delta_flux_alb), "k--", label="$\mathcal{S}\,' + \\sum \mathcal{T}_i\,'$")
             ax2.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
 
             ax2.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
@@ -1123,7 +1124,7 @@ class EnergyBalanceModel():
             ax2.legend()
             ax2.set_title("(b) Feedback Transports", pad=10)
             ax2.set_xlabel("Latitude")
-            ax2.set_ylabel("$\mathcal{T}_i\,'$ [PW]")
+            ax2.set_ylabel("Energy Transport [PW]")
             
             plt.tight_layout()
             
