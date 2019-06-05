@@ -9,7 +9,7 @@ plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 
 ####
 
-f, ax = plt.subplots(1, figsize=(16, 10))
+f, ax = plt.subplots(1)
 
 p0 = 600
 for M in [0, 18]:
@@ -44,13 +44,13 @@ for M in [0, 18]:
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
 ax.set_ylim([0, 1])
-ax.grid()
 ax.legend(loc="lower left")
 ax.set_xlabel("Latitude")
 ax.set_ylabel("RH (at {:3d} mb)".format(p0))
+
 plt.tight_layout()
 
-fname = "RH_{:3d}.png".format(p0)
+fname = "RH_{:3d}.pdf".format(p0)
 plt.savefig(fname)
 plt.show()
 

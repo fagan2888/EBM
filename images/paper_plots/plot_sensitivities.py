@@ -24,10 +24,7 @@ def get_data(filename, location):
     return centers, spreads, intensities, efes
 
 # two plots: tropics and extratropics perturbations
-ratio = 16/20
-width = 15
-height = width * ratio
-f, axes = plt.subplots(1, 2, figsize=(width, height), sharey=True)
+f, axes = plt.subplots(1, 2, figsize=(2*2.47, 4), sharey=True)
 ax1 = axes[0]; ax2 = axes[1]
 
 # dictionary of 'file' : ['label', 'color', 'marker'] elements
@@ -37,7 +34,7 @@ files = {
         'sensitivity_full_radiation_no_wv.dat': ['MEBM No WV Feedback', 'm', 'v'],
         'sensitivity_full_radiation_no_lr.dat': ['MEBM No LR Feedback', 'y', 's'],
         'sensitivity_full_radiation_rh.dat': ['MEBM Parameterized RH Feedback', 'c', '^'],
-        'sensitivity_full_radiation_D_cesm2.dat': ['MEBM $D$ from CESM2', 'r', 'P'],
+        # 'sensitivity_full_radiation_D_cesm2.dat': ['MEBM $D$ from CESM2', 'r', 'P'],
         # 'sensitivity_full_radiation_no_wv_no_al.dat': ['CliMT No WV/AL Feedback', 'm'],
         # 'sensitivity_full_radiation_no_lr_no_al.dat': ['CliMT No LR/AL Feedback', 'y'],
         # 'sensitivity_planck.dat': ['Planck Radiation ($\\epsilon=0.65$)', 'red'],
@@ -49,8 +46,8 @@ files = {
 color = 'k'
 alpha = 0.5
 linestyle = '--'
-markersize = 8
-linewidth = 1
+markersize = 3
+linewidth = 0.5
 marker = 'v'
 centers, spreads, intensities, efes = get_data('sensitivity_clark_no_wv.dat', 'tropics')
 ax1.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (Clark et al.)', markersize=markersize)
@@ -67,8 +64,8 @@ ax2.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=l
 color = 'k'
 alpha = 1.0
 linestyle = '-'
-markersize = 8
-linewidth = 1
+markersize = 3
+linewidth = 0.5
 marker = 'o'
 centers, spreads, intensities, efes = get_data("sensitivity_cesm2.dat", "tropics")
 ax1.plot(intensities, efes, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
@@ -79,33 +76,28 @@ ax2.plot(intensities, efes, marker=marker, color=color, alpha=alpha, linestyle=l
 for f in files:
     for i, location in enumerate(['tropics', 'extratropics']):
         centers, spreads, intensities, efes = get_data(f, location)
-        axes[i].plot(intensities, efes, marker=files[f][2], color=files[f][1], linestyle='', label=files[f][0], markersize=15)
+        axes[i].plot(intensities, efes, marker=files[f][2], color=files[f][1], linestyle='', label=files[f][0])
 
 ax1.set_xlim(0, 20)
-# ax1.set_xticks([1, 3, 5, 10, 15, 18])
 ax1.set_xticks([5, 10, 15, 18])
 ax1.set_ylim(-16, 0)
 ax1.set_yticks(np.arange(-16, 1, 2))
 ax1.set_yticklabels(['16°S', '14°S', '12°S', '10°S', '8°S', '6°S', '4°S', '2°S', 'EQ'])
-# ax1.legend(loc='lower left')
-ax1.set_title('(a) Tropics', pad=10)
-ax1.set_xlabel('M [W/m$^2$]')
+ax1.set_title('(a) Tropics')
+ax1.set_xlabel('M [W m$^{-2}$]')
 ax1.set_ylabel('EFE Latitude')
-ax1.grid()
 
 ax2.set_xlim(0, 20)
-# ax2.set_xticks([1, 3, 5, 10, 15, 18])
 ax2.set_xticks([5, 10, 15, 18])
 ax2.set_ylim(-16, 0)
 ax2.legend(loc='lower left')
-ax2.set_title('(b) Extratropics', pad=10)
-ax2.set_xlabel('M [W/m$^2$]')
-ax2.grid()
+ax2.set_title('(b) Extratropics')
+ax2.set_xlabel('M [W m$^{-2}$]')
 
 plt.tight_layout()
 
-fname = 'sensitivities.png'
-plt.savefig(fname, dpi=120)
+fname = 'sensitivities.pdf'
+plt.savefig(fname)
 plt.show()
 print('{} created.'.format(fname))
 plt.close()

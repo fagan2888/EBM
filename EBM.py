@@ -52,16 +52,16 @@ class EnergyBalanceModel():
     def __init__(self, N_pts=401, dtmax_multiple=1e3, max_sim_years=5, tol=1e-8, diffusivity="constant"):
         # Setup grid
         self.N_pts = N_pts
-        self.dx = 2 / N_pts
-        self.sin_lats = np.linspace(-1.0 + self.dx/2, 1.0 - self.dx/2, N_pts)
+        self.dx = 2 / (N_pts - 1)
+        self.sin_lats = np.linspace(-1.0, 1.0, N_pts)
         self.cos_lats = np.sqrt(1 - self.sin_lats**2)
         self.lats = np.arcsin(self.sin_lats)
 
         # Create useful constants
         self.max_sim_years = max_sim_years
         self.secs_in_min = 60 
-        self.secs_in_hour = 60  * self.secs_in_min 
-        self.secs_in_day = 24  * self.secs_in_hour 
+        self.secs_in_hour = 60 * self.secs_in_min 
+        self.secs_in_day = 24 * self.secs_in_hour 
         self.secs_in_year = 365 * self.secs_in_day 
 
         # Setup Diffusivity
@@ -69,20 +69,34 @@ class EnergyBalanceModel():
         if diffusivity == "constant":
             x = np.deg2rad(np.array([-90, 0, 90]))
             y = np.array([D, D, D])
+            D_f = sp.interpolate.interp1d(x, y, kind="quadratic")
         elif diffusivity == "cesm2":
             cesm2_data = np.load(EBM_PATH + "/data/D_cesm2.npz")
             sin_lats_cesm2 = cesm2_data["sin_lats"]
             D_cesm2 = cesm2_data["D"]
             x = np.arcsin(sin_lats_cesm2)
             y = Re**2 / ps * g * D_cesm2
+            D_f = sp.interpolate.interp1d(x, y, kind="quadratic")
+        elif diffusivity == "D1":
+            def D_f(lats):
+                Diff = 1.5 * D * np.ones(lats.shape)
+                # Diff[np.where(np.logical_or(np.rad2deg(lats) <= -30, np.rad2deg(lats) > 30))] = 0.5 * D
+                Diff[:100] = 0.5 * D
+                Diff[300:] = 0.5 * D
+                return Diff
+        elif diffusivity == "D2":
+            def D_f(lats):
+                Diff = 0.5 * D * np.ones(lats.shape)
+                # Diff[np.where(np.logical_or(np.rad2deg(lats) < -30, np.rad2deg(lats) > 30))] = 1.5 * D
+                Diff[:100] = 1.5 * D
+                Diff[300:] = 1.5 * D
+                return Diff
 
-        f = sp.interpolate.interp1d(x, y, kind="quadratic")
-        self.D = f(self.lats)
+        self.D = D_f(self.lats)
 
-        self.sin_lats_plus_half = self.sin_lats + self.dx/2
-        self.sin_lats_minus_half = self.sin_lats - self.dx/2
-        self.D_plus_half = f(self.sin_lats_plus_half)
-        self.D_minus_half = f(self.sin_lats_minus_half)
+        self.sin_lats_mids = (self.sin_lats - self.dx/2)[1:]
+        self.lats_mids = np.arcsin(self.sin_lats_mids)
+        self.D_mids = D_f(self.lats_mids)
         
         # # Debug: Plot D
         # f, ax = plt.subplots(1, figsize=(10,6))
@@ -100,7 +114,6 @@ class EnergyBalanceModel():
         dtmax_cfl = self.dx / np.max(velocity)
         self.dtmax = np.min([dtmax_diff, dtmax_cfl])
         self.dt = dtmax_multiple * self.dtmax
-        # self.dt = np.min([dtmax_multiple * self.dtmax, self.secs_in_day])
 
         # Cut off iterations
         self.max_iters = int(self.max_sim_years * self.secs_in_year / self.dt)
@@ -235,15 +248,6 @@ class EnergyBalanceModel():
             self.init_alb = reset_alb(self.init_temp)
             self.reset_alb = reset_alb
         else:
-            # From Clark:
-            # self.init_alb = 0.2725 * np.ones(self.N_pts)
-
-            # Using the below calculation from KiehlTrenberth1997
-            # (Reflected Solar - Absorbed Solar) / (Incoming Solar) = (107-67)/342 = .11695906432748538011
-            # self.init_alb = (40 / 342) * np.ones(self.N_pts)
-
-            # To get an Earth-like T dist (~250 at poles ~300 at EQ)
-            # self.init_alb = 0.25 * np.ones(self.N_pts)
             self.init_alb = self.ctrl_data["alb"]
 
         self.alb = self.init_alb
@@ -335,10 +339,13 @@ class EnergyBalanceModel():
                 spread_right = 1/4*width_right
 
                 ## RH Feedback:
-                RH_min_ctrl = 0.14
+                RH_min_ctrl = 0.145
+                # RH_min_ctrl = 0.14
                 if rh_feedback:
-                    slope_L = -0.0186219739292365
-                    slope_R = 0.0111731843575419
+                    slope_L = -0.0203954292274862
+                    slope_R = 0.013515143699796586
+                    # slope_L = -0.0186219739292365
+                    # slope_R = 0.0111731843575419
                 else:
                     slope_L = 0
                     slope_R = 0
@@ -346,8 +353,8 @@ class EnergyBalanceModel():
                 RH_L_max = 0.9
                 RH_R_max = 0.9
                 RH_C_max = 0.8
-                RH_L_min = 0.14 + slope_L*np.rad2deg(lat_center)
-                RH_R_min = np.max([0.14 + slope_R*np.rad2deg(lat_center), 0])
+                RH_L_min = RH_min_ctrl + slope_L*np.rad2deg(lat_center)
+                RH_R_min = np.max([RH_min_ctrl + slope_R*np.rad2deg(lat_center), 0])
 
                 RH_dist[midlevels, left[0]:left[-1]+1, 0] = np.repeat( 
                     RH_L_min + (RH_L_max - RH_L_min) * gaussian(-1, spread_left, self.sin_lats[left]), 
@@ -371,8 +378,9 @@ class EnergyBalanceModel():
             lat_efe = 0   # the latitude (radians) of the EFE. set this as the center of the gaussian
             self.RH_dist = self.generate_RH_dist(lat_efe)
 
+            # # Save RH dists for plotting:
             # np.savez("RH_M0_mebm.npz", RH=self.RH_dist, lats=self.lats, pressures=pressures)
-            # np.savez("RH_M18_mebm.npz", RH=self.generate_RH_dist(np.deg2rad(-8.93)), lats=self.lats, pressures=pressures)
+            # np.savez("RH_M18_mebm.npz", RH=self.generate_RH_dist(np.deg2rad(-10.74)), lats=self.lats, pressures=pressures)
             # os.sys.exit()
 
             # # Debug: Plot RH dist
@@ -521,15 +529,34 @@ class EnergyBalanceModel():
         self.numerical_method = numerical_method
         
         if numerical_method == "implicit":
-            C_plus_half = self.D_plus_half / Re**2 * self.dt / self.dx**2 * (1 - self.sin_lats_plus_half**2)
-            C_minus_half = self.D_minus_half / Re**2 * self.dt / self.dx**2 * (1 - self.sin_lats_minus_half**2)
-            data = np.array([1 + C_plus_half + C_minus_half, 
-                            -C_plus_half[:-1], 
-                            -C_minus_half[1:]])
-            diags = np.array([0, 1, -1])
-            LHS_matrix = sp.sparse.diags(data, diags)
-            # LU factorization (convert to CSC first):
-            self.step_matrix = sp.sparse.linalg.splu(LHS_matrix.tocsc())
+            C_mids = self.D_mids / Re**2 * self.dt / self.dx**2 * (1 - self.sin_lats_mids**2)
+
+            row = np.array([])
+            col = np.array([])
+            data = np.array([])
+            for i in range(1, self.N_pts-1):
+                row = np.append(row, i)
+                col = np.append(col, i - 1)
+                data = np.append(data, -C_mids[i-1])
+
+                row = np.append(row, i)
+                col = np.append(col, i)
+                data = np.append(data, 1 + (C_mids[i] + C_mids[i-1]))
+                
+                row = np.append(row, i)
+                col = np.append(col, i + 1)
+                data = np.append(data, -C_mids[i])
+
+            row = np.append(row, [0, 0, self.N_pts-1, self.N_pts-1])
+            col = np.append(col, [0, 1, self.N_pts-2, self.N_pts-1])
+            data = np.append(data, [1 + C_mids[0], 
+                                    -C_mids[0], 
+                                    -C_mids[-1], 
+                                    1 + C_mids[-1]])
+
+            LHS_matrix = sp.sparse.csc_matrix((data, (row, col)), shape=(self.N_pts, self.N_pts))
+
+            self.step_matrix = sp.sparse.linalg.splu(LHS_matrix)
         else:
             os.sys.exit("Invalid numerical method.")
 
@@ -1004,26 +1031,27 @@ class EnergyBalanceModel():
 
         OUTPUTS
         """
+        plotting_ratio = 1.61803398875
+
         ### FINAL TEMP DIST
         print("\nPlotting Final T Dist")
         
         T_avg = np.mean(self.T_f)
         print("Mean T: {:.2f} K".format(T_avg))
 
-        f, ax = plt.subplots(1, figsize=(16,10))
-        ax.plot(self.sin_lats, self.T_f, "k", label="Mean T = {:.2f} K".format(T_avg))
+        f, ax = plt.subplots(1)
+        ax.plot(self.sin_lats, self.T_f, "k", label="Mean $T_s$ = {:.2f} K".format(T_avg))
         ax.set_title("Final Temperature Distribution")
         ax.set_xlabel("Latitude")
         ax.set_ylabel("$T_s$ [K]")
-        ax.grid()
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
         ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-        ax.legend()
+        ax.legend(loc="upper right")
         
         plt.tight_layout()
         
         fname = "final_temp.png"
-        plt.savefig(fname, dpi=80)
+        plt.savefig(fname)
         print("{} created.".format(fname))
         plt.close()
         
@@ -1035,8 +1063,8 @@ class EnergyBalanceModel():
             self._calculate_efe()
             print("EFE = {:.5f}".format(np.rad2deg(self.EFE)))
             
-            f, ax = plt.subplots(1, figsize=(16, 10))
-            ax.plot(self.sin_lats, self.E_f / 1000, "c", lw=4)
+            f, ax = plt.subplots(1)
+            ax.plot(self.sin_lats, self.E_f / 1000, "c")
             ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(self.E_f)/1000], "r", label="EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)))
             ax.set_title("Final Energy Distribution")
             ax.set_xlabel("Latitude")
@@ -1044,13 +1072,12 @@ class EnergyBalanceModel():
             ax.set_ylim([np.min(self.E_f)/1000 - 1, np.max(self.E_f)/1000 + 1])
             ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-            ax.grid()
-            ax.legend()
+            ax.legend(loc="upper right")
             
             plt.tight_layout()
             
             fname = "efe.png"
-            plt.savefig(fname, dpi=80)
+            plt.savefig(fname)
             print("{} created.".format(fname))
             plt.close()
         
@@ -1060,8 +1087,8 @@ class EnergyBalanceModel():
         S_i = self.S * (1 - self.init_alb)
         L_i = self.L(self.init_temp)
         print("Integral of (S - L): {:.5f} PW".format(10**-15 * self._integrate_lat(self.S_f*(1 - self.alb_f) - self.L_f)))
-
-        f, ax = plt.subplots(1, figsize=(16, 10))
+        
+        f, ax = plt.subplots(1)
         ax.plot(self.sin_lats, self.S_f*(1 - self.alb_f), "r", label="Final $S(1-\\alpha)$")
         ax.plot(self.sin_lats, S_i, "r--", label="Initial $S(1-\\alpha)$")
         ax.plot(self.sin_lats, self.L_f, "b", label="Final OLR")
@@ -1072,7 +1099,6 @@ class EnergyBalanceModel():
         ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
         ax.set_ylim([-200, 400])
         ax.set_yticks(np.arange(-200, 401, 50))
-        ax.grid()
         ax.legend(loc="upper left")
         ax.set_title("Radiation Distributions")
         ax.set_xlabel("Latitude")
@@ -1081,7 +1107,7 @@ class EnergyBalanceModel():
         plt.tight_layout()
         
         fname = "radiation.png"
-        plt.savefig(fname, dpi=80)
+        plt.savefig(fname)
         print("{} created.".format(fname))
         plt.close()
         
@@ -1089,10 +1115,7 @@ class EnergyBalanceModel():
             ### Differences and Transports
             print("\nPlotting Differences and Transports")
 
-            ratio = 10 / 32
-            width = 25
-            height = ratio*width
-            f, (ax1, ax2) = plt.subplots(1, 2, figsize=(width, height))
+            f, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 2.47))
 
             ax1.plot(self.sin_lats, self.dS*(1-self.alb_f), "c", label="$S'$")
             ax1.plot(self.sin_lats, -(self.L_f - self.L_pert_shifted_T), "r",  label="$-L_{PL}'$")
@@ -1103,9 +1126,8 @@ class EnergyBalanceModel():
 
             ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax1.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-            ax1.grid()
-            ax1.legend()
-            ax1.set_title("(a) Feedback Differences", pad=10)
+            ax1.legend(loc="upper left")
+            ax1.set_title("(a) Feedback Differences")
             ax1.set_xlabel("Latitude")
             ax1.set_ylabel("Energy Perturbation [W m$^{-2}$]")
 
@@ -1114,44 +1136,22 @@ class EnergyBalanceModel():
             ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_wv, "m", label="$\mathcal{T}_{WV}\,'$")
             ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_lr, "y", label="$\mathcal{T}_{LR}\,'$")
             ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_alb, "g", label="$\mathcal{T}_{AL}\,'$")
-            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_total, "k", label="$\mathcal{T}\,'$")
+            ax2.plot(self.sin_lats, 10**-15 * self.delta_flux_total, "k", label="$\mathcal{T}\;'$")
             ax2.plot(self.sin_lats, 10**-15 * (self.delta_flux_dS + self.delta_flux_pl + self.delta_flux_wv + self.delta_flux_lr + self.delta_flux_alb), "k--", label="$\mathcal{S}\,' + \\sum \mathcal{T}_i\,'$")
             ax2.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
 
             ax2.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax2.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-            ax2.grid()
-            ax2.legend()
-            ax2.set_title("(b) Feedback Transports", pad=10)
+            ax2.legend(loc="upper left")
+            ax2.set_title("(b) Feedback Transports")
             ax2.set_xlabel("Latitude")
             ax2.set_ylabel("Energy Transport [PW]")
             
             plt.tight_layout()
             
             fname = "transports_and_differences.png"
-            plt.savefig(fname, dpi=80)
+            plt.savefig(fname)
             print("{} created.".format(fname))
             plt.close()
 
             # np.savez("feedback_transports.npz", EFE=self.EFE, sin_lats=self.sin_lats, delta_flux_total=self.delta_flux_total, delta_flux_pl=self.delta_flux_pl, delta_flux_wv=self.delta_flux_wv, delta_flux_lr=self.delta_flux_lr, delta_flux_alb=self.delta_flux_alb, delta_flux_dS=self.delta_flux_dS)
-
-            # ### T'
-            # print("\nPlotting Ts Difference")
-
-            # f, ax = plt.subplots(1, figsize=(16, 10))
-            # ax.plot(self.sin_lats, self.T_f - self.T_f_ctrl, "k",  label="$T_p - T_{ctrl}$")
-
-            # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-            # ax.set_xticklabels(["-90", "", "", "-60", "", "", "-30", "", "", "EQ", "", "", "30", "", "", "60", "", "", "90"])
-            # ax.grid()
-            # ax.legend()
-            # ax.set_title("$T$ Difference")
-            # ax.set_xlabel("Lat")
-            # ax.set_ylabel("K")
-            
-            # plt.tight_layout()
-            
-            # fname = "Ts_diff.png"
-            # plt.savefig(fname, dpi=80)
-            # print("{} created.".format(fname))
-            # plt.close()

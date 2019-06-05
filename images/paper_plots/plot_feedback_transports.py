@@ -20,7 +20,10 @@ delta_S = data["delta_S"]
 sin_lats = data["sin_lats"]
 EFE = data["EFE"]
 
-f, ax = plt.subplots(1, figsize=(16, 10))
+plotting_ratio = 1.61803398875
+height = 8
+width = plotting_ratio*height
+f, ax = plt.subplots(1, figsize=(width, height))
 ax.plot(sin_lats, 10**-15 * delta_flux_total, "k", label="Total")
 ax.plot(sin_lats, 10**-15 * delta_flux_pl,  "r", label="PL")
 ax.plot(sin_lats, 10**-15 * delta_flux_wv, "m", label="WV")
