@@ -11,7 +11,9 @@ max_sim_years=10
 # tol=1e-8
 tol=1e-9
 # diffusivity=constant
-diffusivity=cesm2
+# diffusivity=cesm2
+diffusivity=D1
+# diffusivity=D2
 
 initial_condition=legendre
 low=250
@@ -34,7 +36,7 @@ if [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
 	
 	# olr_type=full_radiation
-	olr_type=full_radiation_no_rh
+	olr_type=full_radiation
 	A=None
 	B=None
 	emissivity=None

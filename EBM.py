@@ -16,6 +16,7 @@ import scipy.integrate, scipy.sparse, scipy.optimize, scipy.interpolate
 import climt
 from time import clock
 import matplotlib.pyplot as plt
+from matplotlib import rc
 import os
 
     
@@ -292,10 +293,10 @@ class EnergyBalanceModel():
             else:
                 lr_feedback = True
         
-            if "no_rh" in olr_type:
-                rh_feedback = False
-            else:
+            if "_rh" in olr_type:
                 rh_feedback = True
+            else:
+                rh_feedback = False
 
             # Use CliMT radiation scheme along with MetPy"s moist adiabat calculator
             self.N_levels = 30   # vertical levels
@@ -1114,6 +1115,7 @@ class EnergyBalanceModel():
         if self.plot_fluxes:
             ### Differences and Transports
             print("\nPlotting Differences and Transports")
+            rc("font", size=9)
 
             f, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 2.47))
 
@@ -1125,7 +1127,7 @@ class EnergyBalanceModel():
             ax1.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
 
             ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-            ax1.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+            ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
             ax1.legend(loc="upper left")
             ax1.set_title("(a) Feedback Differences")
             ax1.set_xlabel("Latitude")
@@ -1141,7 +1143,7 @@ class EnergyBalanceModel():
             ax2.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
 
             ax2.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-            ax2.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+            ax2.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
             ax2.legend(loc="upper left")
             ax2.set_title("(b) Feedback Transports")
             ax2.set_xlabel("Latitude")
@@ -1149,9 +1151,10 @@ class EnergyBalanceModel():
             
             plt.tight_layout()
             
-            fname = "transports_and_differences.png"
+            fname = "differences_transports.pdf"
             plt.savefig(fname)
             print("{} created.".format(fname))
             plt.close()
 
+            rc("font", size=7)
             # np.savez("feedback_transports.npz", EFE=self.EFE, sin_lats=self.sin_lats, delta_flux_total=self.delta_flux_total, delta_flux_pl=self.delta_flux_pl, delta_flux_wv=self.delta_flux_wv, delta_flux_lr=self.delta_flux_lr, delta_flux_alb=self.delta_flux_alb, delta_flux_dS=self.delta_flux_dS)
