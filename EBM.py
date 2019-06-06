@@ -75,6 +75,7 @@ class EnergyBalanceModel():
             cesm2_data = np.load(EBM_PATH + "/data/D_cesm2.npz")
             sin_lats_cesm2 = cesm2_data["sin_lats"]
             D_cesm2 = cesm2_data["D"]
+            # D_cesm2 = cesm2_data["D_filtered"]
             x = np.arcsin(sin_lats_cesm2)
             y = Re**2 / ps * g * D_cesm2
             D_f = sp.interpolate.interp1d(x, y, kind="quadratic")

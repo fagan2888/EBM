@@ -11,14 +11,42 @@ plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 
 rc("font", size=10)
 
+D   = 1.06e6
+ps  = 98000    
+g   = 9.81     
+Re  = 6.371e6  
+
 cesm2_data = np.load(EBM_PATH + "/data/D_cesm2.npz")
 sin_lats_cesm2 = cesm2_data["sin_lats"]
 D_cesm2 = cesm2_data["D"]
 
+N_pts = 401
+dx = 2 / (N_pts - 1)
+sin_lats = np.linspace(-1.0, 1.0, N_pts)
+lats = np.arcsin(sin_lats)
+
+def D_f(lats):
+    Diff = 1.5 * D * np.ones(lats.shape)
+    # Diff[np.where(np.logical_or(np.rad2deg(lats) <= -30, np.rad2deg(lats) > 30))] = 0.5 * D
+    Diff[:100] = 0.5 * D
+    Diff[300:] = 0.5 * D
+    return Diff
+D1 = D_f(lats)
+
+def D_f(lats):
+    Diff = 0.5 * D * np.ones(lats.shape)
+    # Diff[np.where(np.logical_or(np.rad2deg(lats) < -30, np.rad2deg(lats) > 30))] = 1.5 * D
+    Diff[:100] = 1.5 * D
+    Diff[300:] = 1.5 * D
+    return Diff
+D2 = D_f(lats)
+
 f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(8, 2.47), gridspec_kw={"width_ratios": [2, 1, 1]})
 
-ax1.plot(sin_lats_cesm2, D_cesm2, "k", label="CESM2")
-ax1.plot([-1, 1], [2.6e-4, 2.6e-4], "k--", label="Hwang & Frierson 2010")
+ax1.plot(sin_lats_cesm2, D_cesm2, "r", label="CESM2")
+ax1.plot(sin_lats, ps / g * D1 / Re**2, "b", label="$D_1$")
+ax1.plot(sin_lats, ps / g * D2 / Re**2, "g", label="$D_2$")
+ax1.plot([-1, 1], [2.6e-4, 2.6e-4], "k", label="Hwang & Frierson 2010")
 
 ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
