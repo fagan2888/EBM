@@ -5,22 +5,19 @@ sim_dir=~/my-scratch/EBM_sims/
 
 N_pts=401
 dtmax_multiple=200
-# dtmax_multiple=1e3
-# max_sim_years=5
 max_sim_years=10
-# tol=1e-8
 tol=1e-9
-# diffusivity=constant
+diffusivity=constant
 # diffusivity=cesm2
-diffusivity=D1
+# diffusivity=D1
 # diffusivity=D2
 
 initial_condition=legendre
 low=250
 high=300
 
-albedo_feedback=True
-# albedo_feedback=False
+# albedo_feedback=True
+albedo_feedback=False
 alb_ice=0.6
 alb_water=0.2
 
@@ -34,22 +31,22 @@ fname_feedbacks=feedbacks.log
 
 if [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
-	
-	# olr_type=full_radiation
 	olr_type=full_radiation
+	# olr_type=full_radiation_no_wv
+	# olr_type=full_radiation_no_lr
 	A=None
 	B=None
 	emissivity=None
 	
 	insolation_type=perturbation
 
-	i=282
+    i=287
 	# i=0
 	# while [ -d ${sim_dir}sim$i ];
 	# do
 	#     i=`echo "$i + 1" | bc`
 	# done
-	# echo "Making simulations in ${sim_dir}sim$i"
+	echo "Making simulations in ${sim_dir}sim$i"
 
 	# mkdir ${sim_dir}sim$i
 	mkdir ${sim_dir}sim${i}/tropical
@@ -63,10 +60,15 @@ if [ "$1" == "-s" ]; then
         fi
 	    for perturb_intensity in 5 10 15 18; do
         	if [ $perturb_center -eq 15 ]; then
-				dir=${sim_dir}sim${i}/tropical/M$perturb_intensity
+                subdir=tropical
         	else
-				dir=${sim_dir}sim${i}/extratropical/M$perturb_intensity
+                subdir=extratropical
         	fi
+            if [ $perturb_intensity -eq 5 ]; then
+			    dir=${sim_dir}sim${i}/$subdir/M0$perturb_intensity
+            else
+			    dir=${sim_dir}sim${i}/$subdir/M$perturb_intensity
+            fi
 	        echo "Making new simulation in $dir"
 	        mkdir $dir
 	        cd $dir
