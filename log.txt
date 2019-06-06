@@ -1544,3 +1544,19 @@ sim287 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=False
 15, 4.94, 10, -5.6610707111125071
 15, 4.94, 15, -7.7573945807310816
 15, 4.94, 18, -8.9009291336860503
+sim287 | perturbation | lat0=15 | M=5  | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=10 | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=15 | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=18 | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=5  | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=10 | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=15 | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=18 | full_radiation_rh | albedo_feedback=True
+60, 9.89,  5, -2.5330296785247204
+60, 9.89, 10, -4.3296882764428268
+60, 9.89, 15, -5.7437474009932270
+60, 9.89, 18, -6.6286548240126297
+15, 4.94,  5, -6.0004673305859395
+15, 4.94, 10, -12.1896278720165228
+15, 4.94, 15, -14.1138239746200860
+15, 4.94, 18, -15.2428426341790040

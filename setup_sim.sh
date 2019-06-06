@@ -16,8 +16,8 @@ initial_condition=legendre
 low=250
 high=300
 
-# albedo_feedback=True
-albedo_feedback=False
+albedo_feedback=True
+# albedo_feedback=False
 alb_ice=0.6
 alb_water=0.2
 
@@ -31,9 +31,10 @@ fname_feedbacks=feedbacks.log
 
 if [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
-	olr_type=full_radiation
+	# olr_type=full_radiation
 	# olr_type=full_radiation_no_wv
 	# olr_type=full_radiation_no_lr
+	olr_type=full_radiation_rh
 	A=None
 	B=None
 	emissivity=None
