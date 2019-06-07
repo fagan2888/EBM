@@ -37,12 +37,6 @@ if __name__ == "__main__":
             'sensitivity_full_radiation_no_wv.dat': ['MEBM No WV Feedback', 'm', 'v'],
             'sensitivity_full_radiation_no_lr.dat': ['MEBM No LR Feedback', 'y', 's'],
             'sensitivity_full_radiation_rh.dat': ['MEBM Param. RH Feedback', 'c', '^'],
-            # 'sensitivity_full_radiation_D_cesm2.dat': ['MEBM $D$ from CESM2', 'r', 'P'],
-            # 'sensitivity_full_radiation_no_wv_no_al.dat': ['CliMT No WV/AL Feedback', 'm'],
-            # 'sensitivity_full_radiation_no_lr_no_al.dat': ['CliMT No LR/AL Feedback', 'y'],
-            # 'sensitivity_planck.dat': ['Planck Radiation ($\\epsilon=0.65$)', 'red'],
-            # 'sensitivity_linear.dat': ['Linear Radiation ($A=-572.3, B=2.92$)', 'brown'],
-            # 'sensitivity_linear1.dat': ['Linear Radiation ($A=-281.7, B=1.8$)', 'pink'],
             }
     
     # do the Clark data separately (it needs scaling)
@@ -58,6 +52,7 @@ if __name__ == "__main__":
     ax2.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (Clark et al.)', markersize=markersize)
     
     marker = 'o'
+    linestyle = '-.'
     centers, spreads, intensities, efes = get_data('sensitivity_clark.dat', 'tropics')
     ax1.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Interactive WV (Clark et al.)', markersize=markersize)
     centers, spreads, intensities, efes = get_data('sensitivity_clark.dat', 'extratropics')

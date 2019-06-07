@@ -100,12 +100,14 @@ RH_mins_R = data[:, 2]
 RH_ctrl = 1/2*(RH_mins_L[0] + RH_mins_R[0])
 m_L, b_L, r_L = linregress(efes, RH_mins_L, b=RH_ctrl)
 m_R, b_R, r_R = linregress(efes, RH_mins_R, b=RH_ctrl)
+print(m_L, m_R)
+print(r_L**2, r_R**2)
 
 xvals = np.linspace(np.min(efes)-10, np.max(efes)+10, 10)
 
-ax2.plot(efes, RH_mins_L, "bo", label="left minimum")
+ax2.plot(efes, RH_mins_L, "bo", label="SH minimum")
 ax2.plot(xvals, m_L*xvals + RH_ctrl, "b--")
-ax2.plot(efes, RH_mins_R, "ro", label="right minimum")
+ax2.plot(efes, RH_mins_R, "ro", label="NH minimum")
 ax2.plot(xvals, m_R*xvals + RH_ctrl, "r--")
 
 ax2.set_xlim([-12, 1])

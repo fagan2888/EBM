@@ -61,6 +61,10 @@ centers, spreads, intensities, efes = get_data("sensitivity_full_radiation.dat",
 ax2.plot(intensities, efes, marker="o", color="k", linestyle='', label="Constant $D$")
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D_cesm2.dat", location)
 ax2.plot(intensities, efes, marker="P", color="r", linestyle='', label="CESM $D$")
+centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D1.dat", location)
+ax2.plot(intensities, efes, marker="H", color="b", linestyle='', label="$D_1$")
+centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D2.dat", location)
+ax2.plot(intensities, efes, marker="D", color="g", linestyle='', label="$D_2$")
 
 ax2.set_xlim(0, 20)
 ax2.set_xticks([5, 10, 15, 18])
@@ -76,6 +80,10 @@ centers, spreads, intensities, efes = get_data("sensitivity_full_radiation.dat",
 ax3.plot(intensities, efes, marker="o", color="k", linestyle='', label="Constant $D$")
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D_cesm2.dat", location)
 ax3.plot(intensities, efes, marker="P", color="r", linestyle='', label="CESM $D$")
+centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D1.dat", location)
+ax3.plot(intensities, efes, marker="H", color="b", linestyle='', label="$D_1$")
+centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D2.dat", location)
+ax3.plot(intensities, efes, marker="D", color="g", linestyle='', label="$D_2$")
 
 ax3.set_xlim(0, 20)
 ax3.set_xticks([5, 10, 15, 18])
