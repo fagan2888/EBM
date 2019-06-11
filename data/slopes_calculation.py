@@ -84,6 +84,6 @@ for filename in filenames:
     m_e, b_e, r_e = linregress(intensities, efes)
     # plt.plot(intensities, efes, "ro")
     # plt.plot(xvals, xvals*m_e + b_e, "r-")
-    print("{:20s} & {:1.2f} ({:1.4f}) & {:1.2f} ({:1.4f}) \\\\".format(filenames[filename], m_t, r_e**2, m_e, r_t**2))
+    print("{:20s} & {:1.2f} ({:1.4f}) & {:1.2f} ({:1.4f}) \\\\".format(filenames[filename], m_t, r_t**2, m_e, r_e**2))
     # print(b_t, b_e)
     # plt.show()

@@ -2,6 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from matplotlib import rc
 from plot_sensitivities import get_data
 import os
@@ -26,45 +27,60 @@ sin_lats = np.linspace(-1.0, 1.0, N_pts)
 lats = np.arcsin(sin_lats)
 
 def D_f(lats):
-    Diff = 1.5 * D * np.ones(lats.shape)
-    # Diff[np.where(np.logical_or(np.rad2deg(lats) <= -30, np.rad2deg(lats) > 30))] = 0.5 * D
-    Diff[:100] = 0.5 * D
-    Diff[300:] = 0.5 * D
-    return Diff
+    D_avg = 2.54523e-4
+    lat0 = 15
+    L_trop = 2 * np.sin(np.deg2rad(lat0))
+    L_extrop = 2 * (1 - np.sin(np.deg2rad(lat0)))
+    D_trop = 4.5e-4
+    D_extrop = (2*D_avg - D_trop*L_trop)/L_extrop
+    Diff =  D_trop * np.ones(lats.shape)
+    Diff[np.where(np.logical_or(np.rad2deg(lats) <= -lat0, np.rad2deg(lats) > lat0))] = D_extrop
+    return g/ps*Re**2 * Diff
 D1 = D_f(lats)
 
 def D_f(lats):
-    Diff = 0.5 * D * np.ones(lats.shape)
-    # Diff[np.where(np.logical_or(np.rad2deg(lats) < -30, np.rad2deg(lats) > 30))] = 1.5 * D
-    Diff[:100] = 1.5 * D
-    Diff[300:] = 1.5 * D
-    return Diff
+    D_avg = 2.54523e-4
+    lat0 = 15
+    L_trop = 2 * np.sin(np.deg2rad(lat0))
+    L_extrop = 2 * (1 - np.sin(np.deg2rad(lat0)))
+    D_trop = 0.5e-4
+    D_extrop = (2*D_avg - D_trop*L_trop)/L_extrop
+    Diff =  D_trop * np.ones(lats.shape)
+    Diff[np.where(np.logical_or(np.rad2deg(lats) <= -lat0, np.rad2deg(lats) > lat0))] = D_extrop
+    return g/ps*Re**2 * Diff
 D2 = D_f(lats)
 
-f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(8, 2.47), gridspec_kw={"width_ratios": [2, 1, 1]})
+f = plt.figure(figsize=(8, 2.47))
 
-ax1.plot(sin_lats_cesm2, D_cesm2, "r", label="CESM2")
-ax1.plot(sin_lats, ps / g * D1 / Re**2, "b", label="$D_1$")
-ax1.plot(sin_lats, ps / g * D2 / Re**2, "g", label="$D_2$")
-ax1.plot([-1, 1], [2.6e-4, 2.6e-4], "k", label="Hwang & Frierson 2010")
+outer = gridspec.GridSpec(1, 2, width_ratios=[3, 0.84])
+gs1 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[0], wspace=0.4, width_ratios=[2, 1])
+gs2 = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=outer[1], wspace=0)
+
+ax1 = plt.subplot(gs1[0])
+l1, = ax1.plot(sin_lats_cesm2, D_cesm2, "r", label="CESM2")
+l2, = ax1.plot(sin_lats, ps / g * D1 / Re**2, "b", label="$D_1$")
+l3, = ax1.plot(sin_lats, ps / g * D2 / Re**2, "g--", label="$D_2$")
+l4, = ax1.plot([-1, 1], [2.6e-4, 2.6e-4], "k", label="Hwang & Frierson 2010")
 
 ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax1.set_ylim([0, 5e-4])
-ax1.legend(loc="upper left")
+# ax1.legend(loc="upper left")
 ax1.set_title("(a) Diffusivities")
 ax1.set_xlabel("Latitude")
 ax1.set_ylabel("$D$ [kg m$^{-2}$ s$^{-1}$]")
+ax1.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 
+ax2 = plt.subplot(gs1[1])
 location = "tropics"
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation.dat", location)
-ax2.plot(intensities, efes, marker="o", color="k", linestyle='', label="Constant $D$")
+l8, = ax2.plot(intensities, efes, marker="o", color="k", linestyle='', label="Constant $D$")
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D_cesm2.dat", location)
-ax2.plot(intensities, efes, marker="P", color="r", linestyle='', label="CESM $D$")
+l5, = ax2.plot(intensities, efes, marker="P", color="r", linestyle='', label="CESM $D$")
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D1.dat", location)
-ax2.plot(intensities, efes, marker="H", color="b", linestyle='', label="$D_1$")
+l6, = ax2.plot(intensities, efes, marker="H", color="b", linestyle='', label="$D_1$")
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D2.dat", location)
-ax2.plot(intensities, efes, marker="D", color="g", linestyle='', label="$D_2$")
+l7, = ax2.plot(intensities, efes, marker="D", color="g", linestyle='', label="$D_2$")
 
 ax2.set_xlim(0, 20)
 ax2.set_xticks([5, 10, 15, 18])
@@ -75,6 +91,7 @@ ax2.set_title('(b) Tropics')
 ax2.set_xlabel('M [W m$^{-2}$]')
 ax2.set_ylabel('EFE Latitude')
 
+ax3 = plt.subplot(gs2[0])
 location = "extratropics"
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation.dat", location)
 ax3.plot(intensities, efes, marker="o", color="k", linestyle='', label="Constant $D$")
@@ -92,9 +109,14 @@ ax3.set_yticks(np.arange(-16, 1, 2))
 ax3.set_yticklabels(['', '', '', '', '', '', '', '', ''])
 ax3.set_title('(c) Extratropics')
 ax3.set_xlabel('M [W m$^{-2}$]')
-ax3.legend(loc="lower left")
+# ax3.legend(loc="lower left")
+
+handles = (l1, l2, l3, l4, l5, l6, l7, l8)
+labels = ("", "", "", "", "CESM2 $D$", "$D_1$", "$D_2$", "Constant $D$")
+f.legend(handles, labels, loc="right", ncol=2, columnspacing=-1)
 
 plt.tight_layout()
+plt.subplots_adjust(right=0.8)
 
 fname = "diffusivity_sensitivities.pdf"
 plt.savefig(fname)
