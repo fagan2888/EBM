@@ -7,10 +7,10 @@ N_pts=401
 dtmax_multiple=200
 max_sim_years=10
 tol=1e-9
-diffusivity=constant
+# diffusivity=constant
 # diffusivity=cesm2
 # diffusivity=D1
-# diffusivity=D2
+diffusivity=D2
 
 initial_condition=legendre
 low=250
@@ -31,10 +31,10 @@ fname_feedbacks=feedbacks.log
 
 if [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
-	# olr_type=full_radiation
+	olr_type=full_radiation
 	# olr_type=full_radiation_no_wv
 	# olr_type=full_radiation_no_lr
-	olr_type=full_radiation_rh
+	# olr_type=full_radiation_rh
 	A=None
 	B=None
 	emissivity=None
@@ -50,8 +50,6 @@ if [ "$1" == "-s" ]; then
 	echo "Making simulations in ${sim_dir}sim$i"
 
 	# mkdir ${sim_dir}sim$i
-	mkdir ${sim_dir}sim${i}/tropical
-	mkdir ${sim_dir}sim${i}/extratropical
 
 	for perturb_center in 15 60; do
         if [ $perturb_center -eq 15 ]; then
@@ -61,14 +59,14 @@ if [ "$1" == "-s" ]; then
         fi
 	    for perturb_intensity in 5 10 15 18; do
         	if [ $perturb_center -eq 15 ]; then
-                subdir=tropical
+                subdir=T
         	else
-                subdir=extratropical
+                subdir=E
         	fi
             if [ $perturb_intensity -eq 5 ]; then
-			    dir=${sim_dir}sim${i}/$subdir/M0$perturb_intensity
+			    dir=${sim_dir}sim${i}/${subdir}0$perturb_intensity
             else
-			    dir=${sim_dir}sim${i}/$subdir/M$perturb_intensity
+			    dir=${sim_dir}sim${i}/${subdir}$perturb_intensity
             fi
 	        echo "Making new simulation in $dir"
 	        mkdir $dir
@@ -109,7 +107,7 @@ if [ "$1" == "-s" ]; then
 			# python -u simulation.py > out0 &
 	        
 	        # echo "Logging simulation."
-	        log="sim$i | $insolation_type | lat0=$perturb_center | M=$perturb_intensity | $olr_type | albedo_feedback=$albedo_feedback"
+	        log="sim$i | lat0=$perturb_center | M=$perturb_intensity | $olr_type | albedo_feedback=$albedo_feedback | $diffusivity"
 	        echo "Adding line to log.txt: $log"
 	        echo $log >> ${EBM_PATH}/log.txt 
 	        
