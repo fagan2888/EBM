@@ -47,16 +47,16 @@ if __name__ == "__main__":
     linewidth = 0.5
     marker = 'v'
     centers, spreads, intensities, efes = get_data('sensitivity_clark_no_wv.dat', 'tropics')
-    ax1.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (Clark et al.)', markersize=markersize)
+    ax1.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (C18)', markersize=markersize)
     centers, spreads, intensities, efes = get_data('sensitivity_clark_no_wv.dat', 'extratropics')
-    ax2.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (Clark et al.)', markersize=markersize)
+    ax2.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (C18)', markersize=markersize)
     
     marker = 'o'
     linestyle = '-.'
     centers, spreads, intensities, efes = get_data('sensitivity_clark.dat', 'tropics')
-    ax1.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Interactive WV (Clark et al.)', markersize=markersize)
+    ax1.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Interactive WV (C18)', markersize=markersize)
     centers, spreads, intensities, efes = get_data('sensitivity_clark.dat', 'extratropics')
-    ax2.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Interactive WV (Clark et al.)', markersize=markersize)
+    ax2.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Interactive WV (C18)', markersize=markersize)
     
     # CESM
     color = 'k'
