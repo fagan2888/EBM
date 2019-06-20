@@ -245,6 +245,8 @@ class EnergyBalanceModel():
 
             self.dS = -perturb_intensity/perturb_normalizer * np.exp(-(self.lats - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
 
+            # print(10**-15*self._integrate_lat(perturb_intensity))
+
         self.S = S_basic + self.dS
 
 
@@ -917,38 +919,22 @@ class EnergyBalanceModel():
         self.dL = self.L_f - self.L_ctrl
         
         ## dS
-        self.dtrans_dS = self._calculate_trans(self.dS, force_zero=True)
+        self.dtrans_dS = self._calculate_trans(self.dS * (1 - self.alb_ctrl), force_zero=True)
 
-        ## dS * alb
-        self.dtrans_dS_alb = -self._calculate_trans(self.dS * self.alb_ctrl, force_zero=True)
-
-        ## S * dalb
-        self.dtrans_S_dalb = -self._calculate_trans(self.S_ctrl * self.dalb, force_zero=True)
-
-        ## dS * dalb
-        self.dtrans_dS_dalb = -self._calculate_trans(self.dS * self.dalb, force_zero=True)
+        ## dalb
+        self.dtrans_dalb = self._calculate_trans((self.S_ctrl + self.dS) * self.dalb, force_zero=True)
 
         ## Total
         self.trans_total = self._calculate_trans(self.S_f*(1 - self.alb_f) - self.L_f, force_zero=True)
-        # self.trans_total = self._calculate_trans(self.S_f*(1 - self.alb_f) - self.L_f)
-        # self.trans_total_ctrl = self._calculate_trans(self.S_ctrl*(1 - self.alb_ctrl) - self.L_ctrl)
         self.dtrans_total = self.trans_total - self.trans_total_ctrl
 
-        # ## L with PL
-        # self.state["air_temperature"].values[:] = pert_state_temp
-        # self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, :]
-        # self.state["specific_humidity"].values[:] = pert_state_q
-        # tendencies, diagnostics = self.longwave_radiation(self.state)
-        # L_pl = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-        
         ## Planck
         Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
         self.state["air_temperature"].values[:] = pert_state_temp - Tgrid_diff
         self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, :]
         self.state["specific_humidity"].values[:] = pert_state_q
         tendencies, diagnostics = self.longwave_radiation(self.state)
-        self.dL_pl = -(self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
-        # self.dL_pl = -(self.L_f - np.mean(L_pl))
+        self.dL_pl = (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
         self.dtrans_pl = self._calculate_trans(self.dL_pl, force_zero=True)
         
         ## Water Vapor 
@@ -957,7 +943,7 @@ class EnergyBalanceModel():
         # self.state["specific_humidity"].values[:] = ctrl_state_q
         self.state["specific_humidity"].values[:] = pert_state_RH_dist * ctrl_state_qstar
         tendencies, diagnostics = self.longwave_radiation(self.state)
-        self.dL_wv =  -(self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
+        self.dL_wv =  (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
         self.dtrans_wv = self._calculate_trans(self.dL_wv, force_zero=True)
 
         ## Relative Humidity
@@ -965,7 +951,7 @@ class EnergyBalanceModel():
         self.state["surface_temperature"].values[:] = pert_state_temp[0, :, :]
         self.state["specific_humidity"].values[:] = ctrl_state_RH_dist * pert_state_qstar
         tendencies, diagnostics = self.longwave_radiation(self.state)
-        self.dL_rh =  -(self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
+        self.dL_rh =  (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
         self.dtrans_rh = self._calculate_trans(self.dL_rh, force_zero=True)
         
         ## Lapse Rate
@@ -974,7 +960,7 @@ class EnergyBalanceModel():
         self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, :]
         self.state["specific_humidity"].values[:] = pert_state_q
         tendencies, diagnostics = self.longwave_radiation(self.state)
-        self.dL_lr = -(self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
+        self.dL_lr = (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
         self.dtrans_lr = self._calculate_trans(self.dL_lr, force_zero=True)
 
         # self._calculate_shift()
@@ -1158,17 +1144,15 @@ class EnergyBalanceModel():
             # weird_int = self._calculate_trans(1/self._integrate_lat(1)*self._integrate_lat(self.dS*(1-self.alb_f) - self.S_ctrl*(self.alb_f - self.alb_ctrl))- (self.L_bar - self.L_bar_ctrl))
             f, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 2.47))
 
-            l1, = ax1.plot(self.sin_lats, self.dS, "c")
-            l2, = ax1.plot(self.sin_lats, -self.S_ctrl*self.dalb, "g")
-            l3, = ax1.plot(self.sin_lats, -self.dS*self.alb_ctrl, "g--")
-            l4, = ax1.plot(self.sin_lats, -self.dS*self.dalb, "g-.")
-            l5, = ax1.plot(self.sin_lats, self.dL_pl, "r")
-            l6, = ax1.plot(self.sin_lats, self.dL_wv, "m")
-            l7, = ax1.plot(self.sin_lats, self.dL_rh, "b")
-            l8, = ax1.plot(self.sin_lats, self.dL_lr, "y")
-            l9, = ax1.plot(self.sin_lats, self.dS*(1-self.alb_f) - self.S*self.dalb -self.dL, "k")
-            l10, = ax1.plot(self.sin_lats, self.dS*(1-self.alb_f) - self.S*self.dalb + self.dL_rh + self.dL_pl + self.dL_wv + self.dL_lr, "k--")
-            l11, = ax1.plot(np.sin(self.EFE), 0,  "Xr")
+            l1, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb_ctrl), "c")
+            l2, = ax1.plot(self.sin_lats, -(self.S_ctrl + self.dS)*self.dalb, "g")
+            l3, = ax1.plot(self.sin_lats, -self.dL_pl, "r")
+            l4, = ax1.plot(self.sin_lats, -self.dL_wv, "m")
+            l5, = ax1.plot(self.sin_lats, -self.dL_rh, "b")
+            l6, = ax1.plot(self.sin_lats, -self.dL_lr, "y")
+            l7, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb_ctrl) - (self.S_ctrl + self.dS)*self.dalb - self.dL, "k")
+            l8, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb_ctrl) - (self.S_ctrl + self.dS)*self.dalb - (self.dL_pl + self.dL_wv + self.dL_rh + self.dL_lr), "k--")
+            l9, = ax1.plot(np.sin(self.EFE), 0,  "Xr")
 
             ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
@@ -1177,15 +1161,13 @@ class EnergyBalanceModel():
             ax1.set_ylabel("Energy Perturbation [W m$^{-2}$]")
 
             ax2.plot(self.sin_lats, 10**-15 * self.dtrans_dS, "c")
-            ax2.plot(self.sin_lats, 10**-15 * self.dtrans_S_dalb, "g")
-            ax2.plot(self.sin_lats, 10**-15 * self.dtrans_dS_alb, "g--")
-            ax2.plot(self.sin_lats, 10**-15 * self.dtrans_dS_dalb, "g-.")
-            ax2.plot(self.sin_lats, 10**-15 * self.dtrans_pl, "r")
-            ax2.plot(self.sin_lats, 10**-15 * self.dtrans_wv, "m")
-            ax2.plot(self.sin_lats, 10**-15 * self.dtrans_rh, "b")
-            ax2.plot(self.sin_lats, 10**-15 * self.dtrans_lr, "y")
+            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_dalb, "g")
+            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_pl, "r")
+            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_wv, "m")
+            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_rh, "b")
+            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_lr, "y")
             ax2.plot(self.sin_lats, 10**-15 * self.dtrans_total, "k")
-            ax2.plot(self.sin_lats, 10**-15 * (self.dtrans_dS + self.dtrans_dS_alb + self.dtrans_S_dalb + self.dtrans_dS_dalb + self.dtrans_pl + self.dtrans_wv + self.dtrans_rh + self.dtrans_lr), "k--")
+            ax2.plot(self.sin_lats, 10**-15 * (self.dtrans_dS - self.dtrans_dalb - (self.dtrans_pl + self.dtrans_wv + self.dtrans_rh + self.dtrans_lr)), "k--")
             ax2.plot(np.sin(self.EFE), 0,  "Xr")
 
             ax2.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
@@ -1194,9 +1176,9 @@ class EnergyBalanceModel():
             ax2.set_xlabel("Latitude")
             ax2.set_ylabel("Energy Transport [PW]")
 
-            handles = (l1, l2, l3, l4, l5, l6, l7, l8, l9, l10, l11)
-            labels = ("$S'$", "$-S\\alpha'$", "$-S'\\alpha$", "$-S'\\alpha'$", "PL", "WV", "RH", "LR",  "$NEI'$", "Sum", "EFE")
-            f.legend(handles, labels, loc="upper center", ncol=6)
+            handles = (l1, l2, l3, l4, l5, l6, l7, l8, l9)
+            labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}$",  "$NEI'$", "Sum", "EFE")
+            f.legend(handles, labels, loc="upper center", ncol=5)
             
             plt.tight_layout()
             plt.subplots_adjust(top=0.70)
@@ -1213,13 +1195,13 @@ class EnergyBalanceModel():
                 dtrans_total=self.dtrans_total, 
                 dtrans_pl=self.dtrans_pl, 
                 dtrans_wv=self.dtrans_wv, 
+                dtrans_rh=self.dtrans_rh, 
                 dtrans_lr=self.dtrans_lr, 
                 dtrans_dS=self.dtrans_dS, 
-                dtrans_dS_alb=self.dtrans_dS_alb, 
-                dtrans_S_dalb=self.dtrans_S_dalb, 
-                dtrans_dS_dalb=self.dtrans_dS_dalb, 
+                dtrans_dalb=self.dtrans_dalb, 
                 dL_pl=self.dL_pl, 
                 dL_wv=self.dL_wv, 
+                dL_rh=self.dL_rh, 
                 dL_lr=self.dL_lr, 
                 dL=self.dL,
                 dS=self.dS,
