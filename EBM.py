@@ -319,15 +319,15 @@ class EnergyBalanceModel():
             else:
                 lr_feedback = True
 
-            if "no_pl" in olr_type:
-                pl_feedback = False
-            else:
-                pl_feedback = True
-
             if "_rh" in olr_type:
                 rh_feedback = True
             else:
                 rh_feedback = False
+
+            if "homog" in olr_type:
+                homog_olr = True
+            else:
+                homog_olr = False
 
             # Use CliMT radiation scheme along with MetPy"s moist adiabat calculator
             self.N_levels = 30   # vertical levels
@@ -488,18 +488,20 @@ class EnergyBalanceModel():
                     # Recalculate q
                     self.state["specific_humidity"].values[:] = self.RH_dist * self._humidsat(self.state["air_temperature"].values[:], self.state["air_pressure"].values[:] / 100)[1]
                 tendencies, diagnostics = self.longwave_radiation(self.state)
-                if pl_feedback == True:
+                if homog_olr == False:
                     return diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
                 else:
-                    return np.repeat(np.mean(diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]), self.N_pts)
+                    olr = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
+                    olr_avg = 1 / self._integrate_lat(1) * self._integrate_lat(olr)
+                    return np.repeat(olr_avg, self.N_pts)
         else:
             os.sys.exit("Invalid keyword for olr_type: {}".format(self.olr_type))
 
         # save to class
         self.L = L  
+        self.homog_olr = homog_olr
         self.lr_feedback = lr_feedback
         self.wv_feedback = wv_feedback
-        self.pl_feedback = pl_feedback
         self.rh_feedback = rh_feedback
 
 
@@ -593,7 +595,7 @@ class EnergyBalanceModel():
         if self.olr_type == "linear":
             print("\tA = {:.2f}, B = {:.2f}".format(self.A, self.B))
         elif "full_radiation" in self.olr_type:
-            print("\tPL Feedback:       {}".format(self.pl_feedback))
+            print("\tHomog OLR:         {}".format(self.homog_olr))
             print("\tLR Feedback:       {}".format(self.lr_feedback))
             print("\tWV Feedback:       {}".format(self.wv_feedback))
             print("\tRH Feedback:       {}".format(self.rh_feedback))
@@ -757,6 +759,13 @@ class EnergyBalanceModel():
                 data = "{:2d}, {:2.2f}, {:2d}, {:2.16f}".format(0, 0, 0, np.rad2deg(self.EFE))
             f.write(data + "\n")
         print("Logged '{}' in {}".format(data, fname_efe))
+
+        # Calculate lambda
+        dS_trans = self._calculate_trans(-self.dS, force_zero=True)
+        I_equator = self.N_pts//2
+        lambda_total = 10**-15 * dS_trans[I_equator] / np.rad2deg(self.EFE)
+        print("\nlambda = {:2.2f} PW / deg".format(lambda_total))
+        print("1/lambda = {:2.2f} deg / PW".format(1 / lambda_total))
 
 
     def _integrate_lat(self, f, i=-1):
@@ -1189,22 +1198,22 @@ class EnergyBalanceModel():
             plt.close()
 
             rc("font", size=7)
-            np.savez("feedback_transports_differences.npz", 
-                EFE=self.EFE, 
-                sin_lats=self.sin_lats, 
-                dtrans_total=self.dtrans_total, 
-                dtrans_pl=self.dtrans_pl, 
-                dtrans_wv=self.dtrans_wv, 
-                dtrans_rh=self.dtrans_rh, 
-                dtrans_lr=self.dtrans_lr, 
-                dtrans_dS=self.dtrans_dS, 
-                dtrans_dalb=self.dtrans_dalb, 
-                dL_pl=self.dL_pl, 
-                dL_wv=self.dL_wv, 
-                dL_rh=self.dL_rh, 
-                dL_lr=self.dL_lr, 
-                dL=self.dL,
-                dS=self.dS,
-                dalb=self.alb_f - self.alb_ctrl,
-                alb=self.alb_ctrl,
-                S=self.S)
+            # np.savez("feedback_transports_differences.npz", 
+            #     EFE=self.EFE, 
+            #     sin_lats=self.sin_lats, 
+            #     dtrans_total=self.dtrans_total, 
+            #     dtrans_pl=self.dtrans_pl, 
+            #     dtrans_wv=self.dtrans_wv, 
+            #     dtrans_rh=self.dtrans_rh, 
+            #     dtrans_lr=self.dtrans_lr, 
+            #     dtrans_dS=self.dtrans_dS, 
+            #     dtrans_dalb=self.dtrans_dalb, 
+            #     dL_pl=self.dL_pl, 
+            #     dL_wv=self.dL_wv, 
+            #     dL_rh=self.dL_rh, 
+            #     dL_lr=self.dL_lr, 
+            #     dL=self.dL,
+            #     dS=self.dS,
+            #     dalb=self.alb_f - self.alb_ctrl,
+            #     alb=self.alb_ctrl,
+            #     S=self.S)
