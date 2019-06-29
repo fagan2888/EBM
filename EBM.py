@@ -462,6 +462,18 @@ class EnergyBalanceModel():
             self.pressures = pressures
             self.pressures_flipped = pressures_flipped
 
+            if homog_olr:
+                self.ctrl_state_temp = self.ctrl_data["ctrl_state_temp"]
+                self.ctrl_state_RH_dist = self.generate_RH_dist(0)
+                self.ctrl_state_qstar = self._humidsat(self.ctrl_state_temp, self.state["air_pressure"].values[:] / 100)[1]
+                self.ctrl_state_q = self.ctrl_state_RH_dist * self.ctrl_state_qstar
+
+                self.state["air_temperature"].values[:] = self.ctrl_state_temp 
+                self.state["surface_temperature"].values[:] = self.ctrl_state_temp[0, :, :]
+                self.state["specific_humidity"].values[:] = self.ctrl_state_q
+                tendencies, diagnostics = self.longwave_radiation(self.state)
+                self.L_ctrl = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
+
             def L(T):
                 """ 
                 OLR function.
@@ -492,8 +504,9 @@ class EnergyBalanceModel():
                     return diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
                 else:
                     olr = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-                    olr_avg = 1 / self._integrate_lat(1) * self._integrate_lat(olr)
-                    return np.repeat(olr_avg, self.N_pts)
+                    dL = olr - self.L_ctrl
+                    dL_avg = 1 / self._integrate_lat(1) * self._integrate_lat(dL)
+                    return self.L_ctrl + dL_avg
         else:
             os.sys.exit("Invalid keyword for olr_type: {}".format(self.olr_type))
 
@@ -760,13 +773,6 @@ class EnergyBalanceModel():
             f.write(data + "\n")
         print("Logged '{}' in {}".format(data, fname_efe))
 
-        # Calculate lambda
-        dS_trans = self._calculate_trans(-self.dS, force_zero=True)
-        I_equator = self.N_pts//2
-        lambda_total = 10**-15 * dS_trans[I_equator] / np.rad2deg(self.EFE)
-        print("\nlambda = {:2.2f} PW / deg".format(lambda_total))
-        print("1/lambda = {:2.2f} deg / PW".format(1 / lambda_total))
-
 
     def _integrate_lat(self, f, i=-1):
         """
@@ -974,6 +980,13 @@ class EnergyBalanceModel():
 
         # self._calculate_shift()
 
+        # Calculate lambda
+        dS_trans = self._calculate_trans(-self.dS*(1 - self.alb_ctrl), force_zero=True)
+        I_equator = self.N_pts//2
+        lambda_total = 10**-15 * dS_trans[I_equator] / np.rad2deg(self.EFE)
+        print("\nlambda = {:2.2f} PW / deg".format(lambda_total))
+        print("1/lambda = {:2.2f} deg / PW".format(1 / lambda_total))
+
 
     # def predict_efe(self):
     #     dT = self.T_f - self.T_f_ctrl
@@ -1074,7 +1087,7 @@ class EnergyBalanceModel():
         print("Mean T: {:.2f} K".format(T_avg))
 
         f, ax = plt.subplots(1)
-        ax.plot(self.sin_lats, self.T_f - self.ctrl_data["ctrl_state_temp"][0, :, 0], "k", label="Mean $T_s$ = {:.2f} K".format(T_avg))
+        ax.plot(self.sin_lats, self.T_f, "k", label="Mean $T_s$ = {:.2f} K".format(T_avg))
         ax.set_title("Final Temperature Distribution")
         ax.set_xlabel("Latitude")
         ax.set_ylabel("$T_s$ [K]")

@@ -1618,3 +1618,9 @@ Attempting to take out PL from model:
 # 6-17
 ---
 sim288 contains tests with perturbation equation nabla^2 h' + lambda T' = dS' attempting to see if lambda = 0 is the same as the mean OLR model. 
+
+---
+# 6-29
+---
+Continued work on sim288, now with updated idea that removing the PL is L_ctrl + L_pert_bar. 
+Perturbation equation solution is with LAMBDA = 0 but dS must integrate to zero.
