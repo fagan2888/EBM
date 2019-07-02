@@ -27,7 +27,8 @@ sin_lats = np.linspace(-1.0, 1.0, N_pts)
 lats = np.arcsin(sin_lats)
 
 def D_f(lats):
-    D_avg = 2.54523e-4
+    # D_avg = 2.54523e-4
+    D_avg = ps / g * D / Re**2
     lat0 = 15
     L_trop = 2 * np.sin(np.deg2rad(lat0))
     L_extrop = 2 * (1 - np.sin(np.deg2rad(lat0)))
@@ -39,7 +40,8 @@ def D_f(lats):
 D1 = D_f(lats)
 
 def D_f(lats):
-    D_avg = 2.54523e-4
+    # D_avg = 2.54523e-4
+    D_avg = ps / g * D / Re**2
     lat0 = 15
     L_trop = 2 * np.sin(np.deg2rad(lat0))
     L_extrop = 2 * (1 - np.sin(np.deg2rad(lat0)))

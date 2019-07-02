@@ -81,14 +81,9 @@ class EnergyBalanceModel():
             D_f = sp.interpolate.interp1d(x, y, kind="quadratic")
             # NOTE: D_bar = 2.54523E-04
         elif diffusivity == "D1":
-            # def D_f(lats):
-            #     Diff = 1.5 * D * np.ones(lats.shape)
-            #     # Diff[np.where(np.logical_or(np.rad2deg(lats) <= -30, np.rad2deg(lats) > 30))] = 0.5 * D
-            #     Diff[:100] = 0.5 * D
-            #     Diff[300:] = 0.5 * D
-            #     return Diff
             def D_f(lats):
-                D_avg = 2.54523e-4
+                # D_avg = 2.54523e-4
+                D_avg = ps / g * D / Re**2
                 lat0 = 15
                 L_trop = 2 * np.sin(np.deg2rad(lat0))
                 L_extrop = 2 * (1 - np.sin(np.deg2rad(lat0)))
@@ -98,14 +93,9 @@ class EnergyBalanceModel():
                 Diff[np.where(np.logical_or(np.rad2deg(lats) <= -lat0, np.rad2deg(lats) > lat0))] = D_extrop
                 return g/ps*Re**2 * Diff
         elif diffusivity == "D2":
-            # def D_f(lats):
-            #     Diff = 0.5 * D * np.ones(lats.shape)
-            #     # Diff[np.where(np.logical_or(np.rad2deg(lats) < -30, np.rad2deg(lats) > 30))] = 1.5 * D
-            #     Diff[:100] = 1.5 * D
-            #     Diff[300:] = 1.5 * D
-            #     return Diff
             def D_f(lats):
-                D_avg = 2.54523e-4
+                # D_avg = 2.54523e-4
+                D_avg = ps / g * D / Re**2
                 lat0 = 15
                 L_trop = 2 * np.sin(np.deg2rad(lat0))
                 L_extrop = 2 * (1 - np.sin(np.deg2rad(lat0)))
@@ -116,19 +106,19 @@ class EnergyBalanceModel():
                 return g/ps*Re**2 * Diff
 
         self.D = D_f(self.lats)
-        # print("D_bar = {:1.5E}".format(ps/g/Re**2 * 1/self._integrate_lat(1) * self._integrate_lat(self.D)))
+        print("D_bar = {:1.5E}".format(ps/g/Re**2 * 1/self._integrate_lat(1) * self._integrate_lat(self.D)))
 
         self.sin_lats_mids = (self.sin_lats - self.dx/2)[1:]
         self.lats_mids = np.arcsin(self.sin_lats_mids)
         self.D_mids = D_f(self.lats_mids)
         
-        # # Debug: Plot D
-        # f, ax = plt.subplots(1)
-        # ax.plot(self.sin_lats, ps / g * self.D / Re**2)
-        # ax.set_ylim([0, 0.0005])
-        # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-        # plt.show()
+        # Debug: Plot D
+        f, ax = plt.subplots(1)
+        ax.plot(self.sin_lats, ps / g * self.D / Re**2)
+        ax.set_ylim([0, 0.0005])
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+        plt.show()
 
         # Calculate stable dt
         diffusivity = self.D / Re**2 * np.cos(self.lats)**2
