@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import numpy as np
+import scipy as sp
+import scipy.integrate
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import os
@@ -65,58 +67,165 @@ def get_data(filename, location):
     return centers, spreads, intensities, efes
 
 
-files = {'sensitivity_clark.dat':                  {"label" : "C18", "color" : "k", "alpha" : 0.5, "xpos" : 0, "hatch" : "\\"},
-         'sensitivity_cesm2.dat':                  {"label" : "CESM2", "color" : "k", "alpha" : 0.5, "xpos" : 1, "hatch" : ""},
-         'sensitivity_full_radiation.dat':         {"label" : "MEBM","color" : "k", "alpha" : 1.0, "xpos" : 2, "hatch" : ""},
+# filenames = ["sensitivity_clark.dat", "sensitivity_cesm2.dat", "sensitivity_full_radiation.dat", "sensitivity_full_radiation_no_wv.dat", "sensitivity_clark_no_wv.dat", "sensitivity_full_radiation_no_al.dat", "sensitivity_full_radiation_no_lr.dat", "sensitivity_full_radiation_rh.dat", "sensitivity_full_radiation_D_cesm2.dat"]
+# labels = ["C18", "CESM", "MEBM", "MEBM No WV", "C18 No WV", "MEBM No AL", "MEBM No LR", "MEBM RH", "CESM $D$"]
+# colors = ["k", "k", "k", "m", "k", "g", "y", "c", "r"]
+# alphas = [0.5, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0]
+# xvals = np.array([0, 1, 2, 4, 5, 6, 7, 9, 10])
+# hatches = ["\\", "", "","","/","","", "", ""]
 
-         'sensitivity_full_radiation_no_wv.dat':   {"label" : "MEBM No WV","color" : "m", "alpha" : 1.0, "xpos" : 4, "hatch" : ""},
-         'sensitivity_clark_no_wv.dat':            {"label" : "C18 No WV", "color" : "k", "alpha" : 0.5, "xpos" : 5, "hatch" : "/"},
-         'sensitivity_full_radiation_no_al.dat':   {"label" : "MEBM No AL","color" : "g", "alpha" : 1.0, "xpos" : 6, "hatch" : ""},
-         'sensitivity_full_radiation_no_lr.dat':   {"label" : "MEBM No LR","color" : "y", "alpha" : 1.0, "xpos" : 7, "hatch" : ""},
+# f, (ax1, ax2) = plt.subplots(2, 1, figsize=(4, 2*2.47), sharex=True)
 
-         'sensitivity_full_radiation_rh.dat':      {"label" : "MEBM RH","color" : "c", "alpha" : 1.0, "xpos" : 9, "hatch" : ""},
-         'sensitivity_full_radiation_D_cesm2.dat': {"label" : "CESM2 $D$","color" : "r", "alpha" : 1.0, "xpos" : 10, "hatch" : ""}
-         # 'sensitivity_full_radiation_D1.dat':      {"label" : "$D_1$","color" : "b", "alpha" : 1.0, "xpos" : 0, "hatch" : ""},
-         # 'sensitivity_full_radiation_D2.dat':      {"label" : "$D_2$", "color" : "g", "alpha" : 1.0, "xpos" : 0, "hatch" : ""}
-}
-labels = []
-xticks = []
-for d in files.values():
-    labels.append(d["label"])
-    xticks.append(d["xpos"] + 0.4)
+# for i, filename in enumerate(filenames):
+#     location = "tropics"
+#     centers, spreads, intensities, efes = get_data(filename, location)
+#     # m_t, b_t, r_t = linregress(-intensities, efes)
+#     m_t, b_t, r_t = linregress(-intensities, efes, b=0)
+#     ax1.bar(xvals[i], m_t, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
 
+#     location = "extratropics"
+#     centers, spreads, intensities, efes = get_data(filename, location)
+#     # m_e, b_e, r_e = linregress(-intensities, efes)
+#     m_e, b_e, r_e = linregress(-intensities, efes, b=0)
+#     ax2.bar(xvals[i], m_e, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
+#     print("{:20s} & {:1.2f} ({:1.4f}) & {:1.2f} ({:1.4f}) \\\\".format(labels[i], m_t, r_t**2, m_e, r_e**2))
+
+# ax1.set_title("(a) Tropical")
+# ax1.set_ylabel("EFE Shift [$^\\circ$] per Forcing [W m$^{-2}$]")
+# # ax1.set_ylim([0, 0.7])
+# ax1.set_ylim([0, 1.0])
+# ax1.grid(False)
+# ax2.set_title("(b) Extratropical")
+# ax2.set_ylabel("EFE Shift [$^\\circ$] per Forcing [W m$^{-2}$]")
+# ax2.set_xticks(xvals + 0.4)
+# ax2.set_xticklabels(labels, rotation=45, ha="right")
+# # ax2.set_ylim([0, 0.7])
+# ax2.set_ylim([0, 1.0])
+# ax2.grid(False)
+
+# plt.tight_layout()
+
+# fname = 'slopes.pdf'
+# plt.savefig(fname)
+# plt.show()
+# print('{} created.'.format(fname))
+# plt.close()
+
+################################################################################
+def integrate_lat(f, i=-1):
+    if isinstance(f, np.ndarray):
+        if i == -1:
+            return  2*np.pi*Re**2 * np.trapz(f, dx=dx) 
+        else:
+            return  2*np.pi*Re**2 * np.trapz(f[:i+1], dx=dx) 
+    else:
+        if i == -1:
+            return  2*np.pi*Re**2 * np.trapz(f * np.ones(N_pts), dx=dx) 
+        else:
+            return  2*np.pi*Re**2 * np.trapz(f * np.ones(N_pts)[:i+1], dx=dx) 
+
+
+def calculate_trans(f, force_zero=False):
+    if force_zero:
+        area = integrate_lat(1)
+        f_bar = 1 / area * integrate_lat(f)
+    if isinstance(f, np.ndarray):
+        trans = np.zeros(f.shape)
+    else:
+        trans = np.zeros(N_pts)
+    for i in range(N_pts):
+        if force_zero:
+            trans[i] = integrate_lat(f - f_bar, i)
+        else:
+            trans[i] = integrate_lat(f, i)
+    return trans
+
+
+def get_dS(perturb_intensity, location):
+    if location == "tropics":
+        perturb_center = 15
+        perturb_spread = 4.94
+    elif location == "extratropics":
+        perturb_center = 60
+        perturb_spread = 9.89
+    func = lambda y: 0.5 * np.exp(-(y - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2)) * np.cos(y)
+    perturb_normalizer, er = sp.integrate.quadrature(func, -np.pi/2, np.pi/2, tol=1e-16, rtol=1e-16, maxiter=1000)
+    return -perturb_intensity/perturb_normalizer * np.exp(-(np.arcsin(sin_lats) - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
+
+filenames = ["sensitivity_full_radiation_no_wv.dat", "sensitivity_full_radiation_no_al.dat", "sensitivity_full_radiation_no_lr.dat", "sensitivity_full_radiation_rh.dat", "sensitivity_full_radiation_D_cesm2.dat"]
+labels = ["WV", "AL", "LR", "RH", "CESM $D$"]
+colors = ["m", "g", "y", "c", "r"]
+alphas = [1.0, 1.0, 1.0, 1.0, 1.0]
+xvals = np.array([0, 1, 2, 3, 4])
+hatches = ["", "", "", "","",]
+
+# Get control
+control = "sensitivity_full_radiation.dat"
+location = "tropics"
+centers, spreads, intensities, control_efes_t = get_data(control, location)
+location = "extratropics"
+centers, spreads, intensities, control_efes_e = get_data(control, location)
+
+# Set up grid
+Re = 6.371e6 
+N_pts = 401
+dx = 2 / (N_pts - 1)
+sin_lats = np.linspace(-1.0, 1.0, N_pts)
+
+# Calculate forcing transports
+ctrl_data = np.load(EBM_PATH + "/data/ctrl.npz")
+alb_ctrl = ctrl_data["alb"]
+dS_eq_trans_t = np.zeros(4)
+dS_eq_trans_e = np.zeros(4)
+for i, M in enumerate(intensities):
+    dS = get_dS(M, "tropics")
+    dS_trans = calculate_trans(-dS*(1 - alb_ctrl), force_zero=True)
+    I_equator = N_pts//2
+    dS_eq_trans_t[i] = 10**-15 * dS_trans[I_equator] 
+
+    dS = get_dS(M, "extratropics")
+    dS_trans = calculate_trans(-dS*(1 - alb_ctrl), force_zero=True)
+    I_equator = N_pts//2
+    dS_eq_trans_e[i] = 10**-15 * dS_trans[I_equator] 
+
+# Plot
 f, (ax1, ax2) = plt.subplots(2, 1, figsize=(4, 2*2.47), sharex=True)
 
-for filename in files:
+for i, filename in enumerate(filenames):
     location = "tropics"
     centers, spreads, intensities, efes = get_data(filename, location)
-    # m_t, b_t, r_t = linregress(-intensities, efes)
-    m_t, b_t, r_t = linregress(-intensities, efes, b=0)
-    ax1.bar(files[filename]["xpos"], m_t, color=files[filename]["color"], alpha=files[filename]["alpha"], hatch=files[filename]["hatch"], align="edge", edgecolor="k", linewidth=0.5)
+    lambdas_t = dS_eq_trans_t / (efes - control_efes_t)
+    height = -np.mean(1 / lambdas_t)
+    if "rh" in filename:
+        height *= -1
+    ax1.bar(xvals[i], height, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
 
     location = "extratropics"
     centers, spreads, intensities, efes = get_data(filename, location)
-    # m_e, b_e, r_e = linregress(-intensities, efes)
-    m_e, b_e, r_e = linregress(-intensities, efes, b=0)
-    ax2.bar(files[filename]["xpos"], m_e, color=files[filename]["color"], alpha=files[filename]["alpha"], hatch=files[filename]["hatch"], align="edge", edgecolor="k", linewidth=0.5)
-    print("{:20s} & {:1.2f} ({:1.4f}) & {:1.2f} ({:1.4f}) \\\\".format(files[filename]["label"], m_t, r_t**2, m_e, r_e**2))
+    lambdas_e = dS_eq_trans_e / (efes - control_efes_e)
+    height = -np.mean(1 / lambdas_t)
+    if "rh" in filename:
+        height *= -1
+    ax2.bar(xvals[i], height, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
+
+ax1.plot([-10, 10], [0, 0], "k-")
+ax2.plot([-10, 10], [0, 0], "k-")
 
 ax1.set_title("(a) Tropical")
-ax1.set_ylabel("EFE Shift [$^\\circ$] per Forcing [W m$^{-2}$]")
-# ax1.set_ylim([0, 0.7])
-ax1.set_ylim([0, 1.0])
+ax1.set_ylabel("$\\lambda_i^{-1}$ [degrees PW$^{-1}$]")
+ax1.set_ylim([-3.0, 3.0])
 ax1.grid(False)
 ax2.set_title("(b) Extratropical")
-ax2.set_ylabel("EFE Shift [$^\\circ$] per Forcing [W m$^{-2}$]")
-ax2.set_xticks(xticks)
+ax2.set_ylabel("$\\lambda_i^{-1}$ [degrees PW$^{-1}$]")
+ax2.set_xticks(xvals + 0.4)
 ax2.set_xticklabels(labels, rotation=45, ha="right")
-# ax2.set_ylim([0, 0.7])
-ax2.set_ylim([0, 1.0])
+ax2.set_xlim([xvals[0], xvals[-1]+0.8])
+ax2.set_ylim([-3.0, 3.0])
 ax2.grid(False)
 
 plt.tight_layout()
 
-fname = 'slopes.pdf'
+fname = 'feedback_parameters.pdf'
 plt.savefig(fname)
 plt.show()
 print('{} created.'.format(fname))
