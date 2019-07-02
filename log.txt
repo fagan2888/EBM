@@ -1624,3 +1624,41 @@ sim288 contains tests with perturbation equation nabla^2 h' + lambda T' = dS' at
 ---
 Continued work on sim288, now with updated idea that removing the PL is L_ctrl + L_pert_bar. 
 Perturbation equation solution is with LAMBDA = 0 but dS must integrate to zero.
+
+---
+# 6-29
+---
+Redo D1, D2 to have Hwang & Frierson mean.
+sim287 | lat0=15 | M=5  | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=15 | M=10 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=15 | M=15 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=15 | M=18 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=5  | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=10 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=15 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=18 | full_radiation | albedo_feedback=True | D1
+60, 9.89,  5, -1.3575599417935205
+60, 9.89, 10, -2.3343062425022656
+60, 9.89, 18, -3.7211015471281006
+15, 4.94,  5, -4.0552498484630748
+15, 4.94, 10, -7.1039489207142710
+15, 4.94, 15, -9.7032906921535425
+15, 4.94, 18, -11.0904659994273533
+
+sim287 | lat0=15 | M=5  | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=15 | M=10 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=15 | M=15 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=15 | M=18 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=5  | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=10 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=15 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=18 | full_radiation | albedo_feedback=True | D2
+60, 9.89,  5, -0.6308037926043256
+60, 9.89, 10, -1.1670790398863440
+60, 9.89, 15, -1.5298175752061440
+60, 9.89, 18, -1.7958540898534479
+15, 4.94,  5, -1.7274043211229262
+15, 4.94, 10, -3.1339225983835983
+15, 4.94, 15, -4.3528161354605963
+15, 4.94, 18, -7.4197965065300027
+
