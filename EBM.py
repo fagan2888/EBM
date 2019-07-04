@@ -141,7 +141,6 @@ class EnergyBalanceModel():
 
         # Boolean options
         self.plot_transports = False
-        self.plot_efe = False
 
         # Control data
         self.ctrl_data = np.load(EBM_PATH + "/data/ctrl.npz")
@@ -706,14 +705,14 @@ class EnergyBalanceModel():
 
         OUTPUTS
         """
-        np.savez("simulation_data.npz", T=self.T_array, L=self.L_array, alb=self.alb_array, sin_lats=self.sin_lats)
+        trans_total = self._calculate_trans(self.S_f * (1 - self.alb_f) - self.L(self.T_f), force_zero=True)
+        np.savez("simulation_data.npz", T=self.T_array, L=self.L_array, alb=self.alb_array, sin_lats=self.sin_lats, trans_total=trans_total)
         # Save control simulations
         if control:
-            trans_total = self._calculate_trans(self.S * (1 - self.alb) - self.L(self.T), force_zero=True)
-            L_bar = 1/self._integrate_lat(1) * self._integrate_lat(self.L(self.T))
+            L_bar = 1/self._integrate_lat(1) * self._integrate_lat(self.L(self.T_f))
             ctrl_state_temp = self.state["air_temperature"].values[:]
             fname = "ctrl.npz"
-            np.savez(fname, S=self.S, L_bar=L_bar, trans_total=trans_total, ctrl_state_temp=ctrl_state_temp, alb=self.alb)
+            np.savez(fname, S=self.S_f, L_bar=L_bar, trans_total=trans_total, ctrl_state_temp=ctrl_state_temp, alb=self.alb)
             print("{} created".format(fname))
 
 
@@ -750,8 +749,6 @@ class EnergyBalanceModel():
 
         OUTPUTS
         """
-        self.plot_efe = True
-
         print("Calculating EFE...")
         self._calculate_efe()
 
@@ -1068,17 +1065,15 @@ class EnergyBalanceModel():
 
         OUTPUTS
         """
-        plotting_ratio = 1.61803398875
-
-        ### FINAL TEMP DIST
-        print("\nPlotting Final T Dist")
+        ### TEMP 
+        print("\nPlotting T")
         
         T_avg = np.mean(self.T_f)
         print("Mean T: {:.2f} K".format(T_avg))
 
         f, ax = plt.subplots(1)
         ax.plot(self.sin_lats, self.T_f, "k", label="Mean $T_s$ = {:.2f} K".format(T_avg))
-        ax.set_title("Final Temperature Distribution")
+        ax.set_title("Final Temperature")
         ax.set_xlabel("Latitude")
         ax.set_ylabel("$T_s$ [K]")
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
@@ -1087,39 +1082,81 @@ class EnergyBalanceModel():
         
         plt.tight_layout()
         
-        fname = "final_temp.png"
+        fname = "temp.png"
         plt.savefig(fname)
         print("{} created.".format(fname))
         plt.close()
         
+        ### dTEMP 
+        print("\nPlotting dT")
         
-        if self.plot_efe:
-            ### FIND EFE
-            print("\nPlotting EFE")
-            
-            self._calculate_efe()
-            print("EFE = {:.5f}".format(np.rad2deg(self.EFE)))
-            
-            f, ax = plt.subplots(1)
-            ax.plot(self.sin_lats, self.E_f / 1000, "c")
-            ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(self.E_f)/1000], "r", label="EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)))
-            ax.set_title("Final Energy Distribution")
-            ax.set_xlabel("Latitude")
-            ax.set_ylabel("MSE [kJ / kg]")
-            ax.set_ylim([np.min(self.E_f)/1000 - 1, np.max(self.E_f)/1000 + 1])
-            ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-            ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-            ax.legend(loc="upper right")
-            
-            plt.tight_layout()
-            
-            fname = "efe.png"
-            plt.savefig(fname)
-            print("{} created.".format(fname))
-            plt.close()
+        T_ctrl = self.ctrl_data["ctrl_state_temp"][0, :, 0]
+
+        f, ax = plt.subplots(1)
+        ax.plot(self.sin_lats, self.T_f - T_ctrl, "k")
+        ax.set_title("Final Temperature Anomaly")
+        ax.set_xlabel("Latitude")
+        ax.set_ylabel("$T_s$ [K]")
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
         
-        ### RADIATION DISTS
-        print("\nPlotting Radiation Dists")
+        plt.tight_layout()
+        
+        fname = "dtemp.png"
+        plt.savefig(fname)
+        print("{} created.".format(fname))
+        plt.close()
+
+        ### MSE
+        print("\nPlotting MSE")
+        
+        self._calculate_efe()
+        print("EFE = {:.5f}".format(np.rad2deg(self.EFE)))
+        
+        f, ax = plt.subplots(1)
+        ax.plot(self.sin_lats, self.E_f / 1000, "c")
+        ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(self.E_f)/1000], "r", label="EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)))
+        ax.set_title("Final Energy")
+        ax.set_xlabel("Latitude")
+        ax.set_ylabel("MSE [kJ kg$^{-1}$]")
+        ax.set_ylim([np.min(self.E_f)/1000 - 1, np.max(self.E_f)/1000 + 1])
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+        ax.legend(loc="upper right")
+        
+        plt.tight_layout()
+        
+        fname = "mse.png"
+        plt.savefig(fname)
+        print("{} created.".format(fname))
+        plt.close()
+        
+        ### dMSE
+        print("\nPlotting dMSE")
+        
+        E_ctrl = self.E_dataset[np.searchsorted(self.T_dataset, T_ctrl)]
+        dE = (self.E_f - E_ctrl) / 1000
+
+        f, ax = plt.subplots(1)
+        ax.plot(self.sin_lats, dE, "c")
+        ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [np.min(dE) - 100, np.max(dE) + 100], "r", label="EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)))
+        ax.set_title("Final Energy Anomaly")
+        ax.set_xlabel("Latitude")
+        ax.set_ylabel("MSE [kJ kg$^{-1}$]")
+        ax.set_ylim([np.min(dE) - 1, np.max(dE) + 1])
+        ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+        ax.legend(loc="upper right")
+        
+        plt.tight_layout()
+        
+        fname = "dmse.png"
+        plt.savefig(fname)
+        print("{} created.".format(fname))
+        plt.close()
+
+        ### RADIATION
+        print("\nPlotting Radiation")
 
         S_i = self.S * (1 - self.init_alb)
         L_i = self.L(self.init_temp)
@@ -1137,9 +1174,9 @@ class EnergyBalanceModel():
         ax.set_ylim([-200, 400])
         ax.set_yticks(np.arange(-200, 401, 50))
         ax.legend(loc="upper left")
-        ax.set_title("Radiation Distributions")
+        ax.set_title("Radiation")
         ax.set_xlabel("Latitude")
-        ax.set_ylabel("Energy Flux [W/m$^2]$")
+        ax.set_ylabel("Energy Flux [W m$^{-2}]$")
         
         plt.tight_layout()
         
@@ -1153,7 +1190,6 @@ class EnergyBalanceModel():
             print("\nPlotting Differences and Transports")
             rc("font", size=9)
 
-            # weird_int = self._calculate_trans(1/self._integrate_lat(1)*self._integrate_lat(self.dS*(1-self.alb_f) - self.S_ctrl*(self.alb_f - self.alb_ctrl))- (self.L_bar - self.L_bar_ctrl))
             f, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 2.47))
 
             l1, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb_ctrl), "c")
