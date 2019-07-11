@@ -14,6 +14,7 @@ import numpy as np
 import scipy as sp
 import scipy.integrate, scipy.sparse, scipy.optimize, scipy.interpolate
 import climt
+import sympl
 from time import clock
 import matplotlib.pyplot as plt
 from matplotlib import rc
@@ -135,7 +136,7 @@ class EnergyBalanceModel():
         self.tol = tol
 
         # Datasets for numpy search sorted
-        self.T_dataset = np.arange(100, 400, 1e-3)
+        self.T_dataset = np.arange(33, 350, 1e-3)
         self.q_dataset = self._humidsat(self.T_dataset, ps/100)[1]
         self.E_dataset = cp*self.T_dataset + RH*self.q_dataset*Lv
 
@@ -354,19 +355,16 @@ class EnergyBalanceModel():
                 centerR = np.where(np.logical_and(self.sin_lats > np.sin(lat_center), self.sin_lats < np.sin(lat_center) + width_center/2))[0]
                 right = np.where(self.sin_lats >= 1 - width_right)[0]
 
+                spread_left = 1/4*width_left
                 spread_centerL = 1/8*width_center
                 spread_centerR = 1/8*width_center
-                spread_left = 1/4*width_left
                 spread_right = 1/4*width_right
 
                 ## RH Feedback:
                 RH_min_ctrl = 0.145
-                # RH_min_ctrl = 0.14
                 if rh_feedback:
                     slope_L = -0.0203954292274862
                     slope_R = 0.013515143699796586
-                    # slope_L = -0.0186219739292365
-                    # slope_R = 0.0111731843575419
                 else:
                     slope_L = 0
                     slope_R = 0
@@ -377,9 +375,10 @@ class EnergyBalanceModel():
                 RH_L_min = RH_min_ctrl + slope_L*np.rad2deg(lat_center)
                 RH_R_min = np.max([RH_min_ctrl + slope_R*np.rad2deg(lat_center), 0])
 
-                RH_dist[midlevels, left[0]:left[-1]+1, 0] = np.repeat( 
-                    RH_L_min + (RH_L_max - RH_L_min) * gaussian(-1, spread_left, self.sin_lats[left]), 
-                    len(midlevels)).reshape( (len(left), len(midlevels)) ).T
+                if width_left > 0:
+                    RH_dist[midlevels, left[0]:left[-1]+1, 0] = np.repeat( 
+                        RH_L_min + (RH_L_max - RH_L_min) * gaussian(-1, spread_left, self.sin_lats[left]), 
+                        len(midlevels)).reshape( (len(left), len(midlevels)) ).T
                 RH_dist[midlevels, centerL[0]:centerL[-1]+1, 0] = np.repeat( 
                     RH_L_min + (RH_C_max - RH_L_min) * gaussian(np.sin(lat_center), spread_centerL, self.sin_lats[centerL]), 
                     len(midlevels)).reshape( (len(centerL), len(midlevels)) ).T
@@ -634,17 +633,17 @@ class EnergyBalanceModel():
                 else:
                     print("frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}; |dT/dt| = {:.2E}".format(frame, np.rad2deg(self.EFE), T_avg, error))
 
-                # # Debug: Plot RH dist
-                # f, ax = plt.subplots(1, figsize=(10,6))
-                # levels = np.arange(0, 1.05, 0.05)
-                # cf = ax.contourf(self.sin_lats, self.pressures/100, self.RH_dist[:, :, 0], cmap="BrBG", levels=levels)
-                # cb = plt.colorbar(cf, ax=ax, pad=0.1, fraction=0.2)
-                # cb.set_ticks(np.arange(0, 1.05, 0.1))
-                # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-                # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-                # ax.set_yticks(np.arange(0,1001,100))
-                # plt.gca().invert_yaxis()
-                # plt.show()
+                # Debug: Plot RH dist
+                f, ax = plt.subplots(1)
+                levels = np.arange(0, 1.05, 0.05)
+                cf = ax.contourf(self.sin_lats, self.pressures/100, self.RH_dist[:, :, 0], cmap="BrBG", levels=levels)
+                cb = plt.colorbar(cf, ax=ax, pad=0.1, fraction=0.2)
+                cb.set_ticks(np.arange(0, 1.05, 0.1))
+                ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+                ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+                ax.set_yticks(np.arange(0,1001,100))
+                plt.gca().invert_yaxis()
+                plt.show()
 
                 # # Debug: Plot RH 
                 # f, ax = plt.subplots(1, figsize=(16,8))

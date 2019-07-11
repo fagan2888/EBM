@@ -1663,3 +1663,29 @@ sim287 | lat0=60 | M=18 | full_radiation | albedo_feedback=True | D2
 15, 4.94, 15, -4.3528161354605963
 15, 4.94, 18, -7.4197965065300027
 
+
+---
+# 7-5
+---
+sim289 contains a re-check of shortwave WV feedback to ensure that it is negligible. 
+
+---
+# 7-9
+---
+Testing no PL
+sim287 | lat0=15 | M=5  | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=15 | M=10 | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=15 | M=15 | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=15 | M=18 | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=60 | M=5  | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=60 | M=10 | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=60 | M=15 | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=60 | M=18 | full_radiation_homog | albedo_feedback=False | constant
+60, 9.89,  5, -2.8101063510500413
+60, 9.89, 10, -5.8655332448744781
+60, 9.89, 15, -9.3103510367195010
+60, 9.89, 18, -11.4107630287235295
+15, 4.94,  5, -3.4772211393010832
+15, 4.94, 10, -7.4122140010035409
+15, 4.94, 15, -11.7146842102960633
+15, 4.94, 18, -14.1844176717412473
