@@ -177,9 +177,19 @@ def get_bar_height(filename, location, control_efes=None):
     return height
 
 # Set up arrays
-filenames = ["sensitivity_clark.dat", "sensitivity_clark_no_wv.dat", "sensitivity_cesm2.dat", "sensitivity_full_radiation.dat", "sensitivity_full_radiation_no_wv.dat", "sensitivity_full_radiation_no_al.dat", "sensitivity_full_radiation_homog.dat", "sensitivity_full_radiation_no_lr.dat", "sensitivity_full_radiation_rh.dat"]
-controls = [0, 0, 2, 3, 3, 3, 3, 3, 3]
-labels = ["C18 Total", "C18 WV", "CESM2 Total", "MEBM Total", "MEBM WV", "MEBM AL", "MEBM AL + PL", "MEBM LR", "MEBM RH"]
+filenames = ["sensitivity_clark.dat", 
+            "sensitivity_clark_no_wv.dat", 
+            "sensitivity_cesm2.dat", 
+            "sensitivity_full_radiation.dat", 
+            "sensitivity_full_radiation_no_wv.dat", 
+            "sensitivity_full_radiation_no_al.dat", 
+            "sensitivity_full_radiation_no_al_no_wv_no_lr.dat", 
+            # "sensitivity_full_radiation_homog.dat", 
+            # "sensitivity_full_radiation_homog_no_al.dat", 
+            "sensitivity_full_radiation_no_lr.dat", 
+            "sensitivity_full_radiation_rh.dat"]
+controls = [0, 0, 2, 3, 3, 3, 6, 3, 3]
+labels = ["C18 Total", "C18 WV", "CESM2 Total", "MEBM Total", "MEBM WV", "MEBM AL", "MEBM PL", "MEBM LR", "MEBM RH"]
 colors = ["k", "m", "k", "k", "m", "g", "r", "y", "c"]
 alphas = [0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 xvals = np.array([0, 1, 3, 5, 6, 7, 8, 9, 10])
@@ -228,14 +238,14 @@ ax2.plot([-100, 100], [0, 0], "k-", lw=0.5)
 
 ax1.set_title("(a) Tropical")
 ax1.set_ylabel("Feedback Parameter, $\lambda_i$ (PW degrees$^{-1}$)")
-ax1.set_ylim([-1.0, 2.0])
+ax1.set_ylim([-2.5, 2.0])
 ax1.grid(False)
 ax2.set_title("(b) Extratropical")
 ax2.set_ylabel("Feedback Parameter, $\lambda_i$ (PW degrees$^{-1}$)")
 ax2.set_xticks(xvals + 0.4)
 ax2.set_xticklabels(labels, rotation=45, ha="right")
 ax2.set_xlim([xvals[0]-0.4, xvals[-1]+1.2])
-ax2.set_ylim([-1.0, 2.0])
+ax2.set_ylim([-2.5, 2.0])
 ax2.grid(False)
 
 plt.tight_layout()

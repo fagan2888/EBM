@@ -1,7 +1,7 @@
 #!/bin/bash
 
-sim_dir=~/my-scratch/EBM_sims/
-# sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
+# sim_dir=~/my-scratch/EBM_sims/
+sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 
 N_pts=401
 dtmax_multiple=200
@@ -16,8 +16,8 @@ initial_condition=legendre
 low=250
 high=300
 
-albedo_feedback=True
-# albedo_feedback=False
+# albedo_feedback=True
+albedo_feedback=False
 alb_ice=0.6
 alb_water=0.2
 
@@ -35,7 +35,8 @@ if [ "$1" == "-s" ]; then
 	# olr_type=full_radiation_no_wv
 	# olr_type=full_radiation_no_lr
 	# olr_type=full_radiation_rh
-	olr_type=full_radiation_homog
+	# olr_type=full_radiation_homog
+	olr_type=full_radiation_no_wv_no_lr
 	A=None
 	B=None
 	emissivity=None
@@ -104,8 +105,8 @@ if [ "$1" == "-s" ]; then
 	        cp -p ${EBM_PATH}/EBM.py .
 	        
 	        # echo "Running job."
-	        sbatch run_EBM.job
-			# nohup python -u simulation.py > out0 &
+	        # sbatch run_EBM.job
+			nohup python -u simulation.py > out0 &
 	        
 	        # echo "Logging simulation."
 	        log="sim$i | lat0=$perturb_center | M=$perturb_intensity | $olr_type | albedo_feedback=$albedo_feedback | $diffusivity"
