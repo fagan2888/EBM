@@ -1689,3 +1689,25 @@ sim287 | lat0=60 | M=18 | full_radiation_homog | albedo_feedback=False | constan
 15, 4.94, 10, -7.4122140010035409
 15, 4.94, 15, -11.7146842102960633
 15, 4.94, 18, -14.1844176717412473
+
+---
+# 7-11
+---
+Testing no PL but with AL
+sim287 | lat0=15 | M=5  | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=15 | M=10 | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=15 | M=15 | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=15 | M=18 | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=60 | M=5  | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=60 | M=10 | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=60 | M=15 | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=60 | M=18 | full_radiation_homog | albedo_feedback=True | constant
+60, 9.89,  5, -55.8217922087725213
+60, 9.89, 10, -58.3454325662901283
+60, 9.89, 15, -60.4383590688964816
+60, 9.89, 18, -61.5287842868998780
+15, 4.94,  5, -57.2440148894001766
+15, 4.94, 10, -60.3561883043982164
+15, 4.94, 15, -62.7105099548356790
+15, 4.94, 18, -64.1089872113456067
+

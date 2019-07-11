@@ -633,17 +633,17 @@ class EnergyBalanceModel():
                 else:
                     print("frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}; |dT/dt| = {:.2E}".format(frame, np.rad2deg(self.EFE), T_avg, error))
 
-                # Debug: Plot RH dist
-                f, ax = plt.subplots(1)
-                levels = np.arange(0, 1.05, 0.05)
-                cf = ax.contourf(self.sin_lats, self.pressures/100, self.RH_dist[:, :, 0], cmap="BrBG", levels=levels)
-                cb = plt.colorbar(cf, ax=ax, pad=0.1, fraction=0.2)
-                cb.set_ticks(np.arange(0, 1.05, 0.1))
-                ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-                ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-                ax.set_yticks(np.arange(0,1001,100))
-                plt.gca().invert_yaxis()
-                plt.show()
+                # # Debug: Plot RH dist
+                # f, ax = plt.subplots(1)
+                # levels = np.arange(0, 1.05, 0.05)
+                # cf = ax.contourf(self.sin_lats, self.pressures/100, self.RH_dist[:, :, 0], cmap="BrBG", levels=levels)
+                # cb = plt.colorbar(cf, ax=ax, pad=0.1, fraction=0.2)
+                # cb.set_ticks(np.arange(0, 1.05, 0.1))
+                # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
+                # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+                # ax.set_yticks(np.arange(0,1001,100))
+                # plt.gca().invert_yaxis()
+                # plt.show()
 
                 # # Debug: Plot RH 
                 # f, ax = plt.subplots(1, figsize=(16,8))
