@@ -55,5 +55,6 @@ figure.subplot.top:    0.9
 
 
 savefig.format:      pdf
+savefig.dpi: 		 500
 # savefig.transparent: True
 savefig.transparent:   False

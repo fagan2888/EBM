@@ -81,7 +81,7 @@ if __name__ == "__main__":
     centers, spreads, intensities, efes = get_data("sensitivity_cesm2.dat", "extratropics")
     ax2.plot(intensities, efes, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
     
-    ax1.set_xlim(3, 20)
+    ax1.set_xlim(0, 20)
     ax1.set_xticks([5, 10, 15, 18])
     ax1.set_ylim(-16, 0)
     ax1.set_yticks(np.arange(-16, 1, 2))
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     ax1.set_xlabel('Forcing Strength, $M$ (W m$^{-2}$)')
     ax1.set_ylabel('EFE Latitude')
     
-    ax2.set_xlim(3, 20)
+    ax2.set_xlim(0, 20)
     ax2.set_xticks([5, 10, 15, 18])
     ax2.set_ylim(-16, 0)
     ax2.legend(loc='lower left')
