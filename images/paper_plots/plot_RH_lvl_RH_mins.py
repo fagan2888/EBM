@@ -8,8 +8,6 @@ import os
 EBM_PATH = os.environ["EBM_PATH"]
 plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 
-rc("font", size=8)
-
 def linregress(x, y, b=None):
     """
     Compute line of best fit using Normal equations.
@@ -50,7 +48,7 @@ def linregress(x, y, b=None):
 
     return m, b, r
 
-f, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 2.47))
+f, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.057, 7.057/1.62/2))
 
 p0 = 600
 for M in [0, 18]:
@@ -64,7 +62,7 @@ for M in [0, 18]:
     Ip0 = np.argmin(np.abs(pressures - p0))
     
     if M != 0:
-        ax1.plot(sin_lats, RH[Ip0, :], "m-", label="CESM2 M={} tropical".format(M))
+        ax1.plot(sin_lats, RH[Ip0, :], "m-", label="CESM2 $M={}$ tropical".format(M))
     else:
         ax1.plot(sin_lats, RH[Ip0, :], "k-", label="CESM2 Control")
 
@@ -78,17 +76,17 @@ for M in [0, 18]:
     Ip0 = np.argmin(np.abs(pressures - p0))
     
     if M != 0:
-        ax1.plot(sin_lats, RH[Ip0, :], "m--", label="MEBM M={} tropical".format(M))
+        ax1.plot(sin_lats, RH[Ip0, :], "m--", label="MEBM $M={}$ tropical".format(M))
     else:
         ax1.plot(sin_lats, RH[Ip0, :], "k--", label="MEBM Control")
 
 ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax1.set_ylim([0, 1])
-ax1.legend(loc="upper right")
-ax1.set_title("(a) RH at {:3d} hPa".format(p0))
+ax1.legend(loc="upper center", ncol=2)
+ax1.annotate("(a)", (0.02, 1.025), xycoords="axes fraction") 
 ax1.set_xlabel("Latitude")
-ax1.set_ylabel("RH")
+ax1.set_ylabel("Relative Humidity at {:3d} hPa".format(p0))
 
 
 data = np.loadtxt("data_RHasym.dat")
@@ -114,15 +112,14 @@ ax2.set_xlim([-12, 1])
 ax2.set_xticks(np.arange(-12, 1, 2))
 ax2.set_xticklabels(["12°S", "10°S", "8°S", "6°S", "4°S", "2°S", "EQ"])
 ax2.set_ylim([0, 0.4])
-ax2.set_title("(b) RH Mininima at 600 hPa")
+ax2.annotate("(b)", (0.02, 1.025), xycoords="axes fraction") 
 ax2.set_xlabel("EFE Latitude")
-ax2.set_ylabel("RH")
+ax2.set_ylabel("Relative Humidity Min at {:3d} hPa".format(p0))
 ax2.legend()
 
 plt.tight_layout()
 
 fname = "RH_{:3d}_RH_mins.pdf".format(p0)
 plt.savefig(fname)
-plt.show()
 
 print("{} saved.".format(fname))

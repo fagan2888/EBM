@@ -7,13 +7,12 @@ import os
 
 EBM_PATH = os.environ["EBM_PATH"]
 plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
-rc("font", size=10)
 
 def plot_diffs(ax):
     l1, = ax.plot(sin_lats, dS*(1 - alb), "c")
     l2, = ax.plot(sin_lats, -(S + dS)*dalb, "g")
-    skip = 10
-    ax.plot(sin_lats[::skip], (-(S + dS)*dalb)[::skip], "go", ms=3)
+    # skip = 10
+    # ax.plot(sin_lats[::skip], (-(S + dS)*dalb)[::skip], "go", ms=3)
     l3, = ax.plot(sin_lats, -dL_pl, "r")
     l4, = ax.plot(sin_lats, -dL_wv, "m")
     l5, = ax.plot(sin_lats, -dL_rh, "b")
@@ -27,7 +26,7 @@ def plot_diffs(ax):
     ax.set_yticks(np.arange(-150, 101, 50))
     ax.set_ylim([-120, 90])
     ax.set_xlabel("Latitude")
-    ax.set_ylabel("Energy Perturbation [W m$^{-2}$]")
+    ax.set_ylabel("Energy Perturbation (W m$^{-2}$)")
 
     return (l1, l2, l3, l4, l5, l6, l7, l8, l9)
 
@@ -46,9 +45,9 @@ def plot_transports(ax):
     ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
     ax.set_ylim([-5, 4])
     ax.set_xlabel("Latitude")
-    ax.set_ylabel("Energy Transport [PW]")
+    ax.set_ylabel("Energy Transport (PW)")
 
-f, axes = plt.subplots(2, 2, figsize=(8, 2*2.47))
+f, axes = plt.subplots(2, 2, figsize=(7.057, 7.057/1.62))
 
 data = np.load("feedback_transports_differences_T15.npz")
 EFE = data["EFE"] 
@@ -72,11 +71,13 @@ S = data["S"]
 
 ax = axes[0, 0]
 (l1, l2, l3, l4, l5, l6, l7, l8, l9) = plot_diffs(ax)
-ax.set_title("(a) Tropical Differences")
+# ax.set_title("(a) Tropical Differences")
+ax.annotate("(a)", (0.01, 0.92), xycoords="axes fraction")
 
 ax = axes[0, 1]
 plot_transports(ax)
-ax.set_title("(b) Tropical Transports")
+# ax.set_title("(b) Tropical Transports")
+ax.annotate("(b)", (0.01, 0.92), xycoords="axes fraction")
 
 ################################################################################
 
@@ -103,18 +104,20 @@ S = data["S"]
 ax = axes[1, 0]
 (l1, l2, l3, l4, l5, l6, l7, l8, l9) = plot_diffs(ax)
 
-ax.set_title("(c) Extratropical Differences")
+# ax.set_title("(c) Extratropical Differences")
+ax.annotate("(c)", (0.01, 0.92), xycoords="axes fraction")
 
 ax = axes[1, 1]
 plot_transports(ax)
-ax.set_title("(d) Extratropical Transports")
+# ax.set_title("(d) Extratropical Transports")
+ax.annotate("(d)", (0.01, 0.92), xycoords="axes fraction")
 
 handles = (l1, l2, l3, l4, l5, l6, l7, l8, l9)
 labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}$",  "$NEI'$", "Sum", "EFE")
-f.legend(handles, labels, loc="upper center", ncol=5)
+f.legend(handles, labels, loc="upper center", ncol=9)
 
 plt.tight_layout()
-plt.subplots_adjust(top=0.80)
+plt.subplots_adjust(top=0.92)
 
 fname = "differences_transports.pdf"
 plt.savefig(fname)

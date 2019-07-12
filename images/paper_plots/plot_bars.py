@@ -9,7 +9,6 @@ import os
 
 EBM_PATH = os.environ["EBM_PATH"]
 plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
-rc("font", size=8)
 rc("axes", xmargin=0.01)
 
 def linregress(x, y, b=None):
@@ -66,52 +65,6 @@ def get_data(filename, location):
     efes = data_array[:, 3]
     return centers, spreads, intensities, efes
 
-
-# filenames = ["sensitivity_clark.dat", "sensitivity_cesm2.dat", "sensitivity_full_radiation.dat", "sensitivity_full_radiation_no_wv.dat", "sensitivity_clark_no_wv.dat", "sensitivity_full_radiation_no_al.dat", "sensitivity_full_radiation_no_lr.dat", "sensitivity_full_radiation_rh.dat", "sensitivity_full_radiation_D_cesm2.dat"]
-# labels = ["C18", "CESM", "MEBM", "MEBM No WV", "C18 No WV", "MEBM No AL", "MEBM No LR", "MEBM RH", "CESM $D$"]
-# colors = ["k", "k", "k", "m", "k", "g", "y", "c", "r"]
-# alphas = [0.5, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0]
-# xvals = np.array([0, 1, 2, 4, 5, 6, 7, 9, 10])
-# hatches = ["\\", "", "","","/","","", "", ""]
-
-# f, (ax1, ax2) = plt.subplots(2, 1, figsize=(4, 2*2.47), sharex=True)
-
-# for i, filename in enumerate(filenames):
-#     location = "tropics"
-#     centers, spreads, intensities, efes = get_data(filename, location)
-#     # m_t, b_t, r_t = linregress(-intensities, efes)
-#     m_t, b_t, r_t = linregress(-intensities, efes, b=0)
-#     ax1.bar(xvals[i], m_t, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
-
-#     location = "extratropics"
-#     centers, spreads, intensities, efes = get_data(filename, location)
-#     # m_e, b_e, r_e = linregress(-intensities, efes)
-#     m_e, b_e, r_e = linregress(-intensities, efes, b=0)
-#     ax2.bar(xvals[i], m_e, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
-#     print("{:20s} & {:1.2f} ({:1.4f}) & {:1.2f} ({:1.4f}) \\\\".format(labels[i], m_t, r_t**2, m_e, r_e**2))
-
-# ax1.set_title("(a) Tropical")
-# ax1.set_ylabel("EFE Shift [$^\\circ$] per Forcing [W m$^{-2}$]")
-# # ax1.set_ylim([0, 0.7])
-# ax1.set_ylim([0, 1.0])
-# ax1.grid(False)
-# ax2.set_title("(b) Extratropical")
-# ax2.set_ylabel("EFE Shift [$^\\circ$] per Forcing [W m$^{-2}$]")
-# ax2.set_xticks(xvals + 0.4)
-# ax2.set_xticklabels(labels, rotation=45, ha="right")
-# # ax2.set_ylim([0, 0.7])
-# ax2.set_ylim([0, 1.0])
-# ax2.grid(False)
-
-# plt.tight_layout()
-
-# fname = 'slopes.pdf'
-# plt.savefig(fname)
-# plt.show()
-# print('{} created.'.format(fname))
-# plt.close()
-
-################################################################################
 def integrate_lat(f, i=-1):
     if isinstance(f, np.ndarray):
         if i == -1:
@@ -157,13 +110,17 @@ def get_bar_height(filename, location, control_efes=None):
     centers, spreads, intensities, efes = get_data(filename, location)
     if location == "tropics":
         m, b, r = linregress(efes, dS_eq_trans_t, b=0)
+        # m = dS_eq_trans_t[0] / efes[0]
         if isinstance(control_efes, np.ndarray):
             m_ctrl, b_ctrl, r_ctrl = linregress(control_efes, dS_eq_trans_t, b=0)
+            # m_ctrl = dS_eq_trans_t[0] / control_efes[0]
             # print(r_ctrl**2)
     elif location == "extratropics":
         m, b, r = linregress(efes, dS_eq_trans_e, b=0)
+        # m = dS_eq_trans_e[0] / efes[0]
         if isinstance(control_efes, np.ndarray):
             m_ctrl, b_ctrl, r_ctrl = linregress(control_efes, dS_eq_trans_e, b=0)
+            # m_ctrl = dS_eq_trans_e[0] / control_efes[0]
             # print(r_ctrl**2)
     if isinstance(control_efes, np.ndarray):
         height = m_ctrl - m
@@ -176,24 +133,36 @@ def get_bar_height(filename, location, control_efes=None):
     # print("{:15s} {:5s} {:2.5f}".format(labels[i], location[0], r**2))
     return height
 
+
 # Set up arrays
 filenames = ["sensitivity_clark.dat", 
             "sensitivity_clark_no_wv.dat", 
             "sensitivity_cesm2.dat", 
             "sensitivity_full_radiation.dat", 
+            "sum",
             "sensitivity_full_radiation_no_wv.dat", 
             "sensitivity_full_radiation_no_al.dat", 
             "sensitivity_full_radiation_no_al_no_wv_no_lr.dat", 
-            # "sensitivity_full_radiation_homog.dat", 
-            # "sensitivity_full_radiation_homog_no_al.dat", 
             "sensitivity_full_radiation_no_lr.dat", 
             "sensitivity_full_radiation_rh.dat"]
-controls = [0, 0, 2, 3, 3, 3, 6, 3, 3]
-labels = ["C18 Total", "C18 WV", "CESM2 Total", "MEBM Total", "MEBM WV", "MEBM AL", "MEBM PL", "MEBM LR", "MEBM RH"]
-colors = ["k", "m", "k", "k", "m", "g", "r", "y", "c"]
-alphas = [0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-xvals = np.array([0, 1, 3, 5, 6, 7, 8, 9, 10])
-hatches = ["/", "/", "\\", "", "", "", "", "", ""]
+controls = ["None", 
+            "sensitivity_clark.dat", 
+            "None", 
+            "None", 
+            "None",
+            "sensitivity_full_radiation.dat", 
+            "sensitivity_full_radiation.dat", 
+            "None", 
+            "sensitivity_full_radiation.dat", 
+            "sensitivity_full_radiation.dat"] 
+labels = ["C18 Total", "C18 WV", "CESM2 Total", "MEBM Total", "MEBM Sum", "MEBM WV", "MEBM AL", "MEBM PL", "MEBM LR", "MEBM RH"]
+colors = ["k", "m", "k", "k", "k", "m", "g", "r", "y", "c"]
+alphas = [0.5, 0.5, 0.5, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0]
+xvals = np.array([0, 1, 3, 5, 6, 7, 8, 9, 10, 11])
+hatches = ["/", "/", "\\", "", "", "", "", "", "", ""]
+
+heights_t = np.zeros(len(filenames))
+heights_e = np.zeros(len(filenames))
 
 # Set up grid
 Re = 6.371e6 
@@ -218,40 +187,46 @@ for i, M in enumerate([5, 10, 15, 18]):
     dS_eq_trans_e[i] = 10**-15 * dS_trans[I_equator] 
 
 # Plot
-f, (ax1, ax2) = plt.subplots(2, 1, figsize=(4, 2*2.47), sharex=True)
+f, (ax1, ax2) = plt.subplots(2, 1, figsize=(3.404, 3.404/1.62*2), sharex=True)
 
 for i, filename in enumerate(filenames):
-    control = controls[i]
-    if control == i:
-        height_t = get_bar_height(filename, location="tropics", control_efes=None) 
-        height_e = get_bar_height(filename, location="extratropics", control_efes=None) 
-    else:
-        centers, spreads, intensities, control_efes_t = get_data(filenames[control], "tropics")
-        centers, spreads, intensities, control_efes_e = get_data(filenames[control], "extratropics")
-        height_t = get_bar_height(filename, location="tropics", control_efes=control_efes_t) 
-        height_e = get_bar_height(filename, location="extratropics", control_efes=control_efes_e) 
-    ax1.bar(xvals[i], height_t, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
-    ax2.bar(xvals[i], height_e, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
+    if ".dat" in filename:
+        control = controls[i]
+        if control == "None":
+            height_t = get_bar_height(filename, location="tropics", control_efes=None) 
+            height_e = get_bar_height(filename, location="extratropics", control_efes=None) 
+        else:
+            centers, spreads, intensities, control_efes_t = get_data(control, "tropics")
+            centers, spreads, intensities, control_efes_e = get_data(control, "extratropics")
+            height_t = get_bar_height(filename, location="tropics", control_efes=control_efes_t) 
+            height_e = get_bar_height(filename, location="extratropics", control_efes=control_efes_e) 
+        heights_t[i] = height_t
+        heights_e[i] = height_e
+        ax1.bar(xvals[i], height_t, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
+        ax2.bar(xvals[i], height_e, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
+
+# calculate sum
+heights_t[4] = heights_t[5] + heights_t[6] + heights_t[7] + heights_t[8]
+heights_e[4] = heights_e[5] + heights_e[6] + heights_e[7] + heights_e[8]
+ax1.bar(xvals[4], heights_t[4], color=colors[4], alpha=alphas[4], hatch=hatches[4], align="edge", edgecolor="k", linewidth=0.5)
+ax2.bar(xvals[4], heights_e[4], color=colors[4], alpha=alphas[4], hatch=hatches[4], align="edge", edgecolor="k", linewidth=0.5)
 
 ax1.plot([-100, 100], [0, 0], "k-", lw=0.5)
 ax2.plot([-100, 100], [0, 0], "k-", lw=0.5)
 
-ax1.set_title("(a) Tropical")
+ax1.annotate("(a)", (0.015, 0.93), xycoords="axes fraction")
 ax1.set_ylabel("Feedback Parameter, $\lambda_i$ (PW degrees$^{-1}$)")
 ax1.set_ylim([-2.5, 2.0])
-ax1.grid(False)
-ax2.set_title("(b) Extratropical")
+ax2.annotate("(b)", (0.015, 0.93), xycoords="axes fraction")
 ax2.set_ylabel("Feedback Parameter, $\lambda_i$ (PW degrees$^{-1}$)")
 ax2.set_xticks(xvals + 0.4)
 ax2.set_xticklabels(labels, rotation=45, ha="right")
 ax2.set_xlim([xvals[0]-0.4, xvals[-1]+1.2])
 ax2.set_ylim([-2.5, 2.0])
-ax2.grid(False)
 
 plt.tight_layout()
 
 fname = 'feedback_param_bars.pdf'
 plt.savefig(fname)
-plt.show()
 print('{} created.'.format(fname))
 plt.close()

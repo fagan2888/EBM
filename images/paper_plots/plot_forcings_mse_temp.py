@@ -82,12 +82,12 @@ linestyles = [":", "-.", "--", "-"]
 for i, M in enumerate([5, 10, 15, 18]):
     dS = get_dS(M, "tropics")
     ax.plot(sin_lats, dS, "k" + linestyles[i], label="$M={:2d}$".format(M))
-ax.set_title("(a) Tropical Perturbation, $S'$")
+ax.annotate("(a)", (0.02, 0.93), xycoords="axes fraction")
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax.set_ylim([-180, 0])
 ax.set_xlabel("Latitude")
-ax.set_ylabel("Perturbed Insolation (W m$^{-2}$)")
+ax.set_ylabel("Insolation Forcing (W m$^{-2}$)")
 ax.grid(False)
 ax.legend(loc="lower left")
 
@@ -97,12 +97,12 @@ linestyles = [":", "-.", "--", "-"]
 for i, M in enumerate([5, 10, 15, 18]):
     dS = get_dS(M, "extratropics")
     ax.plot(sin_lats, dS, "k" + linestyles[i], label="$M={:2d}$".format(M))
-ax.set_title("(b) Extratropical Perturbation, $S'$")
+ax.annotate("(b)", (0.02, 0.93), xycoords="axes fraction")
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax.set_ylim([-180, 0])
 ax.set_xlabel("Latitude")
-ax.set_ylabel("Perturbed Insolation (W m$^{-2}$)")
+ax.set_ylabel("Insolation Forcing (W m$^{-2}$)")
 ax.grid(False)
 ax.legend(loc="lower left")
 
@@ -125,7 +125,7 @@ data = np.load(directory + simulation + "/simulation_data.npz")
 T = data["T"][-1, :]
 ax.plot(sin_lats, T, "k-.", label="$M=15$ extratropical")
 
-ax.set_title("(c) MEBM Temperature Solutions")
+ax.annotate("(c)", (0.02, 0.93), xycoords="axes fraction")
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax.set_xlabel("Latitude")
@@ -155,7 +155,7 @@ T = data["T"][-1, :]
 E = E_dataset[np.searchsorted(T_dataset, T)]
 ax.plot(sin_lats, E / 1000, "k-.", label="$M=15$ extratropical")
 
-ax.set_title("(d) MEBM MSE Solutions")
+ax.annotate("(d)", (0.02, 0.93), xycoords="axes fraction")
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax.set_xlabel("Latitude")
@@ -167,6 +167,5 @@ plt.tight_layout()
 
 fname = "forcings_mse_temp.pdf"
 plt.savefig(fname)
-plt.show()
-
 print("{} saved.".format(fname))
+plt.close()

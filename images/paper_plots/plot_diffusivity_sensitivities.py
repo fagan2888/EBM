@@ -10,8 +10,6 @@ import os
 EBM_PATH = os.environ["EBM_PATH"]
 plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 
-rc("font", size=10)
-
 D   = 1.06e6
 ps  = 98000    
 g   = 9.81     
@@ -52,7 +50,7 @@ def D_f(lats):
     return g/ps*Re**2 * Diff
 D2 = D_f(lats)
 
-f = plt.figure(figsize=(8, 2.47))
+f = plt.figure(figsize=(7.057, 7.057/1.62/2))
 
 outer = gridspec.GridSpec(1, 2, width_ratios=[3, 0.84])
 gs1 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[0], wspace=0.4, width_ratios=[2, 1])
@@ -62,66 +60,66 @@ ax1 = plt.subplot(gs1[0])
 l1, = ax1.plot(sin_lats_cesm2, D_cesm2, "r", label="CESM2")
 l2, = ax1.plot(sin_lats, ps / g * D1 / Re**2, "b", label="$D_1$")
 l3, = ax1.plot(sin_lats, ps / g * D2 / Re**2, "g--", label="$D_2$")
-l4, = ax1.plot([-1, 1], [2.6e-4, 2.6e-4], "k", label="Hwang & Frierson 2010")
+l4, = ax1.plot([-1, 1], [2.6e-4, 2.6e-4], "k", label="Constant")
 
 ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax1.set_ylim([0, 5e-4])
-# ax1.legend(loc="upper left")
-ax1.set_title("(a) Diffusivities")
+# ax1.legend(loc="upper center", ncol=4)
+ax1.annotate("(a)", (0.015, 0.94), xycoords="axes fraction")
 ax1.set_xlabel("Latitude")
-ax1.set_ylabel("$D$ [kg m$^{-2}$ s$^{-1}$]")
+ax1.set_ylabel("Diffusivity, $D$ (kg m$^{-2}$ s$^{-1}$)")
 ax1.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 
 ax2 = plt.subplot(gs1[1])
 location = "tropics"
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation.dat", location)
 l8, = ax2.plot(intensities, efes, marker="o", color="k", linestyle='', label="Constant $D$")
-centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D_cesm2.dat", location)
-l5, = ax2.plot(intensities, efes, marker="P", color="r", linestyle='', label="CESM $D$")
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D1.dat", location)
 l6, = ax2.plot(intensities, efes, marker="H", color="b", linestyle='', label="$D_1$")
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D2.dat", location)
 l7, = ax2.plot(intensities, efes, marker="D", color="g", linestyle='', label="$D_2$")
+centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D_cesm2.dat", location)
+l5, = ax2.plot(intensities, efes, marker="P", color="r", linestyle='', label="CESM $D$")
 
 ax2.set_xlim(0, 20)
 ax2.set_xticks([5, 10, 15, 18])
 ax2.set_ylim(-16, 0)
 ax2.set_yticks(np.arange(-16, 1, 2))
 ax2.set_yticklabels(['16°S', '14°S', '12°S', '10°S', '8°S', '6°S', '4°S', '2°S', 'EQ'])
-ax2.set_title('(b) Tropics')
-ax2.set_xlabel('M [W m$^{-2}$]')
+ax2.annotate("(b)", (0.015, 0.94), xycoords="axes fraction")
+ax2.set_xlabel('Forcing Strength, $M$ (W m$^{-2}$)')
 ax2.set_ylabel('EFE Latitude')
 
 ax3 = plt.subplot(gs2[0])
 location = "extratropics"
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation.dat", location)
 ax3.plot(intensities, efes, marker="o", color="k", linestyle='', label="Constant $D$")
-centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D_cesm2.dat", location)
-ax3.plot(intensities, efes, marker="P", color="r", linestyle='', label="CESM $D$")
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D1.dat", location)
 ax3.plot(intensities, efes, marker="H", color="b", linestyle='', label="$D_1$")
 centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D2.dat", location)
 ax3.plot(intensities, efes, marker="D", color="g", linestyle='', label="$D_2$")
+centers, spreads, intensities, efes = get_data("sensitivity_full_radiation_D_cesm2.dat", location)
+ax3.plot(intensities, efes, marker="P", color="r", linestyle='', label="CESM $D$")
 
 ax3.set_xlim(0, 20)
 ax3.set_xticks([5, 10, 15, 18])
 ax3.set_ylim(-16, 0)
 ax3.set_yticks(np.arange(-16, 1, 2))
 ax3.set_yticklabels(['', '', '', '', '', '', '', '', ''])
-ax3.set_title('(c) Extratropics')
-ax3.set_xlabel('M [W m$^{-2}$]')
-# ax3.legend(loc="lower left")
+ax3.annotate("(c)", (0.015, 0.94), xycoords="axes fraction")
+ax3.set_xlabel('Forcing Strength, $M$ (W m$^{-2}$)')
+ax3.legend(loc="lower left")
 
-handles = (l1, l2, l3, l4, l5, l6, l7, l8)
-labels = ("", "", "", "", "CESM2 $D$", "$D_1$", "$D_2$", "Constant $D$")
-f.legend(handles, labels, loc="right", ncol=2, columnspacing=-1)
+# handles = (l1, l2, l3, l4, l5, l6, l7, l8)
+# labels = ("", "", "", "", "CESM2 $D$", "$D_1$", "$D_2$", "Constant $D$")
+# f.legend(handles, labels, loc="right", ncol=2, columnspacing=-1)
 
 plt.tight_layout()
-plt.subplots_adjust(right=0.8)
+# plt.subplots_adjust(right=0.85)
 
 fname = "diffusivity_sensitivities.pdf"
 plt.savefig(fname)
-plt.show()
+# plt.show()
 
 print("{} saved.".format(fname))
