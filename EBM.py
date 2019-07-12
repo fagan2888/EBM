@@ -1071,13 +1071,13 @@ class EnergyBalanceModel():
         print("Mean T: {:.2f} K".format(T_avg))
 
         f, ax = plt.subplots(1)
-        ax.plot(self.sin_lats, self.T_f, "k", label="Mean $T_s$ = {:.2f} K".format(T_avg))
+        ax.plot(self.sin_lats, self.T_f, "k", label="Mean $T={:.2f}$ K".format(T_avg))
         ax.set_title("Final Temperature")
         ax.set_xlabel("Latitude")
-        ax.set_ylabel("$T_s$ [K]")
+        ax.set_ylabel("$T$ (K)")
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-        ax.legend(loc="upper right")
+        ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
+        ax.legend(loc="lower center")
         
         plt.tight_layout()
         
@@ -1095,9 +1095,9 @@ class EnergyBalanceModel():
         ax.plot(self.sin_lats, self.T_f - T_ctrl, "k")
         ax.set_title("Final Temperature Anomaly")
         ax.set_xlabel("Latitude")
-        ax.set_ylabel("$T_s$ [K]")
+        ax.set_ylabel("$T$ (K)")
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+        ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
         
         plt.tight_layout()
         
@@ -1114,13 +1114,13 @@ class EnergyBalanceModel():
         
         f, ax = plt.subplots(1)
         ax.plot(self.sin_lats, self.E_f / 1000, "c")
-        ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(self.E_f)/1000], "r", label="EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)))
+        ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(self.E_f)/1000], "r", label="EFE $\\approx {:.2f}^\\circ$".format(np.rad2deg(self.EFE)))
         ax.set_title("Final Energy")
         ax.set_xlabel("Latitude")
-        ax.set_ylabel("MSE [kJ kg$^{-1}$]")
+        ax.set_ylabel("MSE (kJ kg$^{-1}$)")
         ax.set_ylim([np.min(self.E_f)/1000 - 1, np.max(self.E_f)/1000 + 1])
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+        ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
         ax.legend(loc="upper right")
         
         plt.tight_layout()
@@ -1141,10 +1141,10 @@ class EnergyBalanceModel():
         ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [np.min(dE) - 100, np.max(dE) + 100], "r", label="EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)))
         ax.set_title("Final Energy Anomaly")
         ax.set_xlabel("Latitude")
-        ax.set_ylabel("MSE [kJ kg$^{-1}$]")
+        ax.set_ylabel("MSE (kJ kg$^{-1}$)")
         ax.set_ylim([np.min(dE) - 1, np.max(dE) + 1])
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+        ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
         ax.legend(loc="upper right")
         
         plt.tight_layout()
@@ -1162,22 +1162,25 @@ class EnergyBalanceModel():
         print("Integral of (S - L): {:.5f} PW".format(10**-15 * self._integrate_lat(self.S_f*(1 - self.alb_f) - self.L_f)))
         
         f, ax = plt.subplots(1)
-        ax.plot(self.sin_lats, self.S_f*(1 - self.alb_f), "r", label="Final $S(1-\\alpha)$")
-        ax.plot(self.sin_lats, S_i, "r--", label="Initial $S(1-\\alpha)$")
-        ax.plot(self.sin_lats, self.L_f, "b", label="Final OLR")
-        ax.plot(self.sin_lats, L_i, "b--", label="Initial OLR")
-        ax.plot(self.sin_lats, self.S_f*(1 - self.alb_f) - self.L_f, "g", label="Final Net")
-        ax.plot(self.sin_lats, S_i - L_i, "g--", label="Initial Net")
+        l1, = ax.plot(self.sin_lats, self.S_f*(1 - self.alb_f), "r", label="Final $S(1-\\alpha)$")
+        l2, = ax.plot(self.sin_lats, S_i, "r--", label="Initial $S(1-\\alpha)$")
+        l3, = ax.plot(self.sin_lats, self.L_f, "b", label="Final OLR")
+        l4, = ax.plot(self.sin_lats, L_i, "b--", label="Initial OLR")
+        l5, = ax.plot(self.sin_lats, self.S_f*(1 - self.alb_f) - self.L_f, "g", label="Final Net")
+        l6, = ax.plot(self.sin_lats, S_i - L_i, "g--", label="Initial Net")
         ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
+        ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
         ax.set_ylim([-200, 400])
         ax.set_yticks(np.arange(-200, 401, 50))
-        ax.legend(loc="upper left")
-        ax.set_title("Radiation")
         ax.set_xlabel("Latitude")
-        ax.set_ylabel("Energy Flux [W m$^{-2}]$")
+        ax.set_ylabel("Energy Flux (W m$^{-2})$")
+        
+        handles = (l1, l2, l3, l4, l5, l6)
+        labels = ("Final $S(1-\\alpha)$", "Initial $S(1-\\alpha)$", "Final $L$", "Initial $L$", "Final $NEI$", "Initial $NEI$")
+        f.legend(handles, labels, loc="upper center", ncol=3)
         
         plt.tight_layout()
+        plt.subplots_adjust(top=0.8)
         
         fname = "radiation.png"
         plt.savefig(fname)
@@ -1187,9 +1190,7 @@ class EnergyBalanceModel():
         if self.plot_transports:
             ### Differences and Transports
             print("\nPlotting Differences and Transports")
-            rc("font", size=9)
-
-            f, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 2.47))
+            f, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.057, 7.057/1.62/2))
 
             l1, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb_ctrl), "c")
             l2, = ax1.plot(self.sin_lats, -(self.S_ctrl + self.dS)*self.dalb, "g")
@@ -1205,7 +1206,7 @@ class EnergyBalanceModel():
             ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
             ax1.set_title("(a) Feedback Differences")
             ax1.set_xlabel("Latitude")
-            ax1.set_ylabel("Energy Perturbation [W m$^{-2}$]")
+            ax1.set_ylabel("Energy Perturbation (W m$^{-2}$)")
 
             ax2.plot(self.sin_lats, 10**-15 * self.dtrans_dS, "c")
             ax2.plot(self.sin_lats, -10**-15 * self.dtrans_dalb, "g")
@@ -1221,14 +1222,14 @@ class EnergyBalanceModel():
             ax2.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
             ax2.set_title("(b) Feedback Transports")
             ax2.set_xlabel("Latitude")
-            ax2.set_ylabel("Energy Transport [PW]")
+            ax2.set_ylabel("Energy Transport (PW)")
 
             handles = (l1, l2, l3, l4, l5, l6, l7, l8, l9)
             labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}$",  "$NEI'$", "Sum", "EFE")
-            f.legend(handles, labels, loc="upper center", ncol=5)
+            f.legend(handles, labels, loc="upper center", ncol=9)
             
             plt.tight_layout()
-            plt.subplots_adjust(top=0.70)
+            plt.subplots_adjust(top=0.80)
             
             fname = "differences_transports.png"
             plt.savefig(fname)
