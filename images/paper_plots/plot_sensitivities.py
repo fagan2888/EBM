@@ -32,16 +32,11 @@ if __name__ == "__main__":
     
     # dictionary of 'file' : ['label', 'color', 'marker'] elements
     files = {
-            # 'sensitivity_full_radiation.dat': ['MEBM', 'k', 'o'],
-            # 'sensitivity_full_radiation_no_al.dat': ['MEBM No AL Feedback', 'g', '*'],
-            # 'sensitivity_full_radiation_no_wv.dat': ['MEBM No WV Feedback', 'm', 'v'],
-            # 'sensitivity_full_radiation_no_lr.dat': ['MEBM No LR Feedback', 'y', 's'],
-            # 'sensitivity_full_radiation_rh.dat': ['MEBM Param. RH Feedback', 'c', '^'],
             'sensitivity_full_radiation.dat': ['MEBM', 'k', 'o'],
-            'sensitivity_full_radiation_no_al.dat': ['MEBM No AL Feedback', 'g', 'o'],
-            'sensitivity_full_radiation_no_wv.dat': ['MEBM No WV Feedback', 'm', 'o'],
-            'sensitivity_full_radiation_no_lr.dat': ['MEBM No LR Feedback', 'y', 'o'],
-            'sensitivity_full_radiation_rh.dat': ['MEBM Param. RH Feedback', 'c', 'o'],
+            'sensitivity_full_radiation_no_al.dat': ['MEBM No AL Feedback', 'g', '*'],
+            'sensitivity_full_radiation_no_wv.dat': ['MEBM No WV Feedback', 'm', 'v'],
+            'sensitivity_full_radiation_no_lr.dat': ['MEBM No LR Feedback', 'y', 's'],
+            'sensitivity_full_radiation_rh.dat': ['MEBM Param. RH Feedback', 'c', '^'],
             }
     
     # plot all the data
@@ -55,8 +50,7 @@ if __name__ == "__main__":
     linestyle = '--'
     markersize = 3
     linewidth = 0.5
-    # marker = 'v'
-    marker = 'o'
+    marker = 'v'
     centers, spreads, intensities, efes = get_data('sensitivity_clark_no_wv.dat', 'tropics')
     ax1.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (C18)', markersize=markersize)
     centers, spreads, intensities, efes = get_data('sensitivity_clark_no_wv.dat', 'extratropics')
@@ -82,7 +76,7 @@ if __name__ == "__main__":
     ax2.plot(intensities, efes, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
     
     ax1.set_xlim(0, 20)
-    ax1.set_xticks([5, 10, 15, 18])
+    ax1.set_xticks([0, 5, 10, 15, 18])
     ax1.set_ylim(-16, 0)
     ax1.set_yticks(np.arange(-16, 1, 2))
     ax1.set_yticklabels(['16°S', '14°S', '12°S', '10°S', '8°S', '6°S', '4°S', '2°S', 'EQ'])
@@ -91,7 +85,7 @@ if __name__ == "__main__":
     ax1.set_ylabel('EFE Latitude')
     
     ax2.set_xlim(0, 20)
-    ax2.set_xticks([5, 10, 15, 18])
+    ax2.set_xticks([0, 5, 10, 15, 18])
     ax2.set_ylim(-16, 0)
     ax2.legend(loc='lower left')
     ax2.annotate("(b)", (0.02, 0.96), xycoords="axes fraction")

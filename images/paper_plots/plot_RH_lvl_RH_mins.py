@@ -62,9 +62,9 @@ for M in [0, 18]:
     Ip0 = np.argmin(np.abs(pressures - p0))
     
     if M != 0:
-        ax1.plot(sin_lats, RH[Ip0, :], "m-", label="CESM2 $M={}$ tropical".format(M))
+        ax1.plot(sin_lats, RH[Ip0, :], c=(0.2, 0.6, 0.4), ls="-.", label="CESM2 $M={}$ tropical".format(M))
     else:
-        ax1.plot(sin_lats, RH[Ip0, :], "k-", label="CESM2 Control")
+        ax1.plot(sin_lats, RH[Ip0, :], c=(0.5, 0.4, 0.0), ls="-", label="CESM2 Control")
 
     if M != 0:
         data = np.load("RH_M{}_mebm.npz".format(M))
@@ -76,9 +76,9 @@ for M in [0, 18]:
     Ip0 = np.argmin(np.abs(pressures - p0))
     
     if M != 0:
-        ax1.plot(sin_lats, RH[Ip0, :], "m--", label="MEBM $M={}$ tropical".format(M))
+        ax1.plot(sin_lats, RH[Ip0, :], c=(0.2, 0.6, 0.4), ls=":", label="MEBM $M={}$ tropical".format(M))
     else:
-        ax1.plot(sin_lats, RH[Ip0, :], "k--", label="MEBM Control")
+        ax1.plot(sin_lats, RH[Ip0, :], c=(0.5, 0.4, 0.0), ls="--", label="MEBM Control")
 
 ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
@@ -103,10 +103,10 @@ print(r_L**2, r_R**2)
 
 xvals = np.linspace(np.min(efes)-10, np.max(efes)+10, 10)
 
-ax2.plot(efes, RH_mins_L, "bo", label="SH minimum")
-ax2.plot(xvals, m_L*xvals + RH_ctrl, "b--")
-ax2.plot(efes, RH_mins_R, "ro", label="NH minimum")
-ax2.plot(xvals, m_R*xvals + RH_ctrl, "r--")
+ax2.plot(efes, RH_mins_R, c="0.4", marker="^", ls="", label="NH minimum")
+ax2.plot(xvals, m_R*xvals + RH_ctrl, c="0.4", ls="--")
+ax2.plot(efes, RH_mins_L, c=(1.0, 0.5, 0.5), marker="v", ls="", label="SH minimum")
+ax2.plot(xvals, m_L*xvals + RH_ctrl, c=(1.0, 0.5, 0.5), ls="--")
 
 ax2.set_xlim([-12, 1])
 ax2.set_xticks(np.arange(-12, 1, 2))

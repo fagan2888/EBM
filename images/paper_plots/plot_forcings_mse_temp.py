@@ -2,9 +2,9 @@
 
 import numpy as np
 import scipy as sp
-import scipy.integrate
+import scipy.integrate, scipy.interpolate
 import matplotlib.pyplot as plt
-from matplotlib import rc
+from matplotlib.lines import Line2D
 import os
 
 EBM_PATH = os.environ["EBM_PATH"]
@@ -64,6 +64,16 @@ def humidsat(t, p):
     qsat=epsilon*esat/(p-esat*(1-epsilon));
     return esat, qsat, rsat
 
+def calculate_efe(M, location):
+    filename = EBM_PATH + '/data/sensitivity_full_radiation.dat' 
+    data_array = np.loadtxt(filename, delimiter=',')
+    if location == 'tropics':
+        data_array = data_array[np.where(data_array[:, 0] == 15)]
+    elif location == 'extratropics':
+        data_array = data_array[np.where(data_array[:, 0] == 60)]
+    EFE = data_array[np.where(data_array[:, 2] == M), 3]
+    return np.deg2rad(EFE[0][0])
+
 T_dataset = np.arange(33, 350, 1e-3)
 q_dataset = humidsat(T_dataset, ps/100)[1]
 E_dataset = cp*T_dataset + RH*q_dataset*Lv
@@ -74,98 +84,116 @@ dx = 2 / (N_pts - 1)
 sin_lats = np.linspace(-1.0, 1.0, N_pts)
 
 # Plot
-f, axes = plt.subplots(2, 2, figsize=(7.057, 7.057/1.62))
+f, axes = plt.subplots(3, 1, figsize=(3.404, 3.404/1.62*3))
 
-# top left plot
-ax = axes[0, 0]
-linestyles = [":", "-.", "--", "-"]
+ax = axes[0]
+linestyles = [(0, (5, 1)), (0, (5, 1, 1, 1)), (0, (5, 1, 1, 1, 1, 1)), (0, (1, 1))]
+colors = [(1.0,0.25,0.5), (0.5,0.75,1.0)]
 for i, M in enumerate([5, 10, 15, 18]):
     dS = get_dS(M, "tropics")
-    ax.plot(sin_lats, dS, "k" + linestyles[i], label="$M={:2d}$".format(M))
-ax.annotate("(a)", (0.02, 0.93), xycoords="axes fraction")
-ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
-ax.set_ylim([-180, 0])
-ax.set_xlabel("Latitude")
-ax.set_ylabel("Insolation Forcing (W m$^{-2}$)")
-ax.grid(False)
-ax.legend(loc="lower left")
-
-# top right plot
-ax = axes[0, 1]
-linestyles = [":", "-.", "--", "-"]
-for i, M in enumerate([5, 10, 15, 18]):
+    ax.plot(sin_lats, dS, color=colors[0], linestyle=linestyles[i], label="$M={:2d}$".format(M))
     dS = get_dS(M, "extratropics")
-    ax.plot(sin_lats, dS, "k" + linestyles[i], label="$M={:2d}$".format(M))
-ax.annotate("(b)", (0.02, 0.93), xycoords="axes fraction")
+    ax.plot(sin_lats, dS, color=colors[1], linestyle=linestyles[i])
+dS = 0 * dS
+ax.plot(sin_lats, dS, color="k", linestyle="-", label="$M=0$, control")
+ax.annotate("(a)", (0.02, 0.93), xycoords="axes fraction")
+ax.annotate("tropical", (np.sin(np.deg2rad(9)), -188), xycoords="data")
+ax.annotate("extratropical", (np.sin(np.deg2rad(35)), -188), xycoords="data")
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
-ax.set_ylim([-180, 0])
+ax.set_ylim([-200, 0])
 ax.set_xlabel("Latitude")
 ax.set_ylabel("Insolation Forcing (W m$^{-2}$)")
 ax.grid(False)
-ax.legend(loc="lower left")
 
-# bottom left plot
-ax = axes[1, 0]
+legend_elements = [Line2D([0], [0], color="k", linestyle="-", label="$M=0$, control"),
+                   Line2D([0], [0], color="k", linestyle=linestyles[0], label="$M=5$"),
+                   Line2D([0], [0], color="k", linestyle=linestyles[1], label="$M=10$"),
+                   Line2D([0], [0], color="k", linestyle=linestyles[2], label="$M=15$"),
+                   Line2D([0], [0], color="k", linestyle=linestyles[3], label="$M=18$")]
+ax.legend(handles=legend_elements, loc="lower left")
+
+ax = axes[1]
+
+T_min = 205
+T_max = 301
 
 directory = "/home/hpeter/Documents/ResearchBoos/EBM_files/EBM_sims/sim287"
 simulation = "/ctrl"
 data = np.load(directory + simulation + "/simulation_data.npz")
 T = data["T"][-1, :]
-ax.plot(sin_lats, T, "k-", label="$M=0$ (control)")
+ax.plot(sin_lats, T, "k-")
+EFE = 0
+ax.plot([np.sin(EFE), np.sin(EFE)], [T_min, np.max(T)], "k-", alpha=0.5)
 
-simulation = "/full_radiation/tropical/M15"
-data = np.load(directory + simulation + "/simulation_data.npz")
-T = data["T"][-1, :]
-ax.plot(sin_lats, T, "k--", label="$M=15$ tropical")
+for i, M in enumerate([5, 10, 15, 18]):
+    simulation = "/full_radiation/tropical/M{}".format(M)
+    data = np.load(directory + simulation + "/simulation_data.npz")
+    T = data["T"][-1, :]
+    ax.plot(sin_lats, T, color=colors[0], linestyle=linestyles[i])
+    EFE = calculate_efe(M, "tropics")
+    ax.plot([np.sin(EFE), np.sin(EFE)], [T_min, np.max(T)], color=colors[0], linestyle="-", alpha=0.5)
 
-simulation = "/full_radiation/extratropical/M15"
-data = np.load(directory + simulation + "/simulation_data.npz")
-T = data["T"][-1, :]
-ax.plot(sin_lats, T, "k-.", label="$M=15$ extratropical")
+    simulation = "/full_radiation/extratropical/M{}".format(M)
+    data = np.load(directory + simulation + "/simulation_data.npz")
+    T = data["T"][-1, :]
+    ax.plot(sin_lats, T, color=colors[1], linestyle=linestyles[i])
+    EFE = calculate_efe(M, "extratropics")
+    ax.plot([np.sin(EFE), np.sin(EFE)], [T_min, np.max(T)], color=colors[1], linestyle="-", alpha=0.5)
 
-ax.annotate("(c)", (0.02, 0.93), xycoords="axes fraction")
+ax.annotate("(b)", (0.02, 0.93), xycoords="axes fraction")
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax.set_xlabel("Latitude")
 ax.set_ylabel("Surface Temperature, $T$ (K)")
+ax.set_ylim([T_min, T_max])
 ax.grid(False)
-ax.legend(loc="lower center")
 
-# bottom left plot
-ax = axes[1, 1]
+ax = axes[2]
+
+E_min = 210
+E_max = 342
 
 directory = "/home/hpeter/Documents/ResearchBoos/EBM_files/EBM_sims/sim287"
 simulation = "/ctrl"
 data = np.load(directory + simulation + "/simulation_data.npz")
 T = data["T"][-1, :]
 E = E_dataset[np.searchsorted(T_dataset, T)]
-ax.plot(sin_lats, E / 1000, "k-", label="$M=0$ (control)")
+EFE = 0
+ax.plot(sin_lats, E / 1000, color="k", linestyle="-")
+ax.plot([np.sin(EFE), np.sin(EFE)], [E_min, np.max(E)/1000], "k-", alpha=0.5)
 
-simulation = "/full_radiation/tropical/M15"
-data = np.load(directory + simulation + "/simulation_data.npz")
-T = data["T"][-1, :]
-E = E_dataset[np.searchsorted(T_dataset, T)]
-ax.plot(sin_lats, E / 1000, "k--", label="$M=15$ tropical")
+for i, M in enumerate([5, 10, 15, 18]):
+    simulation = "/full_radiation/tropical/M{}".format(M)
+    data = np.load(directory + simulation + "/simulation_data.npz")
+    T = data["T"][-1, :]
+    E = E_dataset[np.searchsorted(T_dataset, T)]
+    ax.plot(sin_lats, E / 1000, color=colors[0], linestyle=linestyles[i])
+    EFE = calculate_efe(M, "tropics")
+    ax.plot([np.sin(EFE), np.sin(EFE)], [E_min, np.max(E)/1000], color=colors[0], linestyle="-", alpha=0.5)
 
-simulation = "/full_radiation/extratropical/M15"
-data = np.load(directory + simulation + "/simulation_data.npz")
-T = data["T"][-1, :]
-E = E_dataset[np.searchsorted(T_dataset, T)]
-ax.plot(sin_lats, E / 1000, "k-.", label="$M=15$ extratropical")
+    simulation = "/full_radiation/extratropical/M{}".format(M)
+    data = np.load(directory + simulation + "/simulation_data.npz")
+    T = data["T"][-1, :]
+    E = E_dataset[np.searchsorted(T_dataset, T)]
+    ax.plot(sin_lats, E / 1000, color=colors[1], linestyle=linestyles[i])
+    EFE = calculate_efe(M, "extratropics")
+    ax.plot([np.sin(EFE), np.sin(EFE)], [E_min, np.max(E)/1000], color=colors[1], linestyle="-", alpha=0.5)
 
-ax.annotate("(d)", (0.02, 0.93), xycoords="axes fraction")
+ax.annotate("(c)", (0.02, 0.93), xycoords="axes fraction")
+ax.annotate("EFEs", xy=(0, np.mean([E_min, E_max])), xycoords="data", xytext=(20, -10), textcoords="offset points", 
+    arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=0.3"))
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax.set_xlabel("Latitude")
 ax.set_ylabel("Surface MSE, $h$ (kJ kg$^{-1}$)")
+ax.set_ylim([E_min, E_max])
 ax.grid(False)
-ax.legend(loc="lower center")
 
 plt.tight_layout()
 
 fname = "forcings_mse_temp.pdf"
 plt.savefig(fname)
-print("{} saved.".format(fname))
+print(fname)
 plt.close()
+
