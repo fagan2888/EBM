@@ -106,63 +106,51 @@ def get_dS(perturb_intensity, location):
     return -perturb_intensity/perturb_normalizer * np.exp(-(np.arcsin(sin_lats) - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
 
 
-def get_bar_height(filename, location, control_efes=None):
+def get_bar_height(filename, location, control_efe=0):
     centers, spreads, intensities, efes = get_data(filename, location)
     if location == "tropics":
-        m, b, r = linregress(efes, dS_eq_trans_t, b=0)
-        # m = dS_eq_trans_t[0] / efes[0]
-        if isinstance(control_efes, np.ndarray):
-            m_ctrl, b_ctrl, r_ctrl = linregress(control_efes, dS_eq_trans_t, b=0)
-            # m_ctrl = dS_eq_trans_t[0] / control_efes[0]
-            # print(r_ctrl**2)
+        if "clark" in filename or "cesm" in filename:
+            height = (efes[0] - control_efe) / dS_eq_trans_t_c18[0]
+        else:
+            height = (efes[0] - control_efe) / dS_eq_trans_t[0]
     elif location == "extratropics":
-        m, b, r = linregress(efes, dS_eq_trans_e, b=0)
-        # m = dS_eq_trans_e[0] / efes[0]
-        if isinstance(control_efes, np.ndarray):
-            m_ctrl, b_ctrl, r_ctrl = linregress(control_efes, dS_eq_trans_e, b=0)
-            # m_ctrl = dS_eq_trans_e[0] / control_efes[0]
-            # print(r_ctrl**2)
-    if isinstance(control_efes, np.ndarray):
-        height = m_ctrl - m
-    else:
-        height = m
-    if "rh" in filename:
+        if "clark" in filename or "cesm" in filename:
+            height = (efes[0] - control_efe) / dS_eq_trans_e_c18[0]
+        else:
+            height = (efes[0] - control_efe) / dS_eq_trans_e[0]
+    if "no" in filename:
         height *= -1
+        if "no_al_no_wv_no_lr" in filename:
+            height *= -1
 
-    print("{:15s} {:5s} {:2.5f} ({:2.1f})".format(labels[i], location[0], height, 1/height))
+    # print("{:15s} {:5s} {:2.5f} ({:2.1f})".format(labels[i], location[0], height, 1/height))
     # print("{:15s} {:5s} {:2.5f}".format(labels[i], location[0], r**2))
     return height
 
 
-# Set up arrays
-filenames = ["sensitivity_clark.dat", 
-            "sensitivity_clark_no_wv.dat", 
-            "sensitivity_cesm2.dat", 
-            "sensitivity_full_radiation.dat", 
-            "sum",
-            "sensitivity_full_radiation_no_wv.dat", 
-            "sensitivity_full_radiation_no_al.dat", 
-            "sensitivity_full_radiation_no_al_no_wv_no_lr.dat", 
-            "sensitivity_full_radiation_no_lr.dat", 
-            "sensitivity_full_radiation_rh.dat"]
-controls = ["None", 
-            "sensitivity_clark.dat", 
-            "None", 
-            "None", 
-            "None",
-            "sensitivity_full_radiation.dat", 
-            "sensitivity_full_radiation.dat", 
-            "None", 
-            "sensitivity_full_radiation.dat", 
-            "sensitivity_full_radiation.dat"] 
-labels = ["C18 Total", "C18 WV", "CESM2 Total", "MEBM Total", "MEBM Sum", "MEBM WV", "MEBM AL", "MEBM PL", "MEBM LR", "MEBM RH"]
-colors = ["k", "m", "k", "k", "k", "m", "g", "r", "y", "c"]
-alphas = [0.5, 0.5, 0.5, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0]
-xvals = np.array([0, 1, 3, 5, 6, 7, 8, 9, 10, 11])
-hatches = ["/", "/", "\\", "", "", "", "", "", "", ""]
+# Set up bars
+bars_dict = { 
+                 0 : {"filename" : "sensitivity_clark.dat", "control" : None, "label" : "C18 Total", "color" : "k", "alpha" : 0.5, "hatch" : "//"},
+                 1 : {"filename" : "sensitivity_clark_no_wv.dat", "control" : 0, "label" : "C18 WV", "color" : "m", "alpha" : 0.5, "hatch" : "//"},
+                 3 : {"filename" : "sensitivity_cesm2.dat", "control" : None, "label" : "CESM2 Total", "color" : "k", "alpha" : 0.5, "hatch" : "\\\\"},
+                 5 : {"filename" : "sensitivity_full_radiation.dat", "control" : None, "label" : "MEBM Total", "color" : "k", "alpha" : 1.0, "hatch" : ""},
+                 6 : {"filename" : None, "control" : None, "label" : "MEBM Sum", "color" : "k", "alpha" : 0.2, "hatch" : ""},
+                 7 : {"filename" : "sensitivity_full_radiation_homog.dat", "control" : None, "label" : "MEBM NF", "color" : (1, 1, 1), "alpha" : 1.0, "hatch" : ""},
+                 8 : {"filename" : "sensitivity_full_radiation_no_al_no_wv_no_lr.dat", "control" : 7, "label" : "MEBM PL", "color" : "r", "alpha" : 1.0, "hatch" : ""},
+                 9 : {"filename" : "sensitivity_full_radiation_no_wv.dat", "control" : 5, "label" : "MEBM WV", "color" : "m", "alpha" : 1.0, "hatch" : ""},
+                10 : {"filename" : "sensitivity_full_radiation_no_al.dat", "control" : 5, "label" : "MEBM AL", "color" : "g", "alpha" : 1.0, "hatch" : ""},
+                11 : {"filename" : "sensitivity_full_radiation_no_lr.dat", "control" : 5, "label" : "MEBM LR", "color" : "y", "alpha" : 1.0, "hatch" : ""},
+                12 : {"filename" : "sensitivity_full_radiation_rh.dat", "control" : 5, "label" : "MEBM RH", "color" : "c", "alpha" : 1.0, "hatch" : ""}
+            }
 
-heights_t = np.zeros(len(filenames))
-heights_e = np.zeros(len(filenames))
+xvals = np.zeros(len(bars_dict))
+labels = []
+for i, x in enumerate(bars_dict):
+    xvals[i] = x
+    labels.append(bars_dict[x]["label"])
+
+heights_t = np.zeros(len(bars_dict))
+heights_e = np.zeros(len(bars_dict))
 
 # Set up grid
 Re = 6.371e6 
@@ -173,60 +161,74 @@ sin_lats = np.linspace(-1.0, 1.0, N_pts)
 # Calculate forcing transports
 ctrl_data = np.load(EBM_PATH + "/data/ctrl.npz")
 alb_ctrl = ctrl_data["alb"]
+alb_c18 = 0.2725
 dS_eq_trans_t = np.zeros(4)
 dS_eq_trans_e = np.zeros(4)
+dS_eq_trans_t_c18 = np.zeros(4)
+dS_eq_trans_e_c18 = np.zeros(4)
+I_equator = N_pts//2
 for i, M in enumerate([5, 10, 15, 18]):
     dS = get_dS(M, "tropics")
     dS_trans = calculate_trans(dS*(1 - alb_ctrl), force_zero=True)
-    I_equator = N_pts//2
+    dS_trans_c18 = calculate_trans(dS*(1 - alb_c18), force_zero=True)
     dS_eq_trans_t[i] = 10**-15 * dS_trans[I_equator] 
+    dS_eq_trans_t_c18[i] = 10**-15 * dS_trans_c18[I_equator] 
 
     dS = get_dS(M, "extratropics")
     dS_trans = calculate_trans(dS*(1 - alb_ctrl), force_zero=True)
-    I_equator = N_pts//2
+    dS_trans_c18 = calculate_trans(dS*(1 - alb_c18), force_zero=True)
     dS_eq_trans_e[i] = 10**-15 * dS_trans[I_equator] 
+    dS_eq_trans_e_c18[i] = 10**-15 * dS_trans_c18[I_equator] 
+
+print(dS_eq_trans_t_c18)
+print(dS_eq_trans_t)
 
 # Plot
 f, (ax1, ax2) = plt.subplots(2, 1, figsize=(3.404, 3.404/1.62*2), sharex=True)
 
-for i, filename in enumerate(filenames):
-    if ".dat" in filename:
-        control = controls[i]
-        if control == "None":
-            height_t = get_bar_height(filename, location="tropics", control_efes=None) 
-            height_e = get_bar_height(filename, location="extratropics", control_efes=None) 
+for i, x in enumerate(bars_dict):
+    bar = bars_dict[x]
+    filename = bar["filename"]
+    if filename != None:
+        control = bar["control"]
+        if control == None:
+            height_t = get_bar_height(filename, location="tropics") 
+            height_e = get_bar_height(filename, location="extratropics") 
         else:
-            centers, spreads, intensities, control_efes_t = get_data(control, "tropics")
-            centers, spreads, intensities, control_efes_e = get_data(control, "extratropics")
-            height_t = get_bar_height(filename, location="tropics", control_efes=control_efes_t) 
-            height_e = get_bar_height(filename, location="extratropics", control_efes=control_efes_e) 
+            centers, spreads, intensities, control_efes_t = get_data(bars_dict[control]["filename"], "tropics")
+            centers, spreads, intensities, control_efes_e = get_data(bars_dict[control]["filename"], "extratropics")
+            height_t = get_bar_height(filename, location="tropics", control_efe=control_efes_t[0]) 
+            height_e = get_bar_height(filename, location="extratropics", control_efe=control_efes_e[0]) 
         heights_t[i] = height_t
         heights_e[i] = height_e
-        ax1.bar(xvals[i], height_t, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
-        ax2.bar(xvals[i], height_e, color=colors[i], alpha=alphas[i], hatch=hatches[i], align="edge", edgecolor="k", linewidth=0.5)
+        ax1.bar(x, height_t, color=bar["color"], alpha=bar["alpha"], hatch=bar["hatch"], align="edge", edgecolor="k", linewidth=0.8)
+        ax2.bar(x, height_e, color=bar["color"], alpha=bar["alpha"], hatch=bar["hatch"], align="edge", edgecolor="k", linewidth=0.8)
 
 # calculate sum
-heights_t[4] = heights_t[5] + heights_t[6] + heights_t[7] + heights_t[8]
-heights_e[4] = heights_e[5] + heights_e[6] + heights_e[7] + heights_e[8]
-ax1.bar(xvals[4], heights_t[4], color=colors[4], alpha=alphas[4], hatch=hatches[4], align="edge", edgecolor="k", linewidth=0.5)
-ax2.bar(xvals[4], heights_e[4], color=colors[4], alpha=alphas[4], hatch=hatches[4], align="edge", edgecolor="k", linewidth=0.5)
+i = 4
+x = 6
+heights_t[i] = np.sum(heights_t[i+1:i+6])
+heights_e[i] = np.sum(heights_e[i+1:i+6])
+bar = bars_dict[x]
+ax1.bar(x, heights_t[i], color=bar["color"], alpha=bar["alpha"], hatch=bar["hatch"], align="edge", edgecolor="k", linewidth=0.8)
+ax2.bar(x, heights_e[i], color=bar["color"], alpha=bar["alpha"], hatch=bar["hatch"], align="edge", edgecolor="k", linewidth=0.8)
 
-ax1.plot([-100, 100], [0, 0], "k-", lw=0.5)
-ax2.plot([-100, 100], [0, 0], "k-", lw=0.5)
+ax1.plot([-100, 100], [0, 0], "k-", lw=0.8)
+ax2.plot([-100, 100], [0, 0], "k-", lw=0.8)
 
 ax1.annotate("(a)", (0.015, 0.93), xycoords="axes fraction")
-ax1.set_ylabel("Feedback Parameter, $\lambda_i$ (PW degrees$^{-1}$)")
-ax1.set_ylim([-2.5, 2.0])
+ax1.set_ylabel("Response to Forcing (degrees PW$^{-1}$)")
+ax1.set_ylim([-5.5, 3.1])
 ax2.annotate("(b)", (0.015, 0.93), xycoords="axes fraction")
-ax2.set_ylabel("Feedback Parameter, $\lambda_i$ (PW degrees$^{-1}$)")
+ax2.set_ylabel("Response to Forcing (degrees PW$^{-1}$)")
 ax2.set_xticks(xvals + 0.4)
 ax2.set_xticklabels(labels, rotation=45, ha="right")
 ax2.set_xlim([xvals[0]-0.4, xvals[-1]+1.2])
-ax2.set_ylim([-2.5, 2.0])
+ax2.set_ylim([-5.5, 3.1])
 
 plt.tight_layout()
 
-fname = 'feedback_param_bars.pdf'
+fname = 'response_bars.pdf'
 plt.savefig(fname)
 print('{} created.'.format(fname))
 plt.close()

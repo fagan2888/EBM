@@ -470,31 +470,29 @@ class EnergyBalanceModel():
                 Sets temp profile with interpolation of moist adiabat calculations from MetPy.
                 Sets specific hum profile by assuming constant RH and using _humidsat function from Boos
                 """
-                # Set surface state
-                self.state["surface_temperature"].values[:] = T.reshape((self.N_pts, 1))
-                if lr_feedback == False:
-                    # Retain LR from control simulations by just shifting all levels by difference at surface
-                    Tgrid_diff = np.repeat(T - self.ctrl_data["ctrl_state_temp"][0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
-                    self.state["air_temperature"].values[:] = self.ctrl_data["ctrl_state_temp"][:] + Tgrid_diff
-                else:
-                    # Create a 2D array of the T vals and pass to self.interpolated_moist_adiabat
-                    Tgrid = np.repeat(T, self.N_levels).reshape( (self.N_pts, self.N_levels) )
-                    self.state["air_temperature"].values[:] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
-                if wv_feedback == True:
-                    # Shift RH_dist based on ITCZ
-                    E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
-                    lat_efe = self.lats[np.argmax(E)] 
-                    self.RH_dist = self.generate_RH_dist(lat_efe)
-                    # Recalculate q
-                    self.state["specific_humidity"].values[:] = self.RH_dist * self._humidsat(self.state["air_temperature"].values[:], self.state["air_pressure"].values[:] / 100)[1]
-                tendencies, diagnostics = self.longwave_radiation(self.state)
                 if homog_olr == False:
+                    # Set surface state
+                    self.state["surface_temperature"].values[:] = T.reshape((self.N_pts, 1))
+                    if lr_feedback == False:
+                        # Retain LR from control simulations by just shifting all levels by difference at surface
+                        Tgrid_diff = np.repeat(T - self.ctrl_data["ctrl_state_temp"][0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
+                        self.state["air_temperature"].values[:] = self.ctrl_data["ctrl_state_temp"][:] + Tgrid_diff
+                    else:
+                        # Create a 2D array of the T vals and pass to self.interpolated_moist_adiabat
+                        Tgrid = np.repeat(T, self.N_levels).reshape( (self.N_pts, self.N_levels) )
+                        self.state["air_temperature"].values[:] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
+                    if wv_feedback == True:
+                        # Shift RH_dist based on ITCZ
+                        E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
+                        lat_efe = self.lats[np.argmax(E)] 
+                        self.RH_dist = self.generate_RH_dist(lat_efe)
+                        # Recalculate q
+                        self.state["specific_humidity"].values[:] = self.RH_dist * self._humidsat(self.state["air_temperature"].values[:], self.state["air_pressure"].values[:] / 100)[1]
+                    tendencies, diagnostics = self.longwave_radiation(self.state)
                     return diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
                 else:
-                    olr = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-                    dL = olr - self.L_ctrl
-                    dL_avg = 1 / self._integrate_lat(1) * self._integrate_lat(dL)
-                    return self.L_ctrl + dL_avg
+                    dS_bar = 1 / self._integrate_lat(1) * self._integrate_lat(self.dS*(1 - self.alb))
+                    return self.L_ctrl + dS_bar
         else:
             os.sys.exit("Invalid keyword for olr_type: {}".format(self.olr_type))
 
@@ -966,12 +964,12 @@ class EnergyBalanceModel():
 
         # self._calculate_shift()
 
-        # Calculate lambda
-        dS_trans = self._calculate_trans(-self.dS*(1 - self.alb_ctrl), force_zero=True)
-        I_equator = self.N_pts//2
-        lambda_total = 10**-15 * dS_trans[I_equator] / np.rad2deg(self.EFE)
-        print("\nlambda = {:2.2f} PW / deg".format(lambda_total))
-        print("1/lambda = {:2.2f} deg / PW".format(1 / lambda_total))
+#         # Calculate lambda
+#         dS_trans = self._calculate_trans(-self.dS*(1 - self.alb_ctrl), force_zero=True)
+#         I_equator = self.N_pts//2
+#         lambda_total = 10**-15 * dS_trans[I_equator] / np.rad2deg(self.EFE)
+#         print("\nlambda = {:2.2f} PW / deg".format(lambda_total))
+#         print("1/lambda = {:2.2f} deg / PW".format(1 / lambda_total))
 
 
     # def predict_efe(self):
