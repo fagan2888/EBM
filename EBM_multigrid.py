@@ -51,20 +51,13 @@ class EnergyBalanceModel():
     Diffusive moist static energy balance model.
     """
     
-    def __init__(self, N_pts=401, dtmax_multiple=1e3, max_sim_years=5, tol=1e-8, diffusivity="constant"):
+    def __init__(self, N_pts=401, max_iters=1000, tol=1e-8, diffusivity="constant"):
         # Setup grid
         self.N_pts = N_pts
         self.dx = 2 / (N_pts - 1)
         self.sin_lats = np.linspace(-1.0, 1.0, N_pts)
         self.cos_lats = np.sqrt(1 - self.sin_lats**2)
         self.lats = np.arcsin(self.sin_lats)
-
-        # Create useful constants
-        self.max_sim_years = max_sim_years
-        self.secs_in_min = 60 
-        self.secs_in_hour = 60 * self.secs_in_min 
-        self.secs_in_day = 24 * self.secs_in_hour 
-        self.secs_in_year = 365 * self.secs_in_day 
 
         # Setup Diffusivity
         self.diffusivity = diffusivity
@@ -121,19 +114,11 @@ class EnergyBalanceModel():
         # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
         # plt.show()
 
-        # Calculate stable dt
-        diffusivity = self.D / Re**2 * np.cos(self.lats)**2
-        dtmax_diff = 0.5 * self.dx**2 / np.max(diffusivity)
-        velocity = self.D / Re**2 * np.sin(self.lats)
-        dtmax_cfl = self.dx / np.max(velocity)
-        self.dtmax = np.min([dtmax_diff, dtmax_cfl])
-        self.dt = dtmax_multiple * self.dtmax
-
-        # Cut off iterations
-        self.max_iters = int(self.max_sim_years * self.secs_in_year / self.dt)
-
-        # Tolerance for dT/dt
+        # Tolerance for error
         self.tol = tol
+
+        # Max iterations
+        self.max_iters = max_iters
 
         # Datasets for numpy search sorted
         self.T_dataset = np.arange(33, 350, 1e-3)
@@ -351,8 +336,8 @@ class EnergyBalanceModel():
                 width_right = 1 - np.sin(lat_center) - width_center/2
                 
                 left = np.where(self.sin_lats <= width_left - 1)[0]
-                centerL = np.where(np.logical_and(self.sin_lats > width_left - 1, self.sin_lats <= np.sin(lat_center)))[0]
-                centerR = np.where(np.logical_and(self.sin_lats > np.sin(lat_center), self.sin_lats < 1 - width_right))[0]
+                centerL = np.where(np.logical_and(self.sin_lats > np.sin(lat_center) - width_center/2, self.sin_lats <= np.sin(lat_center)))[0]
+                centerR = np.where(np.logical_and(self.sin_lats > np.sin(lat_center), self.sin_lats < np.sin(lat_center) + width_center/2))[0]
                 right = np.where(self.sin_lats >= 1 - width_right)[0]
 
                 spread_left = 1/4*width_left
@@ -493,37 +478,83 @@ class EnergyBalanceModel():
                 else:
                     dS_bar = 1 / self._integrate_lat(1) * self._integrate_lat(self.dS*(1 - self.alb))
                     return self.L_ctrl + dS_bar
+
+            self.homog_olr = homog_olr
+            self.lr_feedback = lr_feedback
+            self.wv_feedback = wv_feedback
+            self.rh_feedback = rh_feedback
         else:
             os.sys.exit("Invalid keyword for olr_type: {}".format(self.olr_type))
 
         # save to class
         self.L = L  
-        self.homog_olr = homog_olr
-        self.lr_feedback = lr_feedback
-        self.wv_feedback = wv_feedback
-        self.rh_feedback = rh_feedback
 
 
-    def take_step(self):
-        """
-        Take single time step for integration.
-
-        INPUTS
-
-        OUTPUTS
-            Returns E, T, alb arrays for next step.
-        """
-        # step forward using the take_step_matrix set up in self.solve()
-        E_new = self.step_matrix.solve(self.E + self.dt * g / ps * ((1 - self.alb) * self.S - self.L(self.T)))
+    def _restrict(self, array):
+        array_2h = array[::2]
+        return array_2h
     
-        T_new = self.T_dataset[np.searchsorted(self.E_dataset, E_new)]
-
-        if self.al_feedback:
-            alb_new = self.reset_alb(T_new)
-        else:
-            alb_new = self.alb
+    def _prolongate(self, array_2h):
+        N = len(array_2h)
+        array = np.zeros(2*N - 1)
+        for i in range(2*N - 1):
+            if i % 2 == 0:
+                array[i] = array_2h[i//2]
+            else:
+                array[i] = np.mean([array_2h[(i-1)//2], array_2h[(i+1)//2]])
+        return array
         
-        return E_new, T_new, alb_new
+    def _compute_mats(self, grid_num):
+        if grid_num == 0:
+            C_mids = -ps/g * self.D_mids / Re**2 / self.dx**2 * (1 - self.sin_lats_mids**2)
+        else:
+            sin_lats_mids = self.sin_lats_mids[::2**grid_num]
+            D_mids = self.D_mids[::2**grid_num]
+            C_mids = -ps/g * D_mids / Re**2 / self.dx**2 * (1 - sin_lats_mids**2)
+        N = self.Ns[grid_num]
+        diag = np.zeros(N)
+        for i in range(1, N-1):
+            diag[i] = -(C_mids[i] + C_mids[i-1])
+        diag[0] = -C_mids[0]
+        diag[N-1] = -C_mids[-1]
+        upper_diag = C_mids
+        lower_diag = C_mids
+        D = sp.sparse.diags(diag, 0)
+        L = sp.sparse.diags(-upper_diag, 1)
+        U = sp.sparse.diags(-lower_diag, -1)
+
+        # Gauss-Sidel:
+        LHS = (D - L).tocsc()
+        RHS = U
+
+        LHS_LU = sp.sparse.linalg.splu(LHS)
+        return D, L, U, LHS_LU, RHS
+    
+    def _smoothing(self, its, u, f, LHS, RHS):
+        for i in range(its):
+            u = LHS.solve(RHS.dot(u) + f)
+        return u
+        
+    def V_cycle(self, u, f, grid_num):
+        smoothing_its = 20
+        u = self._smoothing(smoothing_its, u, f, self.LHSs[grid_num], self.RHSs[grid_num])
+        
+        r = f - self.As[grid_num].dot(u)
+        r_2h = self._restrict(r)
+    
+        e_2h = np.zeros(self.Ns[grid_num+1])
+    
+        if grid_num+1 == self.grid_nums[-1]:
+            e_2h = self._smoothing(smoothing_its, e_2h, r_2h, self.LHSs[grid_num+1], self.RHSs[grid_num+1])
+            # e_2h = sp.sparse.linalg.spsolve(self.As[grid_num+1], r_2h)
+        else:
+            e_2h = self.V_cycle(e_2h, r_2h, grid_num+1)
+    
+        e = self._prolongate(e_2h)
+        u += e
+        
+        u = self._smoothing(smoothing_its, u, f, self.LHSs[grid_num], self.RHSs[grid_num])
+        return u
 
 
     def solve(self, numerical_method, frames):
@@ -540,47 +571,30 @@ class EnergyBalanceModel():
         # begin by computing the take_step_matrix for particular scheme
         self.numerical_method = numerical_method
         
-        if numerical_method == "implicit":
-            C_mids = self.D_mids / Re**2 * self.dt / self.dx**2 * (1 - self.sin_lats_mids**2)
+        if numerical_method == "multigrid":
+            self.grid_nums = range(5)
+            self.Ns = [self.N_pts]
+            for grid_num in range(1, len(self.grid_nums)):
+                self.Ns.append(self.N_pts//(2**grid_num) + 1)
 
-            row = np.array([])
-            col = np.array([])
-            data = np.array([])
-            for i in range(1, self.N_pts-1):
-                row = np.append(row, i)
-                col = np.append(col, i - 1)
-                data = np.append(data, -C_mids[i-1])
-
-                row = np.append(row, i)
-                col = np.append(col, i)
-                data = np.append(data, 1 + (C_mids[i] + C_mids[i-1]))
-                
-                row = np.append(row, i)
-                col = np.append(col, i + 1)
-                data = np.append(data, -C_mids[i])
-
-            row = np.append(row, [0, 0, self.N_pts-1, self.N_pts-1])
-            col = np.append(col, [0, 1, self.N_pts-2, self.N_pts-1])
-            data = np.append(data, [1 + C_mids[0], 
-                                    -C_mids[0], 
-                                    -C_mids[-1], 
-                                    1 + C_mids[-1]])
-
-            LHS_matrix = sp.sparse.csc_matrix((data, (row, col)), shape=(self.N_pts, self.N_pts))
-
-            self.step_matrix = sp.sparse.linalg.splu(LHS_matrix)
+            self.LHSs = []
+            self.RHSs = []
+            self.As = []
+            for grid_num in self.grid_nums:
+                D, L, U, LHS, RHS = self._compute_mats(grid_num)
+                A = D - L - U
+                self.LHSs.append(LHS)
+                self.RHSs.append(RHS)
+                self.As.append(A)
         else:
             os.sys.exit("Invalid numerical method.")
 
         # Print some useful information
         print("\nModel Params:")
-        print("dtmax:            {:.2f} s / {:.4f} days".format(self.dtmax, self.dtmax / self.secs_in_day))
-        print("dt:               {:.2f} s / {:.4f} days = {:.2f} * dtmax".format(self.dt, self.dt / self.secs_in_day, self.dt / self.dtmax))
-        print("max_sim_years:    {} years = {:.0f} iterations".format(self.max_sim_years, self.max_iters))
         print("dx:               {:.5f}".format(self.dx))
         print("max dlat:         {:.5f}".format(np.rad2deg(np.max(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
         print("min dlat:         {:.5f}".format(np.rad2deg(np.min(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
-        print("tolerance:        |dT/dt| < {:.2E}".format(self.tol))
+        print("tolerance:        {:.2E}".format(self.tol))
         print("frames:           {}".format(frames))
         
         print("\nDiffusivity Type:  {}".format(self.diffusivity))
@@ -617,11 +631,10 @@ class EnergyBalanceModel():
         frame = 0
         while error > self.tol and frame < frames:
             if iteration % its_per_frame == 0:
-                error = np.mean(np.abs(self.T - T_array[frame-1, :]) / (its_per_frame * self.dt))
+                error = np.mean(np.abs(self.T - T_array[frame-1, :]))
                 T_array[frame, :] = self.T
                 L_array[frame, :] = self.L(self.T)
                 alb_array[frame, :] = self.alb
-                # print("Mean alb: {:0.2f}".format(np.mean(self.alb)))
 
                 # Print progress 
                 T_avg = np.mean(self.T)
@@ -629,35 +642,15 @@ class EnergyBalanceModel():
                 if frame == 0:
                     print("frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}".format(0, np.rad2deg(self.EFE), T_avg))
                 else:
-                    print("frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}; |dT/dt| = {:.2E}".format(frame, np.rad2deg(self.EFE), T_avg, error))
-
-                # # Debug: Plot RH dist
-                # f, ax = plt.subplots(1)
-                # levels = np.arange(0, 1.05, 0.05)
-                # cf = ax.contourf(self.sin_lats, self.pressures/100, self.RH_dist[:, :, 0], cmap="BrBG", levels=levels)
-                # cb = plt.colorbar(cf, ax=ax, pad=0.1, fraction=0.2)
-                # cb.set_ticks(np.arange(0, 1.05, 0.1))
-                # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-                # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-                # ax.set_yticks(np.arange(0,1001,100))
-                # plt.gca().invert_yaxis()
-                # plt.show()
-
-                # # Debug: Plot RH 
-                # f, ax = plt.subplots(1, figsize=(16,8))
-                # I = 14
-                # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "r", label="{:3.0f} hPa".format(self.pressures[I]/100))
-                # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-                # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-                # ax.set_ylim([0, 1])
-                # ax.legend(loc="upper left")
-                # ax.grid()
-                # plt.show()
+                    print("frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}; Error = {:.2E}".format(frame, np.rad2deg(self.EFE), T_avg, error))
 
                 frame += 1
 
-            # take a step
-            self.E, self.T, self.alb = self.take_step()
+            # do a cycle
+            self.E = self.V_cycle(self.E, self.S*(1 - self.alb) - self.L(self.T), 0)
+            self.T = self.T_dataset[np.searchsorted(self.E_dataset, self.E)]
+            if self.al_feedback:
+                self.alb = self.reset_alb(self.T)
             iteration += 1
             if self.tol == 0:
                 # never stop if tol = 0
@@ -680,12 +673,12 @@ class EnergyBalanceModel():
         L_array = L_array[:frame, :]
 
         # Print exit messages
-        print("Equilibrium reached in {:8.5f} days ({} iterations).".format(iteration * self.dt / self.secs_in_day, iteration))
+        print("Equilibrium reached in {} iterations.".format(iteration))
 
         if frame == frames:
-            print("Failed to reach equilibrium in {:8.5f} days ({} iterations). |dT/dt| = {:4.16f}".format(iteration * self.dt / self.secs_in_day, iteration, error))
+            print("Failed to reach equilibrium in {} iterations".format(iteration))
         
-        print("\nEfficiency: \n{:10.10f} seconds/iteration\n{:10.10f} seconds/sim day\n".format(sim_time / iteration, sim_time / (iteration * self.dt / self.secs_in_day)))
+        print("\nEfficiency: \n{:10.10f} seconds/iteration\n".format(sim_time / iteration))
 
         # Save arrays to class
         self.T_array = T_array
