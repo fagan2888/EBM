@@ -493,15 +493,15 @@ class EnergyBalanceModel():
                 else:
                     dS_bar = 1 / self._integrate_lat(1) * self._integrate_lat(self.dS*(1 - self.alb))
                     return self.L_ctrl + dS_bar
+            self.homog_olr = homog_olr
+            self.lr_feedback = lr_feedback
+            self.wv_feedback = wv_feedback
+            self.rh_feedback = rh_feedback
         else:
             os.sys.exit("Invalid keyword for olr_type: {}".format(self.olr_type))
 
         # save to class
         self.L = L  
-        self.homog_olr = homog_olr
-        self.lr_feedback = lr_feedback
-        self.wv_feedback = wv_feedback
-        self.rh_feedback = rh_feedback
 
 
     def take_step(self):
@@ -685,7 +685,7 @@ class EnergyBalanceModel():
         if frame == frames:
             print("Failed to reach equilibrium in {:8.5f} days ({} iterations). |dT/dt| = {:4.16f}".format(iteration * self.dt / self.secs_in_day, iteration, error))
         
-        print("\nEfficiency: \n{:10.10f} seconds/iteration\n{:10.10f} seconds/sim day\n".format(sim_time / iteration, sim_time / (iteration * self.dt / self.secs_in_day)))
+        print("\nEfficiency: \n{:10.10f} total seconds\n{:10.10f} seconds/iteration\n{:10.10f} seconds/sim day\n".format(sim_time, sim_time / iteration, sim_time / (iteration * self.dt / self.secs_in_day)))
 
         # Save arrays to class
         self.T_array = T_array

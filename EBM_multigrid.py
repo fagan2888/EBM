@@ -495,13 +495,9 @@ class EnergyBalanceModel():
         return array_2h
     
     def _prolongate(self, array_2h):
-        N = len(array_2h)
-        array = np.zeros(2*N - 1)
-        for i in range(2*N - 1):
-            if i % 2 == 0:
-                array[i] = array_2h[i//2]
-            else:
-                array[i] = np.mean([array_2h[(i-1)//2], array_2h[(i+1)//2]])
+        array = np.zeros(2*array_2h.shape[0] - 1)
+        array[::2] = array_2h
+        array[1::2] = ((array_2h + np.roll(array_2h, 1))/2)[1:]
         return array
         
     def _compute_mats(self, grid_num):
@@ -511,7 +507,26 @@ class EnergyBalanceModel():
             sin_lats_mids = self.sin_lats_mids[::2**grid_num]
             D_mids = self.D_mids[::2**grid_num]
             C_mids = -ps/g * D_mids / Re**2 / self.dx**2 * (1 - sin_lats_mids**2)
+
         N = self.Ns[grid_num]
+
+        # diag = np.zeros(N)
+        # for i in range(1, N-1):
+        #     diag[i] = -(C_mids[i] + C_mids[i-1])
+        # diag[0] = C_mids[0]
+        # diag[N-1] = C_mids[-1]
+        # upper_diag = C_mids
+        # upper_diag[0] =  -(C_mids[1] + C_mids[0])
+        # lower_diag = C_mids
+        # lower_diag[-1] =  -(C_mids[-1] + C_mids[-2])
+        # upper_upper_diag = np.zeros(N-2)
+        # upper_upper_diag[0] = C_mids[1]
+        # lower_lower_diag = np.zeros(N-2)
+        # lower_lower_diag[-1] = C_mids[-2]
+        # D = sp.sparse.diags(diag, 0)
+        # L = sp.sparse.diags(upper_diag, 1) + sp.sparse.diags(upper_upper_diag, 2)
+        # U = sp.sparse.diags(lower_diag, -1) + sp.sparse.diags(lower_lower_diag, -2)
+
         diag = np.zeros(N)
         for i in range(1, N-1):
             diag[i] = -(C_mids[i] + C_mids[i-1])
@@ -520,19 +535,28 @@ class EnergyBalanceModel():
         upper_diag = C_mids
         lower_diag = C_mids
         D = sp.sparse.diags(diag, 0)
-        L = sp.sparse.diags(-upper_diag, 1)
-        U = sp.sparse.diags(-lower_diag, -1)
+        L = sp.sparse.diags(upper_diag, 1)
+        U = sp.sparse.diags(lower_diag, -1)
 
         # Gauss-Sidel:
-        LHS = (D - L).tocsc()
-        RHS = U
+        LHS = (D + L).tocsc()
+        RHS = -U
 
         LHS_LU = sp.sparse.linalg.splu(LHS)
         return D, L, U, LHS_LU, RHS
     
-    def _smoothing(self, its, u, f, LHS, RHS):
-        for i in range(its):
-            u = LHS.solve(RHS.dot(u) + f)
+    def _smoothing(self, its, u, f, LHS, RHS, tol=0):
+        if tol > 0:
+            error = tol
+            it = 0
+            while error < tol and it < its:
+                u_new = LHS.solve(RHS.dot(u) + f)
+                error = np.max(np.abs(u_new - u))
+                u = u_new
+                it += 1
+        else:
+            for i in range(its):
+                u = LHS.solve(RHS.dot(u) + f)
         return u
         
     def V_cycle(self, u, f, grid_num):
@@ -545,7 +569,7 @@ class EnergyBalanceModel():
         e_2h = np.zeros(self.Ns[grid_num+1])
     
         if grid_num+1 == self.grid_nums[-1]:
-            e_2h = self._smoothing(smoothing_its, e_2h, r_2h, self.LHSs[grid_num+1], self.RHSs[grid_num+1])
+            e_2h = self._smoothing(10*smoothing_its, e_2h, r_2h, self.LHSs[grid_num+1], self.RHSs[grid_num+1], tol=1e-16)
             # e_2h = sp.sparse.linalg.spsolve(self.As[grid_num+1], r_2h)
         else:
             e_2h = self.V_cycle(e_2h, r_2h, grid_num+1)
@@ -572,17 +596,19 @@ class EnergyBalanceModel():
         self.numerical_method = numerical_method
         
         if numerical_method == "multigrid":
+            # self.grid_nums = range(9)
             self.grid_nums = range(5)
             self.Ns = [self.N_pts]
             for grid_num in range(1, len(self.grid_nums)):
                 self.Ns.append(self.N_pts//(2**grid_num) + 1)
+            print(self.Ns)
 
             self.LHSs = []
             self.RHSs = []
             self.As = []
             for grid_num in self.grid_nums:
                 D, L, U, LHS, RHS = self._compute_mats(grid_num)
-                A = D - L - U
+                A = D + L + U
                 self.LHSs.append(LHS)
                 self.RHSs.append(RHS)
                 self.As.append(A)
@@ -629,9 +655,8 @@ class EnergyBalanceModel():
         error = self.tol + 1
         iteration = 0
         frame = 0
-        while error > self.tol and frame < frames:
+        while frame < frames:
             if iteration % its_per_frame == 0:
-                error = np.mean(np.abs(self.T - T_array[frame-1, :]))
                 T_array[frame, :] = self.T
                 L_array[frame, :] = self.L(self.T)
                 alb_array[frame, :] = self.alb
@@ -643,18 +668,21 @@ class EnergyBalanceModel():
                     print("frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}".format(0, np.rad2deg(self.EFE), T_avg))
                 else:
                     print("frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}; Error = {:.2E}".format(frame, np.rad2deg(self.EFE), T_avg, error))
+                    # print(10**-15 * self._integrate_lat(self.S*(1-self.alb) - self.L(self.T)))
 
                 frame += 1
 
             # do a cycle
             self.E = self.V_cycle(self.E, self.S*(1 - self.alb) - self.L(self.T), 0)
+            T_old = self.T
             self.T = self.T_dataset[np.searchsorted(self.E_dataset, self.E)]
             if self.al_feedback:
                 self.alb = self.reset_alb(self.T)
             iteration += 1
-            if self.tol == 0:
-                # never stop if tol = 0
-                error = 1
+
+            error = np.mean(np.abs(self.T - T_old))
+            if error < self.tol:
+                break
 
         tf = clock()
         sim_time = tf - t0
@@ -673,12 +701,13 @@ class EnergyBalanceModel():
         L_array = L_array[:frame, :]
 
         # Print exit messages
-        print("Equilibrium reached in {} iterations.".format(iteration))
-
         if frame == frames:
             print("Failed to reach equilibrium in {} iterations".format(iteration))
+        else:
+            print("Equilibrium reached in {} iterations.".format(iteration))
+
         
-        print("\nEfficiency: \n{:10.10f} seconds/iteration\n".format(sim_time / iteration))
+        print("\nEfficiency: \n{:10.10f} total seconds\n{:10.10f} seconds/iteration\n".format(sim_time, sim_time / iteration))
 
         # Save arrays to class
         self.T_array = T_array
