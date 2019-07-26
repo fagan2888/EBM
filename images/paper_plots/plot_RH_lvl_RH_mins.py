@@ -113,7 +113,7 @@ ax2.set_xticks(np.arange(-12, 1, 2))
 ax2.set_xticklabels(["12°S", "10°S", "8°S", "6°S", "4°S", "2°S", "EQ"])
 ax2.set_ylim([0, 0.4])
 ax2.annotate("(b)", (0.02, 1.025), xycoords="axes fraction") 
-ax2.set_xlabel("EFE Latitude")
+ax2.set_xlabel("EFE Latitude, $\phi_E$")
 ax2.set_ylabel("Relative Humidity Min at {:3d} hPa".format(p0))
 ax2.legend()
 

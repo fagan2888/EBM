@@ -104,7 +104,7 @@ alb = data["alb"]
 S = data["S"]
 
 ax = axes[1, 0]
-(l0, l1, l2, l3, l4, l5, l6, l7, l8)  = plot_diffs(ax)
+(l0, l1, l2, l3, l4, l5, l6, l7, l8) = plot_diffs(ax)
 
 # ax.set_title("(c) Extratropical Differences")
 ax.annotate("(c)", (0.01, 0.92), xycoords="axes fraction")
@@ -115,7 +115,7 @@ plot_transports(ax)
 ax.annotate("(d)", (0.01, 0.92), xycoords="axes fraction")
 
 handles = (l0, l1, l2, l3, l4, l5, l6, l7, l8)
-labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}$", "Sum", "$NEI'$", "EFE")
+labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}'$", "Sum", "$NEI'$", "EFE")
 f.legend(handles, labels, loc="upper center", ncol=9)
 
 plt.tight_layout()

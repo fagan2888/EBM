@@ -36,7 +36,7 @@ if __name__ == "__main__":
             'sensitivity_full_radiation_no_al.dat': ['MEBM No AL Feedback', 'g', '*'],
             'sensitivity_full_radiation_no_wv.dat': ['MEBM No WV Feedback', 'm', 'v'],
             'sensitivity_full_radiation_no_lr.dat': ['MEBM No LR Feedback', 'y', 's'],
-            'sensitivity_full_radiation_rh.dat': ['MEBM Param. RH Feedback', 'c', '^'],
+            'sensitivity_full_radiation_rh.dat': ['MEBM RH Feedback', 'c', '^'],
             }
     
     # plot all the data
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     ax1.set_yticklabels(['16°S', '14°S', '12°S', '10°S', '8°S', '6°S', '4°S', '2°S', 'EQ'])
     ax1.annotate("(a)", (0.02, 0.96), xycoords="axes fraction")
     ax1.set_xlabel('Forcing Strength, $M$ (W m$^{-2}$)')
-    ax1.set_ylabel('EFE Latitude')
+    ax1.set_ylabel('EFE Latitude, $\phi_E$')
     
     ax2.set_xlim(0, 20)
     ax2.set_xticks([0, 5, 10, 15, 18])

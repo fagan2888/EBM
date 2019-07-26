@@ -101,9 +101,9 @@ ax.annotate("tropical", (np.sin(np.deg2rad(9)), -188), xycoords="data")
 ax.annotate("extratropical", (np.sin(np.deg2rad(35)), -188), xycoords="data")
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
-ax.set_ylim([-200, 0])
+ax.set_ylim([-200, 20])
 ax.set_xlabel("Latitude")
-ax.set_ylabel("Insolation Forcing (W m$^{-2}$)")
+ax.set_ylabel("Insolation Forcing, $S'$ (W m$^{-2}$)")
 ax.grid(False)
 
 legend_elements = [Line2D([0], [0], color="k", linestyle="-", label="$M=0$, control"),

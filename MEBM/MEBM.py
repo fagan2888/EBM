@@ -41,7 +41,7 @@ EBM_PATH = os.environ["EBM_PATH"]
 # EBM_PATH = "/home/hpeter/ResearchBoos/EBM_files/EBM"
 
 # Styles:
-plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
+plt.style.use("/plot_styles.mplstyle")
 
 ###########################################################################
 ### CLASS 
@@ -100,20 +100,11 @@ class EnergyBalanceModel():
                 return g/ps*Re**2 * Diff
 
         self.D = D_f(self.lats)
-        # print("D_bar = {:1.5E}".format(ps/g/Re**2 * 1/self._integrate_lat(1) * self._integrate_lat(self.D)))
 
         self.sin_lats_mids = (self.sin_lats - self.dx/2)[1:]
         self.lats_mids = np.arcsin(self.sin_lats_mids)
         self.D_mids = D_f(self.lats_mids)
         
-        # # Debug: Plot D
-        # f, ax = plt.subplots(1)
-        # ax.plot(self.sin_lats, ps / g * self.D / Re**2)
-        # ax.set_ylim([0, 0.0005])
-        # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-        # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-        # plt.show()
-
         # Tolerance for error
         self.tol = tol
 
@@ -129,7 +120,33 @@ class EnergyBalanceModel():
         self.plot_transports = False
 
         # Control data
-        self.ctrl_data = np.load(EBM_PATH + "/data/ctrl.npz")
+        # self.ctrl_data = np.load(EBM_PATH + "/data/ctrl.npz")
+        self.ctrl_data = np.load("ctrl.npz")
+
+    def _E_to_T(self, E):
+        """
+        Return temp given MSE.
+
+        INPUTS
+            E: array of MSE
+
+        OUTPUTS
+            array of temp
+        """
+        return self.T_dataset[np.searchsorted(self.E_dataset, E)]
+        
+
+    def _T_to_E(self, T):
+        """
+        Return MSE given temp.
+
+        INPUTS
+            T: array of temp
+
+        OUTPUTS
+            array of mse
+        """
+        return self.E_dataset[np.searchsorted(self.T_dataset, T)]
 
 
     def _humidsat(self, t, p):
@@ -171,12 +188,12 @@ class EnergyBalanceModel():
         return esat, qsat, rsat
 
 
-    def initial_temperature(self, initial_condition, low=None, high=None):
+    def set_init_temp(self, init_temp_type, low=None, high=None):
         """
         Set the initial temperature distribution.
 
         INPUTS
-            initial_condition: "triangle"  -> triangle in temp with max at eq
+            init_temp_type   : "triangle"  -> triangle in temp with max at eq
                                "legendre"  -> using first two legendre polys
                                "load_data" -> load T_array.npz data if it is in the folder
             low: lowest temp
@@ -185,30 +202,32 @@ class EnergyBalanceModel():
         OUTPUTS
             Creates array init_temp saved to class.
         """
-        self.initial_condition = initial_condition
-        if initial_condition == "triangle":
+        self.init_temp_type = init_temp_type
+        if init_temp_type == "triangle":
             self.init_temp = high - (high - low) * np.abs(self.sin_lats)
-        elif initial_condition == "legendre":
+        elif init_temp_type == "legendre":
             self.init_temp = 2/3*high + 1/3*low - 2/3 * (high-low) * 1/2 * (3 * self.sin_lats**2 - 1)
-        elif initial_condition == "load_data":
+        elif init_temp_type == "load_data":
             self.init_temp = np.load("simulation_data.npz")["T"][-1, :]
+        else:
+            os.sys.exit("Unsupported initial temperature type.")
 
 
-    def insolation(self, insolation_type, perturb_center=None, perturb_spread=None, perturb_intensity=None):
+    def set_insol(self, insol_type, perturb_center=None, perturb_spread=None, perturb_intensity=None):
         """
         Set the incoming shortwave radiation.
 
         INPUTS
-            insolation_type: "perturbation" -> as in Clark et al. 2018 with a gaussian subtracted
+            insol_type: "perturbation" -> as in Clark et al. 2018, a gaussian 
             perturb_center: degrees lat -> center of gaussian 
             perturb_spread: degrees lat -> spread of gaussian 
-            perturb_intensity: W/m^2 -> M from Clark et al. 2018
+            perturb_intensity: W/m^2 -> M 
 
         OUTPUTS
             Creates array S saved to class.
         """
-        self.insolation_type = insolation_type
-        if insolation_type == "perturbation":
+        self.insol_type = insol_type
+        if insol_type == "perturbation":
             self.perturb_center = perturb_center
             self.perturb_spread = perturb_spread
             self.perturb_intensity = perturb_intensity
@@ -219,13 +238,13 @@ class EnergyBalanceModel():
             perturb_normalizer, er = sp.integrate.quadrature(func, -np.pi/2, np.pi/2, tol=1e-16, rtol=1e-16, maxiter=1000)
 
             self.dS = -perturb_intensity/perturb_normalizer * np.exp(-(self.lats - np.deg2rad(perturb_center))**2 / (2*np.deg2rad(perturb_spread)**2))
-
-            # print(10**-15*self._integrate_lat(perturb_intensity))
+        else:
+            os.sys.exit("Unsupported insolation type.")
 
         self.S = S_basic + self.dS
 
 
-    def albedo(self, al_feedback=False, alb_ice=None, alb_water=None):
+    def set_albedo(self, al_feedback=False, alb_ice=None, alb_water=None):
         """
         Set surface albedo.
 
@@ -255,7 +274,7 @@ class EnergyBalanceModel():
         self.alb = self.init_alb
 
 
-    def outgoing_longwave(self, olr_type, emissivity=None, A=None, B=None):
+    def set_olr(self, olr_type, emissivity=None, A=None, B=None):
         """
         Set outgoing longwave radiation.
 
@@ -275,15 +294,15 @@ class EnergyBalanceModel():
         """
         self.olr_type = olr_type
         if olr_type == "planck":
-            """ PLANCK RADIATION """
+            # PLANCK RADIATION
             L = lambda T: emissivity * sig * T**4 
         elif olr_type == "linear":
-            """ LINEAR FIT """
+            # LINEAR FIT
             self.A = A
             self.B = B
             L = lambda T: self.A + self.B * T
         elif "full_radiation" in olr_type:
-            """ FULL BLOWN """
+            # FULL BLOWN
             if "no_wv" in olr_type:
                 wv_feedback = False
             else:
@@ -299,25 +318,19 @@ class EnergyBalanceModel():
             else:
                 rh_feedback = False
 
-            if "homog" in olr_type:
-                homog_olr = True
-            else:
-                homog_olr = False
-
             # Use CliMT radiation scheme along with MetPy"s moist adiabat calculator
-            self.N_levels = 30   # vertical levels
-            self.longwave_radiation = climt.RRTMGLongwave(cloud_overlap_method="clear_only")    # longwave component
-            grid = climt.get_grid(nx=1, ny=self.N_pts, nz=self.N_levels)    # setup grid
-            grid["latitude"].values[:] = np.rad2deg(self.lats).reshape((self.N_pts, 1))    # force the grid to have my model"s lats
-            self.state = climt.get_default_state([self.longwave_radiation], grid_state=grid)    # get the state for this model setup
+            self.N_levels = 30 
+            self.longwave_radiation = climt.RRTMGLongwave(cloud_overlap_method="clear_only")  
+            grid = climt.get_grid(nx=1, ny=self.N_pts, nz=self.N_levels)
+            grid["latitude"].values[:] = np.rad2deg(self.lats).reshape((self.N_pts, 1))  
+            self.state = climt.get_default_state([self.longwave_radiation], grid_state=grid)  
             pressures = self.state["air_pressure"].values[:, 0, 0]
 
             if "2xCO2" in olr_type:
-                # Double CO2
                 self.state["mole_fraction_of_carbon_dioxide_in_air"].values[:] = 2 * self.state["mole_fraction_of_carbon_dioxide_in_air"].values[:]
 
-            # Latitudinal RH profile
-            gaussian = lambda mu, sigma, lat: np.exp( -(lat - mu)**2 / (2 * sigma**2) )    # quick and dirty gaussian function
+            # RH profile
+            gaussian = lambda mu, sigma, lat: np.exp(-(lat - mu)**2/(2*sigma**2)) 
             lowerlevels = np.where(pressures/100 > 875)[0]   
             midlevels = np.where(np.logical_and(pressures/100 < 875, pressures/100 > 200))[0]   
             midupperlevels = np.where(np.logical_and(pressures/100 < 200, pressures/100 > 100))[0]   
@@ -400,52 +413,24 @@ class EnergyBalanceModel():
             # plt.gca().invert_yaxis()
             # plt.show()
 
-            # # Debug: Plot RH 
-            # f, ax = plt.subplots(1, figsize=(16,8))
-            # # I = 0
-            # # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "b", label="{:3.0f} hPa".format(pressures[I]/100))
-            # I = 14
-            # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "r", label="{:3.0f} hPa".format(pressures[I]/100))
-            # # I = 23
-            # # ax.plot(self.sin_lats, self.RH_dist[I, :, 0], "y", label="{:3.0f} hPa".format(pressures[I]/100))
-            # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-            # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-            # ax.set_ylim([0, 1])
-            # ax.legend(loc="upper left")
-            # ax.grid()
-            # plt.show()
-
             # Create the 2d interpolation function: gives function T_moist(T_surf, p)
-            moist_data = np.load(EBM_PATH + "/data/moist_adiabat_data.npz")    # load data from a previous moist adiabat calculation using MetPy
-            # pressures  = moist_data["pressures"]
-            T_surf_sample = moist_data["T_surf_sample"]    # the surface temp points 
-            T_data = moist_data["T_data"]    # the resulting vertical levels temps
+            moist_data = np.load(EBM_PATH + "/data/moist_adiabat_data.npz")    
+            T_surf_sample = moist_data["T_surf_sample"]    
+            T_data = moist_data["T_data"]    
 
-            pressures_flipped = np.flip(pressures, axis=0)   # sp.interpolate.RectBivariateSpline needs increasing x values
+            pressures_flipped = np.flip(pressures, axis=0) 
             T_data = np.flip(T_data, axis=1)
-            self.interpolated_moist_adiabat = sp.interpolate.RectBivariateSpline(T_surf_sample, pressures_flipped, T_data)    # this returns an object that has the method .ev() to evaluate the interpolation function
+            self.interpolated_moist_adiabat = sp.interpolate.RectBivariateSpline(T_surf_sample, pressures_flipped, T_data)   
 
             if wv_feedback == False:
                 # prescribe WV from control simulation
-                T_control = self.ctrl_data["ctrl_state_temp"][0, :, 0]    # control surface temp
+                T_control = self.ctrl_data["ctrl_state_temp"][0, :, 0]    
                 Tgrid_control = np.repeat(T_control, self.N_levels).reshape( (self.N_pts, self.N_levels) )
                 air_temp = self.interpolated_moist_adiabat.ev(Tgrid_control, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
-                self.state["specific_humidity"].values[:] = self.RH_dist * self._humidsat(air_temp, self.state["air_pressure"].values[:] / 100)[1]    # q = RH * q_sat
+                self.state["specific_humidity"].values[:] = self.RH_dist * self._humidsat(air_temp, self.state["air_pressure"].values[:] / 100)[1]    
 
             self.pressures = pressures
             self.pressures_flipped = pressures_flipped
-
-            if homog_olr:
-                self.ctrl_state_temp = self.ctrl_data["ctrl_state_temp"]
-                self.ctrl_state_RH_dist = self.generate_RH_dist(0)
-                self.ctrl_state_qstar = self._humidsat(self.ctrl_state_temp, self.state["air_pressure"].values[:] / 100)[1]
-                self.ctrl_state_q = self.ctrl_state_RH_dist * self.ctrl_state_qstar
-
-                self.state["air_temperature"].values[:] = self.ctrl_state_temp 
-                self.state["surface_temperature"].values[:] = self.ctrl_state_temp[0, :, :]
-                self.state["specific_humidity"].values[:] = self.ctrl_state_q
-                tendencies, diagnostics = self.longwave_radiation(self.state)
-                self.L_ctrl = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
 
             def L(T):
                 """ 
@@ -455,36 +440,37 @@ class EnergyBalanceModel():
                 Sets temp profile with interpolation of moist adiabat calculations from MetPy.
                 Sets specific hum profile by assuming constant RH and using _humidsat function from Boos
                 """
-                if homog_olr == False:
-                    # Set surface state
-                    self.state["surface_temperature"].values[:] = T.reshape((self.N_pts, 1))
-                    if lr_feedback == False:
-                        # Retain LR from control simulations by just shifting all levels by difference at surface
-                        Tgrid_diff = np.repeat(T - self.ctrl_data["ctrl_state_temp"][0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
-                        self.state["air_temperature"].values[:] = self.ctrl_data["ctrl_state_temp"][:] + Tgrid_diff
-                    else:
-                        # Create a 2D array of the T vals and pass to self.interpolated_moist_adiabat
-                        Tgrid = np.repeat(T, self.N_levels).reshape( (self.N_pts, self.N_levels) )
-                        self.state["air_temperature"].values[:] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
-                    if wv_feedback == True:
-                        # Shift RH_dist based on ITCZ
-                        E = self.E_dataset[np.searchsorted(self.T_dataset, T)]
-                        lat_efe = self.lats[np.argmax(E)] 
-                        self.RH_dist = self.generate_RH_dist(lat_efe)
-                        # Recalculate q
-                        self.state["specific_humidity"].values[:] = self.RH_dist * self._humidsat(self.state["air_temperature"].values[:], self.state["air_pressure"].values[:] / 100)[1]
-                    tendencies, diagnostics = self.longwave_radiation(self.state)
-                    return diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
+                # Set surface state
+                self.state["surface_temperature"].values[:] = T.reshape((self.N_pts, 1))
+                if lr_feedback == False:
+                    # Retain LR from control simulations by just shifting all levels by difference at surface
+                    Tgrid_diff = np.repeat(T - self.ctrl_data["ctrl_state_temp"][0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
+                    self.state["air_temperature"].values[:] = self.ctrl_data["ctrl_state_temp"][:] + Tgrid_diff
                 else:
-                    dS_bar = 1 / self._integrate_lat(1) * self._integrate_lat(self.dS*(1 - self.alb))
-                    return self.L_ctrl + dS_bar
+                    # Create a 2D array of the T vals and pass to self.interpolated_moist_adiabat
+                    Tgrid = np.repeat(T, self.N_levels).reshape( (self.N_pts, self.N_levels) )
+                    self.state["air_temperature"].values[:] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
+                if wv_feedback == True:
+                    # Shift RH_dist based on ITCZ
+                    E = self._T_to_E(T)
+                    lat_efe = self.lats[np.argmax(E)] 
+                    self.RH_dist = self.generate_RH_dist(lat_efe)
+                    # Recalculate q
+                    self.state["specific_humidity"].values[:] = self.RH_dist * self._humidsat(self.state["air_temperature"].values[:], self.state["air_pressure"].values[:] / 100)[1]
+                tendencies, diagnostics = self.longwave_radiation(self.state)
+                return diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
 
-            self.homog_olr = homog_olr
             self.lr_feedback = lr_feedback
             self.wv_feedback = wv_feedback
             self.rh_feedback = rh_feedback
+        elif olr_type == "no_feedback":
+            # NO LW FEEDBACKS
+            dS_bar = self._area_weighted_avg(self.dS*(1 - self.alb))
+            self.L_ctrl = self.ctrl_data["L"]
+            def L(T):
+                return self.L_ctrl + dS_bar
         else:
-            os.sys.exit("Invalid keyword for olr_type: {}".format(self.olr_type))
+            os.sys.exit("Unsupported OLR type.")
 
         # save to class
         self.L = L  
@@ -569,7 +555,7 @@ class EnergyBalanceModel():
         e_2h = np.zeros(self.Ns[grid_num+1])
     
         if grid_num+1 == self.grid_nums[-1]:
-            e_2h = self._smoothing(10*smoothing_its, e_2h, r_2h, self.LHSs[grid_num+1], self.RHSs[grid_num+1], tol=1e-16)
+            e_2h = self._smoothing(10*smoothing_its, e_2h, r_2h, self.LHSs[grid_num+1], self.RHSs[grid_num+1], tol=1e-10)
             # e_2h = sp.sparse.linalg.spsolve(self.As[grid_num+1], r_2h)
         else:
             e_2h = self.V_cycle(e_2h, r_2h, grid_num+1)
@@ -596,12 +582,10 @@ class EnergyBalanceModel():
         self.numerical_method = numerical_method
         
         if numerical_method == "multigrid":
-            # self.grid_nums = range(9)
-            self.grid_nums = range(5)
+            self.grid_nums = range(9)
             self.Ns = [self.N_pts]
             for grid_num in range(1, len(self.grid_nums)):
                 self.Ns.append(self.N_pts//(2**grid_num) + 1)
-            print(self.Ns)
 
             self.LHSs = []
             self.RHSs = []
@@ -617,6 +601,7 @@ class EnergyBalanceModel():
 
         # Print some useful information
         print("\nModel Params:")
+        print("grids:            {}".format(self.Ns))
         print("dx:               {:.5f}".format(self.dx))
         print("max dlat:         {:.5f}".format(np.rad2deg(np.max(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
         print("min dlat:         {:.5f}".format(np.rad2deg(np.min(np.abs( (np.roll(self.lats, -1) - self.lats)[:-1])))))
@@ -624,17 +609,16 @@ class EnergyBalanceModel():
         print("frames:           {}".format(frames))
         
         print("\nDiffusivity Type:  {}".format(self.diffusivity))
-        print("Insolation Type:   {}".format(self.insolation_type))
-        if self.insolation_type == "perturbation":
+        print("Insolation Type:   {}".format(self.insol_type))
+        if self.insol_type == "perturbation":
             print("\tlat0 = {:.0f}, M = {:.0f}, sigma = {:.2f}".format(
                 self.perturb_center, self.perturb_intensity, self.perturb_spread))
-        print("Initial Temp Dist: {}".format(self.initial_condition))
+        print("Initial Temp Dist: {}".format(self.init_temp_type))
         print("AL Feedback:       {}".format(self.al_feedback))
         print("OLR Scheme:        {}".format(self.olr_type))
         if self.olr_type == "linear":
             print("\tA = {:.2f}, B = {:.2f}".format(self.A, self.B))
         elif "full_radiation" in self.olr_type:
-            print("\tHomog OLR:         {}".format(self.homog_olr))
             print("\tLR Feedback:       {}".format(self.lr_feedback))
             print("\tWV Feedback:       {}".format(self.wv_feedback))
             print("\tRH Feedback:       {}".format(self.rh_feedback))
@@ -646,7 +630,7 @@ class EnergyBalanceModel():
         L_array = np.zeros((frames, self.lats.shape[0]))
         
         self.T = self.init_temp
-        self.E = self.E_dataset[np.searchsorted(self.T_dataset, self.T)]
+        self.E = self._T_to_E(self.T)
         self.alb = self.init_alb
 
         # Loop through self.take_step() until converged
@@ -662,20 +646,26 @@ class EnergyBalanceModel():
                 alb_array[frame, :] = self.alb
 
                 # Print progress 
-                T_avg = np.mean(self.T)
+                T_avg = self._area_weighted_avg(self.T)
                 self._calculate_efe()
+                energy_balance = np.abs(10**-15 * self._integrate_lat(self.S*(1-self.alb) - self.L(self.T)))
                 if frame == 0:
-                    print("frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}".format(0, np.rad2deg(self.EFE), T_avg))
+                    if self.EFE >= 0:
+                        print("frame = {:5d}; EFE = {:2.3f}°N; T_avg = {:3.1f} K; NEI = {:.2e} PW".format(0, np.rad2deg(self.EFE), T_avg, energy_balance))
+                    else:
+                        print("frame = {:5d}; EFE = {:2.3f}°S; T_avg = {:3.1f} K; NEI = {:.2e} PW".format(0, -np.rad2deg(self.EFE), T_avg, energy_balance))
                 else:
-                    print("frame = {:5d}; EFE = {:2.3f}; T_avg = {:3.1f}; Error = {:.2E}".format(frame, np.rad2deg(self.EFE), T_avg, error))
-                    # print(10**-15 * self._integrate_lat(self.S*(1-self.alb) - self.L(self.T)))
+                    if self.EFE >= 0:
+                        print("frame = {:5d}; EFE = {:2.3f}°N; T_avg = {:3.1f} K; NEI = {:.2e} PW; Error = {:.2e} K".format(frame, np.rad2deg(self.EFE), T_avg, energy_balance, error))
+                    else:
+                        print("frame = {:5d}; EFE = {:2.3f}°S; T_avg = {:3.1f} K; NEI = {:.2e} PW; Error = {:.2e} K".format(frame, -np.rad2deg(self.EFE), T_avg, energy_balance, error))
 
                 frame += 1
 
             # do a cycle
             self.E = self.V_cycle(self.E, self.S*(1 - self.alb) - self.L(self.T), 0)
             T_old = self.T
-            self.T = self.T_dataset[np.searchsorted(self.E_dataset, self.E)]
+            self.T = self._E_to_T(self.E)
             if self.al_feedback:
                 self.alb = self.reset_alb(self.T)
             iteration += 1
@@ -715,7 +705,6 @@ class EnergyBalanceModel():
         self.L_array = L_array
 
 
-
     def save_data(self, control=False):
         """
         Save arrays of state variables.
@@ -728,11 +717,14 @@ class EnergyBalanceModel():
         np.savez("simulation_data.npz", T=self.T_array, L=self.L_array, alb=self.alb_array, sin_lats=self.sin_lats, trans_total=trans_total)
         # Save control simulations
         if control:
-            L_bar = 1/self._integrate_lat(1) * self._integrate_lat(self.L(self.T_f))
-            ctrl_state_temp = self.state["air_temperature"].values[:]
-            fname = "ctrl.npz"
-            np.savez(fname, S=self.S_f, L_bar=L_bar, trans_total=trans_total, ctrl_state_temp=ctrl_state_temp, alb=self.alb)
-            print("{} created".format(fname))
+            if "full_radiation" in self.olr_type:
+                L_bar = self._area_weighted_avg(self.L(self.T_f))
+                ctrl_state_temp = self.state["air_temperature"].values[:]
+                fname = "ctrl.npz"
+                np.savez(fname, S=self.S_f, L=self.L(self.T_F), L_bar=L_bar, trans_total=trans_total, ctrl_state_temp=ctrl_state_temp, alb=self.alb, RH_dist=self.RH_dist)
+                print("{} created\n".format(fname))
+            else:
+                print("\nCannot save as control simulation without CliMT state.\n")
 
 
     def _calculate_efe(self):
@@ -772,7 +764,7 @@ class EnergyBalanceModel():
         self._calculate_efe()
 
         with open(fname_efe, "a") as f:
-            if self.insolation_type == "perturbation":
+            if self.insol_type == "perturbation":
                 data = "{:2d}, {:2.2f}, {:2d}, {:2.16f}".format(self.perturb_center, self.perturb_spread, self.perturb_intensity, np.rad2deg(self.EFE))
             else:
                 data = "{:2d}, {:2.2f}, {:2d}, {:2.16f}".format(0, 0, 0, np.rad2deg(self.EFE))
@@ -803,6 +795,19 @@ class EnergyBalanceModel():
                 return  2*np.pi*Re**2 * np.trapz(f * np.ones(self.N_pts)[:i+1], dx=self.dx) 
 
 
+    def _area_weighted_avg(self, f):
+        """
+        Return area weighted average of some array f.
+
+        INPUTS
+            f: float, array -> some array or constant to integrate
+
+        OUTPUTS
+            f_bar
+        """
+        return 1/self._integrate_lat(1) * self._integrate_lat(f)
+    
+
     def _calculate_trans(self, f, force_zero=False):
         """
         Perform integral calculation to get energy transport.
@@ -815,8 +820,7 @@ class EnergyBalanceModel():
             Returns transport array
         """
         if force_zero:
-            area = self._integrate_lat(1)
-            f_bar = 1 / area * self._integrate_lat(f)
+            f_bar = self._area_weighted_avg(f)
         if isinstance(f, np.ndarray):
             trans = np.zeros(f.shape)
         else:
@@ -829,66 +833,66 @@ class EnergyBalanceModel():
         return trans
 
 
-    def _calculate_shift(self):
-        """
-        Calculate approximations of shift in ITCZ using corrent simulation and control values.
+    # def _calculate_shift(self):
+    #     """
+    #     Calculate approximations of shift in ITCZ using corrent simulation and control values.
 
-        INPUTS
+    #     INPUTS
 
-        OUTPUTS
-        """
-        I_equator = self.N_pts//2 
+    #     OUTPUTS
+    #     """
+    #     I_equator = self.N_pts//2 
 
-        # Method 1: Do the basic Taylor approx
-        spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.trans_total, k=4, s=0)
-        trans_total_der = spl.derivative()(0)
+    #     # Method 1: Do the basic Taylor approx
+    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.trans_total, k=4, s=0)
+    #     trans_total_der = spl.derivative()(0)
 
-        numerator = self.trans_total[I_equator]
-        denominator = trans_total_der
-        shift = -np.rad2deg(np.arcsin(numerator / denominator))
-        print("Simple Taylor Shift: {:2.2f}".format(shift))
+    #     numerator = self.trans_total[I_equator]
+    #     denominator = trans_total_der
+    #     shift = -np.rad2deg(np.arcsin(numerator / denominator))
+    #     print("Simple Taylor Shift: {:2.2f}".format(shift))
 
-        # Method 2: Use feedbacks relative to control
-        spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.trans_total_ctrl, k=4, s=0)
-        trans_total_ctrl_der = spl.derivative()(0)
-        spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_dS, k=4, s=0)
-        dtrans_dS_der = spl.derivative()(0)
-        spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_pl, k=4, s=0)
-        dtrans_pl_der = spl.derivative()(0)
-        spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_wv, k=4, s=0)
-        dtrans_wv_der = spl.derivative()(0)
-        spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_lr, k=4, s=0)
-        dtrans_lr_der = spl.derivative()(0)
-        spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_al, k=4, s=0)
-        dtrans_al_der = spl.derivative()(0)
+    #     # Method 2: Use feedbacks relative to control
+    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.trans_total_ctrl, k=4, s=0)
+    #     trans_total_ctrl_der = spl.derivative()(0)
+    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_dS, k=4, s=0)
+    #     dtrans_dS_der = spl.derivative()(0)
+    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_pl, k=4, s=0)
+    #     dtrans_pl_der = spl.derivative()(0)
+    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_wv, k=4, s=0)
+    #     dtrans_wv_der = spl.derivative()(0)
+    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_lr, k=4, s=0)
+    #     dtrans_lr_der = spl.derivative()(0)
+    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_al, k=4, s=0)
+    #     dtrans_al_der = spl.derivative()(0)
 
-        numerator = self.trans_total_ctrl[I_equator] + self.dtrans_dS[I_equator] + self.dtrans_pl[I_equator] + self.dtrans_wv[I_equator] + self.dtrans_lr[I_equator] + self.dtrans_al[I_equator]
-        denominator = trans_total_ctrl_der + dtrans_dS_der + dtrans_pl_der + dtrans_wv_der + dtrans_lr_der + dtrans_al_der 
-        shift0 = -np.rad2deg(np.arcsin(numerator / denominator))
-        print("Shift with Feedbacks: {:2.2f}".format(shift0))
+    #     numerator = self.trans_total_ctrl[I_equator] + self.dtrans_dS[I_equator] + self.dtrans_pl[I_equator] + self.dtrans_wv[I_equator] + self.dtrans_lr[I_equator] + self.dtrans_al[I_equator]
+    #     denominator = trans_total_ctrl_der + dtrans_dS_der + dtrans_pl_der + dtrans_wv_der + dtrans_lr_der + dtrans_al_der 
+    #     shift0 = -np.rad2deg(np.arcsin(numerator / denominator))
+    #     print("Shift with Feedbacks: {:2.2f}".format(shift0))
         
         
-        weird_int = self._calculate_trans(1/self._integrate_lat(1)*self._integrate_lat(self.dS*(1-self.alb_f) - self.S_ctrl*(self.alb_f - self.alb_ctrl))- (self.L_bar - self.L_bar_ctrl))
-        spl = sp.interpolate.UnivariateSpline(self.sin_lats, weird_int, k=4, s=0)
-        weird_int_der = spl.derivative()(0)
-        shift = -np.rad2deg(np.arcsin((numerator + weird_int[I_equator]) / (denominator + weird_int_der)))
-        percent = 100 * (shift0 - shift) / shift0
-        print("With Weird Integral: {:2.2f} ({:3.1f}%)".format(shift, percent))
+    #     weird_int = self._calculate_trans(1/self._integrate_lat(1)*self._integrate_lat(self.dS*(1-self.alb_f) - self.S_ctrl*(self.alb_f - self.alb_ctrl))- (self.L_bar - self.L_bar_ctrl))
+    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, weird_int, k=4, s=0)
+    #     weird_int_der = spl.derivative()(0)
+    #     shift = -np.rad2deg(np.arcsin((numerator + weird_int[I_equator]) / (denominator + weird_int_der)))
+    #     percent = 100 * (shift0 - shift) / shift0
+    #     print("With Weird Integral: {:2.2f} ({:3.1f}%)".format(shift, percent))
 
-        shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_pl[I_equator]) / (denominator - dtrans_pl_der)))
-        percent = 100 * (shift0 - shift) / shift0
-        print("No PL: {:2.2f} ({:3.1f}%)".format(shift, percent))
-        shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_wv[I_equator]) / (denominator - dtrans_wv_der)))
-        percent = 100 * (shift0 - shift) / shift0
-        print("No WV: {:2.2f} ({:3.1f}%)".format(shift, percent))
-        shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_lr[I_equator]) / (denominator - dtrans_lr_der)))
-        percent = 100 * (shift0 - shift) / shift0
-        print("No LR: {:2.2f} ({:3.1f}%)".format(shift, percent))
-        shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_al[I_equator]) / (denominator - dtrans_al_der)))
-        percent = 100 * (shift0 - shift) / shift0
-        print("No AL: {:2.2f} ({:3.1f}%)".format(shift, percent))
+    #     shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_pl[I_equator]) / (denominator - dtrans_pl_der)))
+    #     percent = 100 * (shift0 - shift) / shift0
+    #     print("No PL: {:2.2f} ({:3.1f}%)".format(shift, percent))
+    #     shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_wv[I_equator]) / (denominator - dtrans_wv_der)))
+    #     percent = 100 * (shift0 - shift) / shift0
+    #     print("No WV: {:2.2f} ({:3.1f}%)".format(shift, percent))
+    #     shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_lr[I_equator]) / (denominator - dtrans_lr_der)))
+    #     percent = 100 * (shift0 - shift) / shift0
+    #     print("No LR: {:2.2f} ({:3.1f}%)".format(shift, percent))
+    #     shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_al[I_equator]) / (denominator - dtrans_al_der)))
+    #     percent = 100 * (shift0 - shift) / shift0
+    #     print("No AL: {:2.2f} ({:3.1f}%)".format(shift, percent))
 
-        # print("\t- {:1.2E} / {:1.2E}".format(numerator, denominator))
+    #     # print("\t- {:1.2E} / {:1.2E}".format(numerator, denominator))
 
 
     def log_feedbacks(self, fname_feedbacks):
@@ -901,179 +905,86 @@ class EnergyBalanceModel():
         OUTPUTS
             Creates arrays for each feedback transport saved to class.
         """
-        print("\nCalculating feedbacks...")
+        if "full_radiation" not in self.olr_type:
+            print("\nCannot calculate feedbacks without CliMT state.\n")
+        else:
+            print("\nCalculating feedbacks...")
 
-        self.plot_transports = True
+            self.plot_transports = True
 
-        area = self._integrate_lat(1)
-        self.L_bar = 1 / area * self._integrate_lat(self.L_f)
+            self.L_bar = self._area_weighted_avg(self.L_f)
 
-        # Get ctrl data
-        ctrl_state_temp = self.ctrl_data["ctrl_state_temp"]
-        pert_state_temp = np.copy(self.state["air_temperature"].values[:])
+            # Get ctrl data
+            ctrl_state_temp = self.ctrl_data["ctrl_state_temp"]
+            pert_state_temp = np.copy(self.state["air_temperature"].values[:])
 
-        ctrl_state_RH_dist = self.generate_RH_dist(0)
-        ctrl_state_qstar = self._humidsat(ctrl_state_temp, self.state["air_pressure"].values[:] / 100)[1]
-        ctrl_state_q = ctrl_state_RH_dist * ctrl_state_qstar
-        pert_state_RH_dist = self.generate_RH_dist(self.EFE)
-        pert_state_qstar = self._humidsat(pert_state_temp, self.state["air_pressure"].values[:] / 100)[1]
-        pert_state_q = np.copy(self.state["specific_humidity"].values[:])
+            ctrl_state_RH_dist = self.ctrl_data["RH_dist"]
+            ctrl_state_qstar = self._humidsat(ctrl_state_temp, self.state["air_pressure"].values[:] / 100)[1]
+            ctrl_state_q = ctrl_state_RH_dist * ctrl_state_qstar
+            pert_state_RH_dist = self.generate_RH_dist(self.EFE)
+            pert_state_qstar = self._humidsat(pert_state_temp, self.state["air_pressure"].values[:] / 100)[1]
+            pert_state_q = np.copy(self.state["specific_humidity"].values[:])
 
-        self.S_ctrl = self.ctrl_data["S"]
-        self.alb_ctrl = self.ctrl_data["alb"]
-        self.L_bar_ctrl = self.ctrl_data["L_bar"]
-        self.dalb = self.alb_f - self.alb_ctrl
+            self.S_ctrl = self.ctrl_data["S"]
+            self.alb_ctrl = self.ctrl_data["alb"]
+            self.L_bar_ctrl = self.ctrl_data["L_bar"]
+            self.dalb = self.alb_f - self.alb_ctrl
 
-        self.trans_total_ctrl = self.ctrl_data["flux_total"]
+            self.trans_total_ctrl = self.ctrl_data["trans_total"]
 
-        self.T_f_ctrl = ctrl_state_temp[0, :, 0]
-        self.ctrl_state_temp = ctrl_state_temp
-        self.pert_state_temp = pert_state_temp
-        self.ctrl_state_q = ctrl_state_q
-        self.pert_state_q = pert_state_q
+            self.T_f_ctrl = ctrl_state_temp[0, :, 0]
+            self.ctrl_state_temp = ctrl_state_temp
+            self.pert_state_temp = pert_state_temp
+            self.ctrl_state_q = ctrl_state_q
+            self.pert_state_q = pert_state_q
 
-        self.state["air_temperature"].values[:] = ctrl_state_temp 
-        self.state["surface_temperature"].values[:] = ctrl_state_temp[0, :, :]
-        self.state["specific_humidity"].values[:] = ctrl_state_q
-        tendencies, diagnostics = self.longwave_radiation(self.state)
-        self.L_ctrl = diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0]
-        self.dL = self.L_f - self.L_ctrl
-        
-        ## dS
-        self.dtrans_dS = self._calculate_trans(self.dS * (1 - self.alb_ctrl), force_zero=True)
+            self.L_ctrl = self.ctrl_data["L"]
+            self.dL = self.L_f - self.L_ctrl
 
-        ## dalb
-        self.dtrans_dalb = self._calculate_trans((self.S_ctrl + self.dS) * self.dalb, force_zero=True)
+            ## dS
+            self.dtrans_dS = self._calculate_trans(self.dS * (1 - self.alb_ctrl), force_zero=True)
 
-        ## Total
-        self.trans_total = self._calculate_trans(self.S_f*(1 - self.alb_f) - self.L_f, force_zero=True)
-        self.dtrans_total = self.trans_total - self.trans_total_ctrl
+            ## dalb
+            self.dtrans_dalb = self._calculate_trans((self.S_ctrl + self.dS) * self.dalb, force_zero=True)
 
-        ## Planck
-        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
-        self.state["air_temperature"].values[:] = pert_state_temp - Tgrid_diff
-        self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, :]
-        self.state["specific_humidity"].values[:] = pert_state_q
-        tendencies, diagnostics = self.longwave_radiation(self.state)
-        self.dL_pl = (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
-        self.dtrans_pl = self._calculate_trans(self.dL_pl, force_zero=True)
-        
-        ## Water Vapor 
-        self.state["air_temperature"].values[:] = pert_state_temp
-        self.state["surface_temperature"].values[:] = pert_state_temp[0, :, :]
-        # self.state["specific_humidity"].values[:] = ctrl_state_q
-        self.state["specific_humidity"].values[:] = pert_state_RH_dist * ctrl_state_qstar
-        tendencies, diagnostics = self.longwave_radiation(self.state)
-        self.dL_wv =  (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
-        self.dtrans_wv = self._calculate_trans(self.dL_wv, force_zero=True)
+            ## Total
+            self.trans_total = self._calculate_trans(self.S_f*(1 - self.alb_f) - self.L_f, force_zero=True)
+            self.dtrans_total = self.trans_total - self.trans_total_ctrl
 
-        ## Relative Humidity
-        self.state["air_temperature"].values[:] = pert_state_temp
-        self.state["surface_temperature"].values[:] = pert_state_temp[0, :, :]
-        self.state["specific_humidity"].values[:] = ctrl_state_RH_dist * pert_state_qstar
-        tendencies, diagnostics = self.longwave_radiation(self.state)
-        self.dL_rh =  (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
-        self.dtrans_rh = self._calculate_trans(self.dL_rh, force_zero=True)
-        
-        ## Lapse Rate
-        Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
-        self.state["air_temperature"].values[:] =  ctrl_state_temp + Tgrid_diff
-        self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, :]
-        self.state["specific_humidity"].values[:] = pert_state_q
-        tendencies, diagnostics = self.longwave_radiation(self.state)
-        self.dL_lr = (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
-        self.dtrans_lr = self._calculate_trans(self.dL_lr, force_zero=True)
+            ## Planck
+            Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
+            self.state["air_temperature"].values[:] = pert_state_temp - Tgrid_diff
+            self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, :]
+            self.state["specific_humidity"].values[:] = pert_state_q
+            tendencies, diagnostics = self.longwave_radiation(self.state)
+            self.dL_pl = (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
+            self.dtrans_pl = self._calculate_trans(self.dL_pl, force_zero=True)
 
-        # self._calculate_shift()
+            ## Water Vapor 
+            self.state["air_temperature"].values[:] = pert_state_temp
+            self.state["surface_temperature"].values[:] = pert_state_temp[0, :, :]
+            # self.state["specific_humidity"].values[:] = ctrl_state_q
+            self.state["specific_humidity"].values[:] = pert_state_RH_dist * ctrl_state_qstar
+            tendencies, diagnostics = self.longwave_radiation(self.state)
+            self.dL_wv =  (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
+            self.dtrans_wv = self._calculate_trans(self.dL_wv, force_zero=True)
 
-#         # Calculate lambda
-#         dS_trans = self._calculate_trans(-self.dS*(1 - self.alb_ctrl), force_zero=True)
-#         I_equator = self.N_pts//2
-#         lambda_total = 10**-15 * dS_trans[I_equator] / np.rad2deg(self.EFE)
-#         print("\nlambda = {:2.2f} PW / deg".format(lambda_total))
-#         print("1/lambda = {:2.2f} deg / PW".format(1 / lambda_total))
-
-
-    # def predict_efe(self):
-    #     dT = self.T_f - self.T_f_ctrl
-    #     lambda_pl = -3.15
-    #     lambda_wv = 1.8
-    #     lambda_lr = -0.84
-
-    #     # # Feedback contributions
-    #     # f, ax = plt.subplots(1, figsize=(16, 10))
-    #     # ax.plot(self.sin_lats, dT, "k")
-    #     # ax.plot(self.sin_lats, lambda_pl * dT, "r")
-    #     # ax.plot(self.sin_lats, lambda_wv * dT, "m")
-    #     # ax.plot(self.sin_lats, lambda_lr * dT, "y")
-    #     # ax.set_xlabel("Lat")
-    #     # ax.set_ylabel("T (K)")
-    #     # ax.grid(c="k", ls="--", lw=1, alpha=0.4)
-    #     # ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-    #     # ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-    #     # plt.tight_layout()
-    #     # plt.show()
-
-    #     # Predicted Delta Feedback fluxes
-    #     flux_pl = self._calculate_trans(lambda_pl * dT, force_zero=True)
-    #     flux_wv = self._calculate_trans(lambda_wv * dT, force_zero=True)
-    #     flux_lr = self._calculate_trans(lambda_lr * dT, force_zero=True)
-    #     f, ax = plt.subplots(1, figsize=(16, 10))
-    #     ax.plot(self.sin_lats, 10**-15 * self.dtrans_total, "k", label="Total")
-    #     ax.plot(self.sin_lats, 10**-15 * (self.dtrans_dS + flux_pl + flux_wv + flux_lr), "k--", label="Linear $\\delta S + \\sum \\delta F_i$")
-    #     ax.plot(self.sin_lats, 10**-15 * flux_pl, "r--", label="Linear PL")
-    #     ax.plot(self.sin_lats, 10**-15 * self.dtrans_pl, "r", label="PL")
-    #     ax.plot(self.sin_lats, 10**-15 * flux_wv, "m--", label="Linear WV")
-    #     ax.plot(self.sin_lats, 10**-15 * self.dtrans_wv, "m", label="WV")
-    #     ax.plot(self.sin_lats, 10**-15 * flux_lr, "y--", label="Linear LR")
-    #     ax.plot(self.sin_lats, 10**-15 * self.dtrans_lr, "y", label="LR")
-    #     ax.plot(self.sin_lats, 10**-15 * self.dtrans_dS, "c", label="$\\delta S$")
-    #     ax.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
-    #     ax.set_xlabel("Latitude")
-    #     ax.set_ylabel("Transport [PW]")
-    #     ax.grid()
-    #     ax.legend()
-    #     ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-    #     ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-    #     plt.tight_layout()
-    #     plt.savefig("linear_feedback_transport.png")
-    #     plt.show()
-        
-    #     # Predicted Flux
-    #     f, ax = plt.subplots(1, figsize=(16, 10))
-    #     ax.plot(self.sin_lats, 10**-15 * (self.trans_total_ctrl + self.dtrans_dS + flux_pl + flux_wv + flux_lr), "k--", label="Linear $F$")
-    #     ax.plot(self.sin_lats, 10**-15 * self.trans_total, "k", label="$F$")
-    #     ax.plot(np.sin(self.EFE), 0,  "Xr", label="EFE")
-    #     ax.set_xlabel("Lat")
-    #     ax.set_ylabel("Transport [PW]")
-    #     ax.grid()
-    #     ax.legend()
-    #     ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-    #     ax.set_xticklabels(["90°S", "", "", "60°S", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "60°N", "", "", "90°N"])
-    #     plt.tight_layout()
-    #     plt.savefig("linear_transport.png")
-    #     plt.show()
-
-    #     # Predicted Shift
-    #     dS = self.S_f - self.S_ctrl
-    #     dL_bar = self.L_bar - self.L_bar_ctrl
-
-    #     I_equator = self.N_pts//2 
-    #     numerator = self.trans_total_ctrl[I_equator] + self._integrate_lat(dS - dL_bar, I_equator) + flux_pl[I_equator] + flux_wv[I_equator] + flux_lr[I_equator]
-    #     denominator = 0 
-
-    #     spl = sp.interpolate.UnivariateSpline(self.lats, self.trans_total_ctrl, k=4, s=0)
-    #     denominator -= spl.derivative()(0)
-    #     spl = sp.interpolate.UnivariateSpline(self.lats, flux_pl, k=4, s=0)
-    #     denominator -= spl.derivative()(0)
-    #     spl = sp.interpolate.UnivariateSpline(self.lats, flux_wv, k=4, s=0)
-    #     denominator -= spl.derivative()(0)
-    #     spl = sp.interpolate.UnivariateSpline(self.lats, flux_lr, k=4, s=0)
-    #     denominator -= spl.derivative()(0)
-
-    #     shift = np.rad2deg(numerator / denominator)
-    #     print("Shift with Feedbacks: {:2.2f}".format(shift))
-    #     print("\tNum / Denom = {}/{}".format(numerator, denominator))
+            ## Relative Humidity
+            self.state["air_temperature"].values[:] = pert_state_temp
+            self.state["surface_temperature"].values[:] = pert_state_temp[0, :, :]
+            self.state["specific_humidity"].values[:] = ctrl_state_RH_dist * pert_state_qstar
+            tendencies, diagnostics = self.longwave_radiation(self.state)
+            self.dL_rh =  (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
+            self.dtrans_rh = self._calculate_trans(self.dL_rh, force_zero=True)
+            
+            ## Lapse Rate
+            Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
+            self.state["air_temperature"].values[:] =  ctrl_state_temp + Tgrid_diff
+            self.state["surface_temperature"].values[:] = self.state["air_temperature"].values[0, :, :]
+            self.state["specific_humidity"].values[:] = pert_state_q
+            tendencies, diagnostics = self.longwave_radiation(self.state)
+            self.dL_lr = (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
+            self.dtrans_lr = self._calculate_trans(self.dL_lr, force_zero=True)
 
 
     def save_plots(self):
@@ -1087,7 +998,7 @@ class EnergyBalanceModel():
         ### TEMP 
         print("\nPlotting T")
         
-        T_avg = np.mean(self.T_f)
+        T_avg = self._area_weighted_avg(self.T_f)
         print("Mean T: {:.2f} K".format(T_avg))
 
         f, ax = plt.subplots(1)
@@ -1153,7 +1064,7 @@ class EnergyBalanceModel():
         ### dMSE
         print("\nPlotting dMSE")
         
-        E_ctrl = self.E_dataset[np.searchsorted(self.T_dataset, T_ctrl)]
+        E_ctrl = self._T_to_E(T_ctrl)
         dE = (self.E_f - E_ctrl) / 1000
 
         f, ax = plt.subplots(1)
@@ -1210,53 +1121,55 @@ class EnergyBalanceModel():
         if self.plot_transports:
             ### Differences and Transports
             print("\nPlotting Differences and Transports")
+            colors = ["c", "g", "r", "m", "b", "y", "k", "k"]
+            linestyles = [(0, (10, 1)), (0, (1, 1)), (0, (5, 1, 1, 1)), (0, (5, 1, 1, 1, 1, 1)), (0, (5, 1, 1, 1, 1, 1, 1, 1)), (0, (2, 2)), "--", "-"]
+
             f, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.057, 7.057/1.62/2))
 
-            l1, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb_ctrl), "c")
-            l2, = ax1.plot(self.sin_lats, -(self.S_ctrl + self.dS)*self.dalb, "g")
-            l3, = ax1.plot(self.sin_lats, -self.dL_pl, "r")
-            l4, = ax1.plot(self.sin_lats, -self.dL_wv, "m")
-            l5, = ax1.plot(self.sin_lats, -self.dL_rh, "b")
-            l6, = ax1.plot(self.sin_lats, -self.dL_lr, "y")
-            l7, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb_ctrl) - (self.S_ctrl + self.dS)*self.dalb - self.dL, "k")
-            l8, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb_ctrl) - (self.S_ctrl + self.dS)*self.dalb - (self.dL_pl + self.dL_wv + self.dL_rh + self.dL_lr), "k--")
-            l9, = ax1.plot(np.sin(self.EFE), 0,  "Xr")
+            l0, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb), color=colors[0], linestyle=linestyles[0])
+            l1, = ax1.plot(self.sin_lats, -(self.S + self.dS)*self.dalb, color=colors[1], linestyle=linestyles[1])
+            l2, = ax1.plot(self.sin_lats, -self.dL_pl, color=colors[2], linestyle=linestyles[2])
+            l3, = ax1.plot(self.sin_lats, -self.dL_wv, color=colors[3], linestyle=linestyles[3])
+            l4, = ax1.plot(self.sin_lats, -self.dL_rh, color=colors[4], linestyle=linestyles[4])
+            l5, = ax1.plot(self.sin_lats, -self.dL_lr, color=colors[5], linestyle=linestyles[5])
+            l6, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb) - (self.S + self.dS)*self.dalb - (self.dL_pl + self.dL_wv + self.dL_rh + self.dL_lr), color=colors[6], linestyle=linestyles[6])
+            l7, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb) - (self.S + self.dS)*self.dalb - self.dL, color=colors[7], linestyle=linestyles[7])
+            l8, = ax1.plot(np.sin(self.EFE), 0,  "or")
 
             ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
-            ax1.set_title("(a) Feedback Differences")
             ax1.set_xlabel("Latitude")
             ax1.set_ylabel("Energy Perturbation (W m$^{-2}$)")
 
-            ax2.plot(self.sin_lats, 10**-15 * self.dtrans_dS, "c")
-            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_dalb, "g")
-            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_pl, "r")
-            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_wv, "m")
-            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_rh, "b")
-            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_lr, "y")
-            ax2.plot(self.sin_lats, 10**-15 * self.dtrans_total, "k")
-            ax2.plot(self.sin_lats, 10**-15 * (self.dtrans_dS - self.dtrans_dalb - (self.dtrans_pl + self.dtrans_wv + self.dtrans_rh + self.dtrans_lr)), "k--")
-            ax2.plot(np.sin(self.EFE), 0,  "Xr")
-
+            ax2.plot(self.sin_lats, 10**-15  * self.dtrans_dS, c=colors[0], ls=linestyles[0])
+            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_dalb, c=colors[1], ls=linestyles[1])
+            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_pl, c=colors[2], ls=linestyles[2])
+            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_wv, c=colors[3], ls=linestyles[3])
+            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_rh, c=colors[4], ls=linestyles[4])
+            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_lr, c=colors[5], ls=linestyles[5])
+            ax2.plot(self.sin_lats, 10**-15  * (self.dtrans_dS - self.dtrans_dalb - (self.dtrans_pl + self.dtrans_wv + self.dtrans_rh + self.dtrans_lr)), c=colors[6], ls=linestyles[6])
+            ax2.plot(self.sin_lats, 10**-15  * self.dtrans_total, c=colors[7], ls=linestyles[7])
+            ax2.plot(np.sin(self.EFE), 0,  "or")
+            
             ax2.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
             ax2.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
-            ax2.set_title("(b) Feedback Transports")
             ax2.set_xlabel("Latitude")
             ax2.set_ylabel("Energy Transport (PW)")
 
-            handles = (l1, l2, l3, l4, l5, l6, l7, l8, l9)
-            labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}$",  "$NEI'$", "Sum", "EFE")
+            ax1.annotate("(a)", (0.01, 0.92), xycoords="axes fraction")
+            ax2.annotate("(b)", (0.01, 0.92), xycoords="axes fraction")
+
+            handles = (l0, l1, l2, l3, l4, l5, l6, l7, l8)
+            labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}'$", "Sum", "$NEI'$", "EFE")
             f.legend(handles, labels, loc="upper center", ncol=9)
             
             plt.tight_layout()
-            plt.subplots_adjust(top=0.80)
+            plt.subplots_adjust(top=0.89)
             
             fname = "differences_transports.png"
             plt.savefig(fname)
             print("{} created.".format(fname))
             plt.close()
-
-            rc("font", size=7)
             # np.savez("feedback_transports_differences.npz", 
             #     EFE=self.EFE, 
             #     sin_lats=self.sin_lats, 
