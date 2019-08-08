@@ -13,9 +13,10 @@ def plot_diffs(ax):
     l1, = ax.plot(sin_lats, -(S + dS)*dalb, color=colors[1], linestyle=linestyles[1])
     l2, = ax.plot(sin_lats, -dL_pl, color=colors[2], linestyle=linestyles[2])
     l3, = ax.plot(sin_lats, -dL_wv, color=colors[3], linestyle=linestyles[3])
-    l4, = ax.plot(sin_lats, -dL_rh, color=colors[4], linestyle=linestyles[4])
+    # l4, = ax.plot(sin_lats, -dL_rh, color=colors[4], linestyle=linestyles[4])
     l5, = ax.plot(sin_lats, -dL_lr, color=colors[5], linestyle=linestyles[5])
-    l6, = ax.plot(sin_lats, dS*(1 - alb) - (S + dS)*dalb - (dL_pl + dL_wv + + dL_rh + dL_lr), color=colors[6], linestyle=linestyles[6])
+    # l6, = ax.plot(sin_lats, dS*(1 - alb) - (S + dS)*dalb - (dL_pl + dL_wv + dL_rh + dL_lr), color=colors[6], linestyle=linestyles[6])
+    l6, = ax.plot(sin_lats, dS*(1 - alb) - (S + dS)*dalb - (dL_pl + dL_wv + dL_lr), color=colors[6], linestyle=linestyles[6])
     l7, = ax.plot(sin_lats, dS*(1 - alb) - (S + dS)*dalb - dL, color=colors[7], linestyle=linestyles[7])
     l8, = ax.plot(np.sin(EFE), 0,  "or")
 
@@ -26,16 +27,18 @@ def plot_diffs(ax):
     ax.set_xlabel("Latitude")
     ax.set_ylabel("Energy Perturbation (W m$^{-2}$)")
 
-    return (l0, l1, l2, l3, l4, l5, l6, l7, l8)
+    # return (l0, l1, l2, l3, l4, l5, l6, l7, l8)
+    return (l0, l1, l2, l3, l5, l6, l7, l8)
 
 def plot_transports(ax):
     ax.plot(sin_lats, 10**-15 * dtrans_dS, c=colors[0], ls=linestyles[0])
     ax.plot(sin_lats, -10**-15 * dtrans_dalb, c=colors[1], ls=linestyles[1])
     ax.plot(sin_lats, -10**-15 * dtrans_pl, c=colors[2], ls=linestyles[2])
     ax.plot(sin_lats, -10**-15 * dtrans_wv, c=colors[3], ls=linestyles[3])
-    ax.plot(sin_lats, -10**-15 * dtrans_rh, c=colors[4], ls=linestyles[4])
+    # ax.plot(sin_lats, -10**-15 * dtrans_rh, c=colors[4], ls=linestyles[4])
     ax.plot(sin_lats, -10**-15 * dtrans_lr, c=colors[5], ls=linestyles[5])
-    ax.plot(sin_lats, 10**-15 * (dtrans_dS - dtrans_dalb - (dtrans_pl + dtrans_wv + dtrans_rh + dtrans_lr)), c=colors[6], ls=linestyles[6])
+    # ax.plot(sin_lats, 10**-15 * (dtrans_dS - dtrans_dalb - (dtrans_pl + dtrans_wv + dtrans_rh + dtrans_lr)), c=colors[6], ls=linestyles[6])
+    ax.plot(sin_lats, 10**-15 * (dtrans_dS - dtrans_dalb - (dtrans_pl + dtrans_wv + dtrans_lr)), c=colors[6], ls=linestyles[6])
     ax.plot(sin_lats, 10**-15 * dtrans_total, c=colors[7], ls=linestyles[7])
     ax.plot(np.sin(EFE), 0,  "or")
     
@@ -46,7 +49,6 @@ def plot_transports(ax):
     ax.set_ylabel("Energy Transport (PW)")
 
 colors = ["c", "g", "r", "m", "b", "y", "k", "k"]
-# colors = ["k", "k", "k", "k", "k", "k", "k", "k"]
 linestyles = [(0, (10, 1)), (0, (1, 1)), (0, (5, 1, 1, 1)), (0, (5, 1, 1, 1, 1, 1)), (0, (5, 1, 1, 1, 1, 1, 1, 1)), (0, (2, 2)), "--", "-"]
 
 f, axes = plt.subplots(2, 2, figsize=(7.057, 7.057/1.62))
@@ -57,13 +59,13 @@ sin_lats = data["sin_lats"]
 dtrans_total = data["dtrans_total"] 
 dtrans_pl = data["dtrans_pl"] 
 dtrans_wv = data["dtrans_wv"] 
-dtrans_rh = data["dtrans_rh"] 
+# dtrans_rh = data["dtrans_rh"] 
 dtrans_lr = data["dtrans_lr"] 
 dtrans_dS = data["dtrans_dS"] 
 dtrans_dalb = data["dtrans_dalb"] 
 dL_pl = data["dL_pl"] 
 dL_wv = data["dL_wv"] 
-dL_rh = data["dL_rh"] 
+# dL_rh = data["dL_rh"] 
 dL_lr = data["dL_lr"] 
 dL = data["dL"] 
 dS = data["dS"]
@@ -72,7 +74,8 @@ alb = data["alb"]
 S = data["S"]
 
 ax = axes[0, 0]
-(l1, l2, l3, l4, l5, l6, l7, l8, l9) = plot_diffs(ax)
+# (l1, l2, l3, l4, l5, l6, l7, l8, l9) = plot_diffs(ax)
+(l1, l2, l3, l5, l6, l7, l8, l9) = plot_diffs(ax)
 # ax.set_title("(a) Tropical Differences")
 ax.annotate("(a)", (0.01, 0.92), xycoords="axes fraction")
 
@@ -89,13 +92,13 @@ sin_lats = data["sin_lats"]
 dtrans_total = data["dtrans_total"] 
 dtrans_pl = data["dtrans_pl"] 
 dtrans_wv = data["dtrans_wv"] 
-dtrans_rh = data["dtrans_rh"] 
+# dtrans_rh = data["dtrans_rh"] 
 dtrans_lr = data["dtrans_lr"] 
 dtrans_dS = data["dtrans_dS"] 
 dtrans_dalb = data["dtrans_dalb"] 
 dL_pl = data["dL_pl"] 
 dL_wv = data["dL_wv"] 
-dL_rh = data["dL_rh"] 
+# dL_rh = data["dL_rh"] 
 dL_lr = data["dL_lr"] 
 dL = data["dL"] 
 dS = data["dS"]
@@ -104,7 +107,8 @@ alb = data["alb"]
 S = data["S"]
 
 ax = axes[1, 0]
-(l0, l1, l2, l3, l4, l5, l6, l7, l8) = plot_diffs(ax)
+# (l0, l1, l2, l3, l4, l5, l6, l7, l8) = plot_diffs(ax)
+(l0, l1, l2, l3, l5, l6, l7, l8) = plot_diffs(ax)
 
 # ax.set_title("(c) Extratropical Differences")
 ax.annotate("(c)", (0.01, 0.92), xycoords="axes fraction")
@@ -114,9 +118,12 @@ plot_transports(ax)
 # ax.set_title("(d) Extratropical Transports")
 ax.annotate("(d)", (0.01, 0.92), xycoords="axes fraction")
 
-handles = (l0, l1, l2, l3, l4, l5, l6, l7, l8)
-labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}'$", "Sum", "$NEI'$", "EFE")
-f.legend(handles, labels, loc="upper center", ncol=9)
+# handles = (l0, l1, l2, l3, l4, l5, l6, l7, l8)
+handles = (l0, l1, l2, l3, l5, l6, l7, l8)
+# labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}'$", "Sum", "$NEI'$", "EFE")
+labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{LR}'$", "Sum", "$NEI'$", "EFE")
+# f.legend(handles, labels, loc="upper center", ncol=9)
+f.legend(handles, labels, loc="upper center", ncol=8)
 
 plt.tight_layout()
 plt.subplots_adjust(top=0.92)

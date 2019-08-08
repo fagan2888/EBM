@@ -120,7 +120,7 @@ def get_bar_height(filename, location, control_efe=0):
             height = (efes[0] - control_efe) / dS_eq_trans_e[0]
     if "no" in filename:
         height *= -1
-        if "no_al_no_wv_no_lr" in filename:
+        if "no_al_no_wv_no_lr" in filename or "no_feedbacks" in filename:
             height *= -1
 
     # print("{:15s} {:5s} {:2.5f} ({:2.1f})".format(labels[i], location[0], height, 1/height))
@@ -135,7 +135,7 @@ bars_dict = {
                  3 : {"filename" : "sensitivity_cesm2.dat", "control" : None, "label" : "CESM2 Total", "color" : "k", "alpha" : 0.5, "hatch" : "\\\\"},
                  5 : {"filename" : "sensitivity_full_radiation.dat", "control" : None, "label" : "MEBM Total", "color" : "k", "alpha" : 1.0, "hatch" : ""},
                  6 : {"filename" : None, "control" : None, "label" : "MEBM Sum", "color" : "k", "alpha" : 0.2, "hatch" : ""},
-                 7 : {"filename" : "sensitivity_full_radiation_homog.dat", "control" : None, "label" : "MEBM NF", "color" : (1, 1, 1), "alpha" : 1.0, "hatch" : ""},
+                 7 : {"filename" : "sensitivity_no_feedbacks.dat", "control" : None, "label" : "MEBM NF", "color" : (1, 1, 1), "alpha" : 1.0, "hatch" : ""},
                  8 : {"filename" : "sensitivity_full_radiation_no_al_no_wv_no_lr.dat", "control" : 7, "label" : "MEBM PL", "color" : "r", "alpha" : 1.0, "hatch" : ""},
                  9 : {"filename" : "sensitivity_full_radiation_no_wv.dat", "control" : 5, "label" : "MEBM WV", "color" : "m", "alpha" : 1.0, "hatch" : ""},
                 10 : {"filename" : "sensitivity_full_radiation_no_al.dat", "control" : 5, "label" : "MEBM AL", "color" : "g", "alpha" : 1.0, "hatch" : ""},

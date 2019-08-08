@@ -79,7 +79,7 @@ q_dataset = humidsat(T_dataset, ps/100)[1]
 E_dataset = cp*T_dataset + RH*q_dataset*Lv
 
 # Set up grid
-N_pts = 401
+N_pts = 513
 dx = 2 / (N_pts - 1)
 sin_lats = np.linspace(-1.0, 1.0, N_pts)
 
@@ -104,7 +104,6 @@ ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", 
 ax.set_ylim([-200, 20])
 ax.set_xlabel("Latitude")
 ax.set_ylabel("Insolation Forcing, $S'$ (W m$^{-2}$)")
-ax.grid(False)
 
 legend_elements = [Line2D([0], [0], color="k", linestyle="-", label="$M=0$, control"),
                    Line2D([0], [0], color="k", linestyle=linestyles[0], label="$M=5$"),
@@ -118,7 +117,7 @@ ax = axes[1]
 T_min = 205
 T_max = 301
 
-directory = "/home/hpeter/Documents/ResearchBoos/EBM_files/EBM_sims/sim287"
+directory = "/home/hpeter/Documents/ResearchBoos/EBM_files/EBM_sims/sim291"
 simulation = "/ctrl"
 data = np.load(directory + simulation + "/simulation_data.npz")
 T = data["T"][-1, :]
@@ -127,14 +126,14 @@ EFE = 0
 ax.plot([np.sin(EFE), np.sin(EFE)], [T_min, np.max(T)], "k-", alpha=0.5)
 
 for i, M in enumerate([5, 10, 15, 18]):
-    simulation = "/full_radiation/tropical/M{}".format(M)
+    simulation = "/full_radiation/T{:02d}".format(M)
     data = np.load(directory + simulation + "/simulation_data.npz")
     T = data["T"][-1, :]
     ax.plot(sin_lats, T, color=colors[0], linestyle=linestyles[i])
     EFE = calculate_efe(M, "tropics")
     ax.plot([np.sin(EFE), np.sin(EFE)], [T_min, np.max(T)], color=colors[0], linestyle="-", alpha=0.5)
 
-    simulation = "/full_radiation/extratropical/M{}".format(M)
+    simulation = "/full_radiation/E{:02d}".format(M)
     data = np.load(directory + simulation + "/simulation_data.npz")
     T = data["T"][-1, :]
     ax.plot(sin_lats, T, color=colors[1], linestyle=linestyles[i])
@@ -147,14 +146,12 @@ ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", 
 ax.set_xlabel("Latitude")
 ax.set_ylabel("Surface Temperature, $T$ (K)")
 ax.set_ylim([T_min, T_max])
-ax.grid(False)
 
 ax = axes[2]
 
 E_min = 210
 E_max = 342
 
-directory = "/home/hpeter/Documents/ResearchBoos/EBM_files/EBM_sims/sim287"
 simulation = "/ctrl"
 data = np.load(directory + simulation + "/simulation_data.npz")
 T = data["T"][-1, :]
@@ -164,7 +161,7 @@ ax.plot(sin_lats, E / 1000, color="k", linestyle="-")
 ax.plot([np.sin(EFE), np.sin(EFE)], [E_min, np.max(E)/1000], "k-", alpha=0.5)
 
 for i, M in enumerate([5, 10, 15, 18]):
-    simulation = "/full_radiation/tropical/M{}".format(M)
+    simulation = "/full_radiation/T{:02d}".format(M)
     data = np.load(directory + simulation + "/simulation_data.npz")
     T = data["T"][-1, :]
     E = E_dataset[np.searchsorted(T_dataset, T)]
@@ -172,7 +169,7 @@ for i, M in enumerate([5, 10, 15, 18]):
     EFE = calculate_efe(M, "tropics")
     ax.plot([np.sin(EFE), np.sin(EFE)], [E_min, np.max(E)/1000], color=colors[0], linestyle="-", alpha=0.5)
 
-    simulation = "/full_radiation/extratropical/M{}".format(M)
+    simulation = "/full_radiation/E{:02d}".format(M)
     data = np.load(directory + simulation + "/simulation_data.npz")
     T = data["T"][-1, :]
     E = E_dataset[np.searchsorted(T_dataset, T)]
@@ -188,7 +185,6 @@ ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", 
 ax.set_xlabel("Latitude")
 ax.set_ylabel("Surface MSE, $h$ (kJ kg$^{-1}$)")
 ax.set_ylim([E_min, E_max])
-ax.grid(False)
 
 plt.tight_layout()
 

@@ -83,7 +83,7 @@ for M in [0, 18]:
 ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax1.set_ylim([0, 1])
-ax1.legend(loc="upper center", ncol=2)
+ax1.legend(loc="upper center", ncol=2, bbox_to_anchor=(0.51, 1.01))
 ax1.annotate("(a)", (0.02, 1.025), xycoords="axes fraction") 
 ax1.set_xlabel("Latitude")
 ax1.set_ylabel("Relative Humidity at {:3d} hPa".format(p0))

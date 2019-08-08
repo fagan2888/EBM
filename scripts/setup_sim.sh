@@ -3,25 +3,25 @@
 # sim_dir=~/my-scratch/EBM_sims/
 sim_dir=~/ResearchBoos/EBM_files/EBM_sims/
 
-N_pts=401
-dtmax_multiple=200
-max_sim_years=10
-tol=1e-9
-diffusivity=constant
+N_pts=513
+max_iters=1e3
+tol=1e-4
+# diffusivity=constant
 # diffusivity=cesm2
 # diffusivity=D1
-# diffusivity=D2
+diffusivity=D2
+control_file=default
 
-initial_condition=legendre
+init_temp_type=legendre
 low=250
 high=300
 
-# albedo_feedback=True
-albedo_feedback=False
+al_feedback=True
+# al_feedback=False
 alb_ice=0.6
 alb_water=0.2
 
-numerical_method=implicit
+numerical_method=multigrid
 frames=100
 
 control=False
@@ -31,19 +31,19 @@ fname_feedbacks=feedbacks.log
 
 if [ "$1" == "-s" ]; then
 	# SENSITIVITY EXPERIMENTS 
-	# olr_type=full_radiation
+	olr_type=full_radiation
 	# olr_type=full_radiation_no_wv
 	# olr_type=full_radiation_no_lr
 	# olr_type=full_radiation_rh
-	# olr_type=full_radiation_homog
-	olr_type=full_radiation_no_wv_no_lr
+	# olr_type=no_feedback
+	# olr_type=full_radiation_no_wv_no_lr
 	A=None
 	B=None
 	emissivity=None
 	
-	insolation_type=perturbation
+	insol_type=perturbation
 
-    i=287
+    i=291
 	# i=0
 	# while [ -d ${sim_dir}sim$i ];
 	# do
@@ -51,7 +51,17 @@ if [ "$1" == "-s" ]; then
 	# done
 	echo "Making simulations in ${sim_dir}sim$i"
 
-	# mkdir ${sim_dir}sim$i
+	mkdir ${sim_dir}sim$i
+	if [ $diffusivity != constant ]; then
+		sim_name=$diffusivity
+	else 
+		if [ $al_feedback = False ]; then
+			sim_name=${olr_type}_no_al
+		else
+			sim_name=${olr_type}
+		fi
+	fi
+	mkdir ${sim_dir}sim${i}/$sim_name
 
 	for perturb_center in 15 60; do
         if [ $perturb_center -eq 15 ]; then
@@ -66,53 +76,33 @@ if [ "$1" == "-s" ]; then
                 subdir=E
         	fi
             if [ $perturb_intensity -eq 5 ]; then
-			    dir=${sim_dir}sim${i}/${subdir}0$perturb_intensity
+			    dir=${sim_dir}sim${i}/${sim_name}/${subdir}0$perturb_intensity
             else
-			    dir=${sim_dir}sim${i}/${subdir}$perturb_intensity
+			    dir=${sim_dir}sim${i}/${sim_name}/${subdir}$perturb_intensity
             fi
-	        echo "Making new simulation in $dir"
 	        mkdir $dir
 	        cd $dir
 	        
 	        # echo "Copying template files."
-	        sed -e 's/N_pts=/N_pts='$N_pts'/g' \
-	            -e 's/dtmax_multiple=/dtmax_multiple='$dtmax_multiple'/g' \
-	            -e 's/max_sim_years=/max_sim_years='$max_sim_years'/g' \
-	            -e 's/tol=/tol='$tol'/g' \
-	            -e 's/diffusivity=/diffusivity="'$diffusivity'"/g' \
-	            -e 's/initial_condition=/initial_condition="'$initial_condition'"/g' \
-	            -e 's/low=/low='$low'/g' \
-	            -e 's/high=/high='$high'/g' \
-	            -e 's/al_feedback=/al_feedback='$albedo_feedback'/g' \
-	            -e 's/alb_ice=/alb_ice='$alb_ice'/g' \
-	            -e 's/alb_water=/alb_water='$alb_water'/g' \
-	            -e 's/insolation_type=/insolation_type="'$insolation_type'"/g' \
-	            -e 's/perturb_center=/perturb_center='$perturb_center'/g' \
-	            -e 's/perturb_spread=/perturb_spread='$perturb_spread'/g' \
-	            -e 's/perturb_intensity=/perturb_intensity='$perturb_intensity'/g' \
-	            -e 's/olr_type=/olr_type="'$olr_type'"/g' \
-	            -e 's/A=/A='$A'/g' \
-	            -e 's/B=/B='$B'/g' \
-	            -e 's/emissivity=/emissivity='$emissivity'/g' \
-	            -e 's/numerical_method=/numerical_method="'$numerical_method'"/g' \
-	            -e 's/frames=/frames='$frames'/g' \
-	            -e 's/control=/control='$control'/g' \
-	            -e 's/fname_efe=/fname_efe="'$fname_efe'"/g' \
-	            -e 's/fname_feedbacks=/fname_feedbacks="'$fname_feedbacks'"/g' \
-	            ${EBM_PATH}/simulation.py > simulation.py
-	        
-	        sed -e 's/NAME/'Sim$i'/g' ${EBM_PATH}/run_EBM.job > run_EBM.job
-	        cp -p ${EBM_PATH}/EBM.py .
+			echo "import mebm" >> simulation.py
+			echo 'model = mebm.MoistEnergyBalanceModel(N_pts='$N_pts', max_iters='$max_iters', tol='$tol', diffusivity="'$diffusivity'", control_file="'$control_file'")' >> simulation.py
+			echo 'model.set_init_temp(init_temp_type="'$init_temp_type'", low='$low', high='$high')' >> simulation.py
+			echo 'model.set_insol(insol_type="'$insol_type'", perturb_center='$perturb_center', perturb_spread='$perturb_spread', perturb_intensity='$perturb_intensity')' >> simulation.py
+			echo 'model.set_albedo(al_feedback='$al_feedback', alb_ice='$alb_ice', alb_water='$alb_water')' >> simulation.py
+			echo 'model.set_olr(olr_type="'$olr_type'", A='$A', B='$B', emissivity='$emissivity')' >> simulation.py
+			echo 'model.solve(numerical_method="'$numerical_method'", frames='$frames')' >> simulation.py
+			echo 'model.save_data(control='$control')' >> simulation.py
+			echo 'model.log_efe(fname_efe="'$fname_efe'")' >> simulation.py
+			echo 'model.log_feedbacks(fname_feedbacks="'$fname_feedbacks'")' >> simulation.py
+			echo 'model.save_plots()' >> simulation.py
 	        
 	        # echo "Running job."
 	        # sbatch run_EBM.job
-			nohup python -u simulation.py > out0 &
+			nohup python -u simulation.py > out0 2> out.err &
 	        
 	        # echo "Logging simulation."
-	        log="sim$i | lat0=$perturb_center | M=$perturb_intensity | $olr_type | albedo_feedback=$albedo_feedback | $diffusivity"
-	        echo "Adding line to log.txt: $log"
-	        echo $log >> ${EBM_PATH}/log.txt 
-	        
+	        echo "sim$i | lat0=$perturb_center | M=$perturb_intensity | $olr_type | al_feedback=$al_feedback | $diffusivity"
+
 	        cd ..
         done
     done

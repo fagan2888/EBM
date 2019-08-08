@@ -16,7 +16,8 @@ import climt
 from metpy.calc import moist_lapse
 from metpy.units import units
 from metpy.plots import SkewT
-from EBM import RH
+
+RH = 0.8
 
 # to get same pressure levels as CliMT
 N_levels = 30
@@ -25,10 +26,10 @@ state = climt.get_default_state([], grid_state=grid)
 pressures = state['air_pressure'].values[:,0,0] 
 
 # setup sample Ts points
-N_sample_pts = 20    # test
-# N_sample_pts = 200    # full run
-minT = 217    #overflow if minT is below 217 ???
-maxT = 350
+# N_sample_pts = 20    # test
+N_sample_pts = 200    # full run
+minT = 100
+maxT = 400
 T_surf_sample = np.linspace(minT, maxT, N_sample_pts) 
 
 T_data = np.zeros((N_sample_pts, N_levels)) 
@@ -36,7 +37,8 @@ T_data[:, 0] = T_surf_sample
 
 print('Calculating moist adiabats...')
 for i in range(N_sample_pts):
-    if i%10 == 0: print(i)
+    if i % 10 == 0: 
+        print(i)
     T_data[i, :] = moist_lapse(temperature=T_data[i, 0]*units('K'), pressure=pressures*units('Pa'))
 
 # Keep T constant above 200 hPa for a Tropopause
@@ -50,12 +52,11 @@ skew = SkewT(f, rotation=45)
 for i in range(N_sample_pts):
     skew.plot(pressures/100, T_data[i, :] - 273.15, 'r')
 skew.ax.set_ylim(1000, 100)
-skew.ax.set_xlim(minT - 273.15, maxT - 273.15)
+skew.ax.set_xlim(minT - 273.15 - 5, maxT - 273.15 + 5)
 skew.plot_moist_adiabats()
 plt.show()
 
-# # Save data
-# fname = 'data/moist_adiabat_data.npz'
-# np.savez(fname, pressures=pressures, T_surf_sample=T_surf_sample, T_data=T_data)
-# print('Data saved in {}.'.format(fname))
-
+# Save data
+fname = 'moist_adiabat_data.npz'
+np.savez(fname, pressures=pressures, T_surf_sample=T_surf_sample, T_data=T_data)
+print('Data saved in {}.'.format(fname))

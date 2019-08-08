@@ -10,7 +10,8 @@ import os
 EBM_PATH = os.environ["EBM_PATH"]
 plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 
-rc("lines", markersize=8)
+# rc("lines", markersize=8)
+rc("lines", markersize=6)
 
 def get_data(filename, location):
     filename   = EBM_PATH + '/data/' + filename
@@ -27,7 +28,8 @@ def get_data(filename, location):
 
 if __name__ == "__main__":
     # two plots: tropics and extratropics perturbations
-    f, axes = plt.subplots(1, 2, figsize=(7.057, 7.057/1.62), sharey=True)
+    f, axes = plt.subplots(1, 2, figsize=(7.057, 7.057/1.62/1.8), sharey=True)
+    # f, axes = plt.subplots(1, 2, figsize=(7.057, 7.057/1.62/2))
     ax1 = axes[0]; ax2 = axes[1]
     
     # dictionary of 'file' : ['label', 'color', 'marker'] elements
@@ -44,11 +46,24 @@ if __name__ == "__main__":
         for i, location in enumerate(['tropics', 'extratropics']):
             centers, spreads, intensities, efes = get_data(f, location)
             axes[i].plot(intensities, efes, marker=files[f][2], color=files[f][1], linestyle='', label=files[f][0])
+    
+    # CESM
+    color = 'k'
+    alpha = 1.0
+    linestyle = '-'
+    markersize = 4
+    linewidth = 0.5
+    marker = 'o'
+    centers, spreads, intensities, efes = get_data("sensitivity_cesm2.dat", "tropics")
+    ax1.plot(intensities, efes, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
+    centers, spreads, intensities, efes = get_data("sensitivity_cesm2.dat", "extratropics")
+    ax2.plot(intensities, efes, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
+
     # C18
     color = 'k'
     alpha = 0.5
     linestyle = '--'
-    markersize = 3
+    markersize = 4
     linewidth = 0.5
     marker = 'v'
     centers, spreads, intensities, efes = get_data('sensitivity_clark_no_wv.dat', 'tropics')
@@ -63,33 +78,24 @@ if __name__ == "__main__":
     centers, spreads, intensities, efes = get_data('sensitivity_clark.dat', 'extratropics')
     ax2.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Interactive WV (C18)', markersize=markersize)
     
-    # CESM
-    color = 'k'
-    alpha = 1.0
-    linestyle = '-'
-    markersize = 3
-    linewidth = 0.5
-    marker = 'o'
-    centers, spreads, intensities, efes = get_data("sensitivity_cesm2.dat", "tropics")
-    ax1.plot(intensities, efes, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
-    centers, spreads, intensities, efes = get_data("sensitivity_cesm2.dat", "extratropics")
-    ax2.plot(intensities, efes, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
-    
     ax1.set_xlim(0, 20)
     ax1.set_xticks([0, 5, 10, 15, 18])
     ax1.set_ylim(-16, 0)
     ax1.set_yticks(np.arange(-16, 1, 2))
     ax1.set_yticklabels(['16°S', '14°S', '12°S', '10°S', '8°S', '6°S', '4°S', '2°S', 'EQ'])
-    ax1.annotate("(a)", (0.02, 0.96), xycoords="axes fraction")
+    ax1.annotate("(a)", (0.02, 0.93), xycoords="axes fraction")
     ax1.set_xlabel('Forcing Strength, $M$ (W m$^{-2}$)')
     ax1.set_ylabel('EFE Latitude, $\phi_E$')
     
     ax2.set_xlim(0, 20)
     ax2.set_xticks([0, 5, 10, 15, 18])
-    ax2.set_ylim(-16, 0)
+    # ax2.set_ylim(-16, 0)
+    # ax2.set_yticks(np.arange(-16, 1, 2))
+    # ax2.set_yticklabels(['16°S', '14°S', '12°S', '10°S', '8°S', '6°S', '4°S', '2°S', 'EQ'])
     ax2.legend(loc='lower left')
-    ax2.annotate("(b)", (0.02, 0.96), xycoords="axes fraction")
+    ax2.annotate("(b)", (0.02, 0.93), xycoords="axes fraction")
     ax2.set_xlabel('Forcing Strength, $M$ (W m$^{-2}$)')
+    # ax2.set_ylabel('EFE Latitude, $\phi_E$')
     
     plt.tight_layout()
     

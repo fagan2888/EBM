@@ -1,0 +1,1901 @@
+################################################################################
+# Logfile for EBM simulation
+# Henry Peterson 2018
+################################################################################
+
+---
+# Unknown Date
+---
+# Some linear fits:
+
+PLANCK OLR:
+A: -652.8783145676047 W/m2, B: 3.1022145805413275 W/m2/K
+
+Full OLR, WV Feedback:
+A: -417.0478973801873 W/m2, B: 2.349441658553002 W/m2/K
+
+Full OLR, No WV Feedback:
+A: -383.62200068534526 W/m2, B: 2.2236068235897157 W/m2/K
+A: -418.26464942476156 W/m2, B: 2.3554184845083475 W/m2/K    (starting at T_f from WV feedback)
+
+Shell Somerville:
+A: -999.1626913063144 W/m2, B: 4.033450693435474 W/m2/K      (k = 0.03)
+A: -1417.4283920090295 W/m2, B: 5.681866740765462 W/m2/K     (k = 0.20)
+        
+---
+# 7-20-2018
+---
+# A rough analysis of accuracy depending on dy, dy, an tol with linear olr
+dy  dt  tol    T
+0.5 1.0 0.01   279.82
+0.5 1.0 0.001  279.88 ***
+0.5 1.0 0.0001 279.89
+0.5 0.5 0.01   279.82
+0.5 0.5 0.001  279.87
+
+---
+# 7-26
+---
+# Some initial tests of RH profiles
+sim0  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant                     | scale_efe=False |
+sim1  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=zero_top | RH_lat_profile=constant                     | scale_efe=False |
+sim2  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=constant                     | scale_efe=False |
+sim3  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=constant                     | scale_efe=False |
+sim4  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=False |
+sim5  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=False |
+sim6  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=True  |
+sim7  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=False |
+sim8  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=False |
+sim9  | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=True  |
+sim10 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
+sim11 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
+sim12 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=True  |
+
+--> Noticed sharp dips in init OLR for the full_wvf runs with latitudinally varying RH
+
+---
+# 7-27
+---
+# Check the profiles for annual mean
+sim13 | annual_mean_clark | lat0=None | M=None | full_wvf    | RH_vert_profile=zero_top | RH_lat_profile=constant | scale_efe=False |
+sim14 | annual_mean_clark | lat0=None | M=None | full_no_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant | scale_efe=False |
+sim15 | annual_mean_clark | lat0=None | M=None | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=constant | scale_efe=False |
+sim16 | annual_mean_clark | lat0=None | M=None | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=constant | scale_efe=False |
+sim17 | annual_mean_clark | lat0=None | M=None | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian | scale_efe=False |
+sim18 | annual_mean_clark | lat0=None | M=None | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=gaussian | scale_efe=False |
+
+# Changes made to lats now -- must make new prescribed water vapor T arrays for each type of RH
+# (The change was that lats did not contain 0, and thus the EFE was slightly offset all the time. Fixed now.)
+sim19 | annual_mean_clark | full_wvf | RH_vert_profile=steps    | RH_lat_profile=constant                     |
+sim20 | annual_mean_clark | full_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant                     |
+sim21 | annual_mean_clark | full_wvf | RH_vert_profile=steps    | RH_lat_profile=gaussian                     |
+sim22 | annual_mean_clark | full_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           |
+sim23 | annual_mean_clark | full_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian |
+
+# Now redo the perturbations
+sim24 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=constant                     | scale_efe=False |
+sim25 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=constant                     | scale_efe=False |
+sim26 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=zero_top | RH_lat_profile=constant                     | scale_efe=False |
+sim27 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=zero_top | RH_lat_profile=constant                     | scale_efe=False |
+sim28 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=False |
+sim29 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=False |
+sim30 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=False |
+sim31 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=False |
+sim32 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
+sim33 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=False |
+sim34 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=gaussian                     | scale_efe=True  |
+sim35 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_level_gaussian           | scale_efe=True  |
+sim36 | perturbation | lat0=15 | M=15 | full_wvf    | RH_vert_profile=steps    | RH_lat_profile=mid_and_upper_level_gaussian | scale_efe=True  |
+
+# the efe logs:
+FOLDER L0  SIG   M   EFE
+sim24: 15, 4.94, 15, -6.4752348845995886
+sim25: 15, 4.94, 15, -5.0940033650012930
+sim26: 15, 4.94, 15, -6.1948242987685704
+sim27: 15, 4.94, 15, -4.7757420199444205
+sim28: 15, 4.94, 15, -7.2394332459199893
+sim29: 15, 4.94, 15, -5.6341989642593902
+sim30: 15, 4.94, 15, -6.4627919835991019
+sim31: 15, 4.94, 15, -4.1669575379738646
+sim32: 15, 4.94, 15, -6.4799025209573653
+sim33: 15, 4.94, 15, -4.1489327123277508
+sim34: 15, 4.94, 15, -7.1196716893246927
+sim35: 15, 4.94, 15, -6.0080486755648836
+sim36: 15, 4.94, 15, -6.0063756769752317
+
+---
+# 7-31
+---
+# Run some sensitivity experiments for mid_level_gaussian
+sim37 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim38 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim39 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim40 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim41 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim42 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim43 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim44 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+
+sim45 | perturbation | lat0=15 | M=5  | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim46 | perturbation | lat0=15 | M=10 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim47 | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim48 | perturbation | lat0=15 | M=18 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim49 | perturbation | lat0=60 | M=5  | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim50 | perturbation | lat0=60 | M=10 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim51 | perturbation | lat0=60 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+sim52 | perturbation | lat0=60 | M=18 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=10 |
+
+sim53 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim54 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim55 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim56 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim57 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim58 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim59 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+sim60 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5  |
+
+sim61 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim62 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim63 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim64 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim65 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim66 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim67 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+sim68 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=2  |
+
+sim69 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim70 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim71 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim72 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim73 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim74 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim75 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+sim76 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=15 |
+
+sim77 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.5 |
+sim78 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.5 |
+sim79 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.5 |
+sim80 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.5 |
+sim81 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.5 |
+sim82 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.5 |
+sim83 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.5 |
+sim84 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.5 |
+
+sim85 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.1 |
+sim86 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.1 |
+sim87 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.1 |
+sim88 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.1 |
+sim89 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.1 |
+sim90 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.1 |
+sim91 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.1 |
+sim92 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=0.1 |
+
+sim93  | perturbation | lat0=15 | M=5  | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim94  | perturbation | lat0=15 | M=10 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim95  | perturbation | lat0=15 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim96  | perturbation | lat0=15 | M=18 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim97  | perturbation | lat0=60 | M=5  | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim98  | perturbation | lat0=60 | M=10 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim99  | perturbation | lat0=60 | M=15 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim100 | perturbation | lat0=60 | M=18 | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+
+# EFE results
+# no wvf
+#gaussian_spread1=10
+sim45: 15, 4.94, 5,  -1.5916657723569547
+sim46: 15, 4.94, 10, -2.9614363673422153
+sim47: 15, 4.94, 15, -4.1669575379738646
+sim48: 15, 4.94, 18, -4.8280824570009155
+sim49: 60, 9.89, 5,  -0.3572446459302813
+sim50: 60, 9.89, 10, -0.7066951431770163
+sim51: 60, 9.89, 15, -1.0534624231683849
+sim52: 60, 9.89, 18, -1.2628755675775780
+#gaussian_spread1=5
+sim93:  15,  4.94, 5,  -1.5112325865973557
+sim94:  15,  4.94, 10, -2.8353677150425840
+sim95:  15,  4.94, 15, -4.0282048866196467
+sim96:  15,  4.94, 18, -4.6956453531350419
+sim97:  60,  9.89, 5,  -0.3378324625565640
+sim98:  60,  9.89, 10, -0.6695194537869197
+sim99:  60,  9.89, 15, -0.9988910906483932
+sim100: 60,  9.89, 18, -1.1986970446045195
+
+# wvf
+#gaussian_spread1=0.1
+sim85: 15, 4.94, 5,  -2.4825361502790666
+sim86: 15, 4.94, 10, -4.5523608128747881
+sim87: 15, 4.94, 15, -6.4857809379034181
+sim88: 15, 4.94, 18, -7.5061825566683096
+sim89: 60, 9.89, 5,  -0.9397074428861178
+sim90: 60, 9.89, 10, -1.6060963536853623
+sim91: 60, 9.89, 15, -2.4749282966094732
+sim92: 60, 9.89, 18, -2.9387130406460820
+#gaussian_spread1=0.5
+sim77: 15, 4.94, 5,  -2.4779607378418378
+sim78: 15, 4.94, 10, -4.5645470630951941
+sim79: 15, 4.94, 15, -6.4819548313616764
+sim80: 15, 4.94, 18, -7.5073984962141269
+sim81: 60, 9.89, 5,  -0.9238172057670537
+sim82: 60, 9.89, 10, -1.6320498458707251
+sim83: 60, 9.89, 15, -2.4682130745028248
+sim84: 60, 9.89, 18, -2.9236570392511934
+#gaussian_spread1=2
+sim61: 15, 4.94, 5,  -2.4750341453338454
+sim62: 15, 4.94, 10, -4.5689701023052560
+sim63: 15, 4.94, 15, -6.4782207122961939
+sim64: 15, 4.94, 18, -7.5051207999746889
+sim65: 60, 9.89, 5,  -0.9152626377272597
+sim66: 60, 9.89, 10, -1.6446020672361223
+sim67: 60, 9.89, 15, -2.4651740313813870
+sim68: 60, 9.89, 18, -2.9163396328907343
+#gaussian_spread1=5
+sim53: 15, 4.94, 5,  -2.4726204969475534
+sim54: 15, 4.94, 10, -4.5680990552587781
+sim55: 15, 4.94, 15, -6.4723546421838298
+sim56: 15, 4.94, 18, -7.4999258230063779
+sim57: 60, 9.89, 5,  -0.9099198250036619
+sim58: 60, 9.89, 10, -1.6489771372096687
+sim59: 60, 9.89, 15, -2.4635508491408515
+sim60: 60, 9.89, 18, -2.9130917115943804
+#gaussian_spread1=10
+sim37: 15, 4.94, 5,  -2.4691280649892948
+sim38: 15, 4.94, 10, -4.5657596295947558
+sim39: 15, 4.94, 15, -6.4627919835991019
+sim40: 15, 4.94, 18, -7.4905004558989203
+sim41: 60, 9.89, 5,  -0.9007737951193726
+sim42: 60, 9.89, 10, -1.6541595843329675
+sim43: 60, 9.89, 15, -2.4601513532319128
+sim44: 60, 9.89, 18, -2.9083547947150299
+#gaussian_spread1=15
+sim69: 15, 4.94, 5,  -2.4638333014884073
+sim70: 15, 4.94, 10, -4.5600348546104845
+sim71: 15, 4.94, 15, -6.4495817316482800
+sim72: 15, 4.94, 18, -7.4765071510544301
+sim73: 60, 9.89, 5,  -0.8927612348056017
+sim74: 60, 9.89, 10, -1.6609440345329189
+sim75: 60, 9.89, 15, -2.4583530435298759
+sim76: 60, 9.89, 18, -2.9054364337455789
+
+# Choosing gaussian_spread1=5
+sim101 | annual_mean_clark | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim102 | annual_mean_clark | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian |
+
+# The fitted A, B
+sim103 | perturbation | lat0=15 | M=5  | linear | A=-452.68 | B=2.51 | accidentally overwritten :(  
+sim104 | perturbation | lat0=15 | M=10 | linear | A=-452.68 | B=2.51 | accidentally overwritten :(
+sim105 | perturbation | lat0=15 | M=15 | linear | A=-452.68 | B=2.51 | accidentally overwritten :(
+sim106 | perturbation | lat0=15 | M=18 | linear | A=-452.68 | B=2.51 |
+sim107 | perturbation | lat0=60 | M=5  | linear | A=-452.68 | B=2.51 |
+sim108 | perturbation | lat0=60 | M=10 | linear | A=-452.68 | B=2.51 |
+sim109 | perturbation | lat0=60 | M=15 | linear | A=-452.68 | B=2.51 |
+sim110 | perturbation | lat0=60 | M=18 | linear | A=-452.68 | B=2.51 |
+sim111 | perturbation | lat0=15 | M=5  | linear | A=-448.73 | B=2.50 |
+sim112 | perturbation | lat0=15 | M=10 | linear | A=-448.73 | B=2.50 |
+sim113 | perturbation | lat0=15 | M=15 | linear | A=-448.73 | B=2.50 |
+sim114 | perturbation | lat0=15 | M=18 | linear | A=-448.73 | B=2.50 |
+sim115 | perturbation | lat0=60 | M=5  | linear | A=-448.73 | B=2.50 |
+sim116 | perturbation | lat0=60 | M=10 | linear | A=-448.73 | B=2.50 |
+sim117 | perturbation | lat0=60 | M=15 | linear | A=-448.73 | B=2.50 |
+sim118 | perturbation | lat0=60 | M=18 | linear | A=-448.73 | B=2.50 |
+
+# wvf
+sim103: 15, 4.94, 5,  -2.4096553007944470
+sim104: 15, 4.94, 10, -4.5363085069089637
+sim105: 15, 4.94, 15, -6.4430431617864627
+sim106: 15, 4.94, 18, -7.4959671344414023
+sim107: 60, 9.89, 5,  -0.8609869201245035
+sim108: 60, 9.89, 10, -1.6456144287159502
+sim109: 60, 9.89, 15, -2.3675494022788608
+sim110: 60, 9.89, 18, -2.7689740114898918
+# no wvf
+sim111: 15, 4.94, 5,  -2.4126870577289909
+sim112: 15, 4.94, 10, -4.5434452876711404
+sim113: 15, 4.94, 15, -6.4519735774198921
+sim114: 15, 4.94, 18, -7.5050152320612096
+sim115: 60, 9.89, 5,  -0.8620308748135537
+sim116: 60, 9.89, 10, -1.6511469892765396
+sim117: 60, 9.89, 15, -2.3702073861341288
+sim118: 60, 9.89, 18, -2.7707160026373625
+
+---
+# 8-6
+---
+After looking at SW - LW integral, we realized that my cartesian coordinates solution 
+is not exactly the same as if you solve the diffusion equation in spherical
+coordinate (btw, Earth is spherical. Go figure). So the new code solves the adjusted
+PDE with a method from Brian Rose 
+(https://climlab.readthedocs.io/en/latest/api/climlab.dynamics.Diffusion.html).
+
+New method of calculating error: 
+  |dT/dt| = max( |Ti - Ti-1| ) / time btwn i and i-1
+
+# Accuracy experiments with new error calculation and integration scheme
+# (all using M = 18 tropical perturbation, planck OLR, implicit scheme)
+dlat | dtmax_mult | tol   | ITCZ
+0.5  | 1.0        | 1E-10 | -5.78
+0.5  | 1.0        | 1E-9  | -5.78
+0.5  | 1.0        | 1E-8  | -5.78 
+0.5  | 1.0        | 1E-7  | -5.77  ==> tol = 1E-7 is too small
+0.5  | 0.5        | 1E-8  | -5.78
+0.5  | 1.5        | 1E-8  | -5.78  ***
+0.5  | 2.0        | 1E-8  | -5.77  ==> dtmax_mult = 2.0 is too large
+1.0  | 1.5        | 1E-8  | -5.77  ==> dlat = 1.0 is too large
+0.25 | 1.5        | 1E-8  | -5.78  ==> dlat = 0.25 is not necessary
+
+Conclusion: dlat = 0.5, dtmax_mult = 1.5, tol = 1E-8 give fastest results while
+    remaining accurate.
+
+---
+# 8-7
+---
+# Looking at planck feedback forcing and water vapor feedback forcing
+sim103 | annual_mean_clark | full_wvf    | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim104 | annual_mean_clark | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim105 | annual_mean_clark | full_no_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 | constant_spec_hum=True
+    ---> sim105 gives /data/L_array_constant_q_steps_mid_level_gaussian5_n361.npz
+
+# Testing sensitivities (note, dtmax_mult = 10.0 and tol = 1E-7)
+# full_wvf
+L0  S     M   EFE                  ITCZ
+15, 4.94, 18, -8.9222023431231428, -5.7102094995988111
+15, 4.94, 15, -7.8151183831679960, -5.0016757652275174
+15, 4.94, 10, -5.5927186602160139, -3.5793399425382488
+15, 4.94,  5, -3.0709810908189650, -1.9654278981241375
+60, 9.89, 18, -3.0793976194162953, -1.9708144764264290
+60, 9.89, 15, -2.6207891845080660, -1.6773050780851622
+60, 9.89, 10, -1.9152314381793913, -1.2257481204348104
+60, 9.89,  5, -1.0021850723920951, -0.6413984463309409
+# full_no_wvf
+L0  S     M   EFE                  ITCZ
+15, 4.94, 18, -5.4880324620232797, -3.5123407756948990
+15, 4.94, 15, -4.7134997268545584, -3.0166398251869175
+15, 4.94, 10, -3.3345732838137963, -2.1341269016408297
+15, 4.94,  5, -1.7929847803388312, -1.1475102594168520
+60, 9.89, 18, -1.1243505107295861, -0.7195843268669352
+60, 9.89, 15, -0.9475412883755877, -0.6064264245603761
+60, 9.89, 10, -0.6444894591439709, -0.4124732538521414
+60, 9.89,  5, -0.3291728417761017, -0.2106706187367051
+
+---
+# 8-9
+---
+# Testing a hypothesis with feedback shifts
+# --> These results will be redone tomorrow; it looks like they are sensitive to initial conditions
+
+## Tropics
+
+# M = 5
+EFE: -3.08E+00 deg
+Integral S - L from SP to EQ: 5.88E+14 W/m
+F(0):                         9.72E+14 W/m
+EFE approx with NEI:  -1.85E+00 deg
+EFE approx with F(0): -3.05E+00 deg
+
+Shift no_fb:     -2.38E+00 deg
+Shift planck_fb: -1.67E+00 deg
+Shift wv_fb1:    -8.12E-01 deg
+Shift wv_fb2:    -2.36E+00 deg
+
+# M = 10
+EFE: -5.57E+00 deg
+Integral S - L from SP to EQ: 1.51E+15 W/m
+F(0):                         1.81E+15 W/m
+EFE approx with NEI:  -4.53E+00 deg
+EFE approx with F(0): -5.42E+00 deg
+
+Shift no_fb:     -5.76E+00 deg
+Shift planck_fb: -3.90E+00 deg
+Shift wv_fb1:    -4.00E+00 deg
+Shift wv_fb2:    -5.88E+00 deg
+
+# M = 15
+EFE: -7.83E+00 deg
+Integral S - L from SP to EQ: 2.28E+15 W/m
+F(0):                         2.57E+15 W/m
+EFE approx with NEI:  -6.62E+00 deg
+EFE approx with F(0): -7.46E+00 deg
+
+Shift no_fb:     -8.82E+00 deg
+Shift planck_fb: -5.77E+00 deg
+Shift wv_fb1:    -6.50E+00 deg
+Shift wv_fb2:    -9.16E+00 deg
+
+# M = 18
+EFE: -8.95E+00 deg
+Integral S - L from SP to EQ: 2.68E+15 W/m
+F(0):                         2.99E+15 W/m
+EFE approx with NEI:  -7.65E+00 deg
+EFE approx with F(0): -8.53E+00 deg
+
+Shift no_fb:     -1.05E+01 deg
+Shift planck_fb: -6.71E+00 deg
+Shift wv_fb1:    -7.65E+00 deg
+Shift wv_fb2:    -1.10E+01 deg
+
+## Extratropics
+
+# M = 5
+EFE: -1.11E+00 deg
+Integral S - L from SP to EQ: 7.24E+14 W/m
+F(0):                         3.36E+14 W/m
+EFE approx with NEI:  -2.39E+00 deg
+EFE approx with F(0): -1.11E+00 deg
+
+Shift no_fb:     -5.19E+00 deg
+Shift planck_fb: -1.54E+00 deg
+Shift wv_fb1:    -3.42E+00 deg
+Shift wv_fb2:    -5.81E+00 deg
+
+# M = 10
+EFE: -1.88E+00 deg
+Integral S - L from SP to EQ: 5.81E+14 W/m
+F(0):                         5.81E+14 W/m
+EFE approx with NEI:  -1.87E+00 deg
+EFE approx with F(0): -1.87E+00 deg
+
+Shift no_fb:     -6.97E+00 deg
+Shift planck_fb: -1.22E+00 deg
+Shift wv_fb1:    -1.88E+00 deg
+Shift wv_fb2:    -7.94E+00 deg
+
+# M = 15
+EFE: -2.72E+00 deg
+Integral S - L from SP to EQ: 7.78E+14 W/m
+F(0):                         8.50E+14 W/m
+EFE approx with NEI:  -2.46E+00 deg
+EFE approx with F(0): -2.69E+00 deg
+
+Shift no_fb:     -1.02E+01 deg
+Shift planck_fb: -1.68E+00 deg
+Shift wv_fb1:    -2.38E+00 deg
+Shift wv_fb2:    -1.16E+01 deg
+
+# M = 18
+EFE: -3.13E+00 deg
+Integral S - L from SP to EQ: 8.93E+14 W/m
+F(0):                         9.91E+14 W/m
+EFE approx with NEI:  -2.80E+00 deg
+EFE approx with F(0): -3.11E+00 deg
+
+Shift no_fb:     -1.23E+01 deg
+Shift planck_fb: -2.05E+00 deg
+Shift wv_fb1:    -2.70E+00 deg
+Shift wv_fb2:    -1.41E+01 deg
+
+---
+# 8-10
+---
+# Redo of feedback sims (this time on savio with init condiation Legendre and high res in time)
+sim119 | perturbation | lat0=15 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim120 | perturbation | lat0=15 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim121 | perturbation | lat0=15 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim122 | perturbation | lat0=15 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim123 | perturbation | lat0=60 | M=5  | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim124 | perturbation | lat0=60 | M=10 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim125 | perturbation | lat0=60 | M=15 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+sim126 | perturbation | lat0=60 | M=18 | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian | gaussian_spread1=5 |
+
+## Tropics
+# M = 5
+Integral S - L from SP to EQ: 0.99 PW/m
+F(0):                         0.96 PW/m
+EFE approx with NEI:  -3.17 deg
+EFE approx with F(0): -3.06 deg
+
+true EFE:              -3.09 deg
+no_fb:                 -3.70 deg
+planck_fb:             -2.53 deg
+wv_fb1:                -3.30 deg
+wv_fb2:                -3.73 deg
+planck_fb + wv_fb1:    -1.80 deg
+planck_fb + wv_fb2:    -2.52 deg
+
+# M = 10
+Integral S - L from SP to EQ: 1.86 PW/m
+F(0):                         1.83 PW/m
+EFE approx with NEI:  -5.65 deg
+EFE approx with F(0): -5.57 deg
+
+true EFE:              -5.77 deg
+no_fb:                 -6.94 deg
+planck_fb:             -4.63 deg
+wv_fb1:                -5.98 deg
+wv_fb2:                -7.07 deg
+planck_fb + wv_fb1:    -3.16 deg
+planck_fb + wv_fb2:    -4.67 deg
+
+# M = 15
+Integral S - L from SP to EQ: 2.60 PW/m
+F(0):                         2.58 PW/m
+EFE approx with NEI:  -7.66 deg
+EFE approx with F(0): -7.59 deg
+
+true EFE:              -7.92 deg
+no_fb:                 -10.01 deg
+planck_fb:             -6.47 deg
+wv_fb1:                -8.22 deg
+wv_fb2:                -10.44 deg
+planck_fb + wv_fb1:    -4.10 deg
+planck_fb + wv_fb2:    -6.66 deg
+
+# M = 18
+Integral S - L from SP to EQ: 3.03 PW/m
+F(0):                         3.01 PW/m
+EFE approx with NEI:  -8.78 deg
+EFE approx with F(0): -8.71 deg
+
+true EFE:              -9.06 deg
+no_fb:                 -11.79 deg
+planck_fb:             -7.47 deg
+wv_fb1:                -9.44 deg
+wv_fb2:                -12.43 deg
+planck_fb + wv_fb1:    -4.57 deg
+planck_fb + wv_fb2:    -7.79 deg
+
+## Extratropics
+# M = 5
+Integral S - L from SP to EQ: 0.34 PW/m
+F(0):                         0.31 PW/m
+EFE approx with NEI:  -1.15 deg
+EFE approx with F(0): -1.04 deg
+
+true EFE:              -1.04 deg
+no_fb:                 -3.86 deg
+planck_fb:             -0.74 deg
+wv_fb1:                -1.23 deg
+wv_fb2:                -4.42 deg
+planck_fb + wv_fb1:    1.71 deg
+planck_fb + wv_fb2:    -1.01 deg
+
+# M = 10
+Integral S - L from SP to EQ: 0.64 PW/m
+F(0):                         0.61 PW/m
+EFE approx with NEI:  -2.08 deg
+EFE approx with F(0): -1.98 deg
+
+true EFE:              -1.99 deg
+no_fb:                 -7.46 deg
+planck_fb:             -1.38 deg
+wv_fb1:                -2.15 deg
+wv_fb2:                -8.50 deg
+planck_fb + wv_fb1:    3.11 deg
+planck_fb + wv_fb2:    -1.83 deg
+
+# M = 15
+Integral S - L from SP to EQ: 0.91 PW/m
+F(0):                         0.88 PW/m
+EFE approx with NEI:  -2.92 deg
+EFE approx with F(0): -2.84 deg
+
+true EFE:              -2.86 deg
+no_fb:                 -10.94 deg
+planck_fb:             -2.00 deg
+wv_fb1:                -3.01 deg
+wv_fb2:                -12.45 deg
+planck_fb + wv_fb1:    4.19 deg
+planck_fb + wv_fb2:    -2.61 deg
+
+# M = 18
+Integral S - L from SP to EQ: 1.06 PW/m
+F(0):                         1.03 PW/m
+EFE approx with NEI:  -3.38 deg
+EFE approx with F(0): -3.29 deg
+
+true EFE:              -3.33 deg
+no_fb:                 -12.99 deg
+planck_fb:             -2.38 deg
+wv_fb1:                -3.48 deg
+wv_fb2:                -14.79 deg
+planck_fb + wv_fb1:    4.73 deg
+planck_fb + wv_fb2:    -3.07 deg
+
+# Summary:
+Simulation  | True EFE | No FB  | Planck | WV     | Planck and WV
+------------------------------------------------------------------
+L0=15; M= 5 | -3.09    | -3.70  | -2.53  | -3.73  | -2.52
+L0=15; M=10 | -5.77    | -6.94  | -4.63  | -7.07  | -4.67
+L0=15; M=15 | -7.92    | -10.01 | -6.47  | -10.44 | -6.66
+L0=15; M=18 | -9.06    | -11.79 | -7.47  | -12.43 | -7.79
+L0=60; M= 5 | -1.04    | -3.86  | -0.74  | -4.42  | -1.01
+L0=60; M=10 | -1.99    | -7.46  | -1.38  | -8.50  | -1.83
+L0=60; M=15 | -2.86    | -10.94 | -2.00  | -12.45 | -2.61
+L0=60; M=18 | -3.33    | -12.99 | -2.38  | -14.79 | -3.07
+
+---
+# 9-11
+---
+# Ran full control simulation on savio, saved control_data.npz in 'data/'
+sim127 | annual_mean_clark | full_wvf | RH_vert_profile=steps | RH_lat_profile=mid_level_gaussian |
+
+---
+# 9-18
+---
+# Using sim127 control data, calculated perturbation ratios
+EFE: -5.61
+No feedbacks used: -5.47
+	Num / Denom = 1.8050194761068867/-18.91383589915037
+No control used: -6.70
+	Num / Denom = 1.6215945044347948/-13.87469992152801
+Simplified ratio: -6.92
+	Num / Denom = 1.5869056747758141/-13.14309988536028
+Full ratio: -6.70
+	Num / Denom = 1.621594504434797/-13.874699921527997
+
+---
+# 9-23
+---
+# Redid sim127 to save full air_temperature from state variable
+# This will allow for calculation of lapse rate feedback and adjustments to how we calculate other feedbacks.
+
+---
+# 10-2
+---
+# Ran full perturbation simulation on PC to see how accurate the taylor expansion is 
+sim128 | perturbation | lat0=15 | M=10 | full_wvf | 
+
+# Output:
+Calculating EFE...
+Logged "15, 4.94, 10, -5.7718429104500277, -3.6939794626880178" in "itcz.log"
+
+Calculating feedbacks...
+Simple Taylor Shift: -5.57
+	Num / Denom = 1.8305489454818156/-18.819695412113372
+Shift with Feedbacks: -5.97
+	Num / Denom = 1.4425129461601305/-13.855172188236882
+
+---
+# 10-18
+---
+# Ran full albedo anomaly on PC to see if it can equilibrate
+sim129 | annual_mean_clark | full_wvf | albedo_feedback | alb_ice=0.3 | alb_water=0.1
+
+# Results: 
+Equilibration 610 days
+Mean T: 291.17 K
+
+---
+# 10-31
+---
+# Created control simulation `data/control_data_alb_feedback.npz`, ran sensitivity experiments on savio
+sim131 | perturbation | lat0=15 | M=5  | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim132 | perturbation | lat0=15 | M=10 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim133 | perturbation | lat0=15 | M=15 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim134 | perturbation | lat0=15 | M=18 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim135 | perturbation | lat0=60 | M=5  | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim136 | perturbation | lat0=60 | M=10 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim137 | perturbation | lat0=60 | M=15 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+sim138 | perturbation | lat0=60 | M=18 | full_wvf | alb_feedback=True | alb_water=0.1 | alb_ice=0.3 |
+
+# Results: 
+15, 4.94,  5, -3.0840001935213621, -1.9737601238536717
+15, 4.94, 10, -5.6283912352728755, -3.6021703905746403
+15, 4.94, 15, -7.9009987009684810, -5.0566391686198280
+15, 4.94, 18, -9.0403596384103686, -5.7858301685826357
+60, 9.89,  5, -1.2605174718629029, -0.8067311819922578
+60, 9.89, 10, -2.1231961807054560, -1.3588455556514918
+60, 9.89, 15, -3.0036368393509232, -1.9223275771845909
+60, 9.89, 18, -3.4641624364306924, -2.2170639593156434
+
+---
+# 11-1
+---
+# different albedos
+sim139 | perturbation | lat0=15 | M=5  | full_wvf | albedo_feedback=True | alb_ice=0.5 | alb_water=0.1 |
+sim140 | perturbation | lat0=15 | M=10 | full_wvf | albedo_feedback=True | alb_ice=0.5 | alb_water=0.1 |
+sim141 | perturbation | lat0=15 | M=15 | full_wvf | albedo_feedback=True | alb_ice=0.5 | alb_water=0.1 |
+sim142 | perturbation | lat0=15 | M=18 | full_wvf | albedo_feedback=True | alb_ice=0.5 | alb_water=0.1 |
+sim143 | perturbation | lat0=60 | M=5  | full_wvf | albedo_feedback=True | alb_ice=0.5 | alb_water=0.1 |
+sim144 | perturbation | lat0=60 | M=10 | full_wvf | albedo_feedback=True | alb_ice=0.5 | alb_water=0.1 |
+sim145 | perturbation | lat0=60 | M=15 | full_wvf | albedo_feedback=True | alb_ice=0.5 | alb_water=0.1 |
+sim146 | perturbation | lat0=60 | M=18 | full_wvf | albedo_feedback=True | alb_ice=0.5 | alb_water=0.1 |
+
+# Results: 
+15, 4.94,  5, -3.0764475339502519, -1.9689264217281612
+15, 4.94, 10, -5.6289551252802550, -3.6025312801793632
+15, 4.94, 15, -7.8780176252632135, -5.0419312801684564
+15, 4.94, 18, -9.0162654856198472, -5.7704099107967020
+60, 9.89,  5, -1.3814538730894566, -0.8841304787772523
+60, 9.89, 10, -2.3995676571210098, -1.5357233005574464
+60, 9.89, 15, -3.0920394614862370, -1.9789052553511917
+60, 9.89, 18, -3.5641399500842343, -2.2810495680539100
+
+---
+# 12-17
+---
+I have converted the model to $x = \sin \phi$ coordinates. It only works with an explicity step method so far. 
+Here I perform some convergence tests. 
+
+N_pts | tol  | dt  | Mean T | SW - LW
+--------------------------------------
+200   | 1E-8 | 0.5 | 306.95 | -0.45745
+300   | 1E-8 | 0.5 | 306.76 | -0.27276
+400   | 1E-8 | 0.5 | 306.66 | -0.17913
+500   | 1E-8 | 0.5 | 306.61 | -0.12237
+
+---
+# 12-18
+---
+Minor changes have been made that make the above table's numbers slightly different from what I would get now. 
+Mainly, I adjusted how N_pts works, so the array is a different size.
+
+The more important update for today is that I have implemented explicit, semi-implicit, and implicit schemes.
+All of them are set up in the `solve` method by creating the matrix `self.take_step_matrix`.
+
+# Convergence tests (planck radiation, implicit, M=0)
+sim139 | N_pts=300 | dtmax_multiple=0.5 | tol=1e-7 | T=306.18 | SW-LW=0.86135
+sim140 | N_pts=300 | dtmax_multiple=1.5 | tol=1e-7 | T=306.18 | SW-LW=0.86743
+sim141 | N_pts=300 | dtmax_multiple=5.0 | tol=1e-7 | T=306.17 | SW-LW=0.88300
+sim142 | N_pts=300 | dtmax_multiple=0.5 | tol=1e-8 | T=306.73 | SW-LW=-0.20994
+sim143 | N_pts=300 | dtmax_multiple=1.5 | tol=1e-8 | T=306.73 | SW-LW=-0.20487
+sim144 | N_pts=300 | dtmax_multiple=5.0 | tol=1e-8 | T=306.72 | SW-LW=-0.18860
+sim145 | N_pts=300 | dtmax_multiple=0.5 | tol=1e-9 | T=306.78 | SW-LW=-0.31554
+sim146 | N_pts=300 | dtmax_multiple=1.5 | tol=1e-9 | T=306.78 | SW-LW=-0.30940
+sim147 | N_pts=300 | dtmax_multiple=5.0 | tol=1e-9 | T=306.77 | SW-LW=-0.29295
+
+sim148 | N_pts=400 | dtmax_multiple=0.5 | tol=1e-7 | T=306.10 | SW-LW=0.92884
+sim149 | N_pts=400 | dtmax_multiple=1.5 | tol=1e-7 | T=306.10 | SW-LW=0.93177
+sim150 | N_pts=400 | dtmax_multiple=5.0 | tol=1e-7 | T=306.09 | SW-LW=0.94214
+sim151 | N_pts=400 | dtmax_multiple=0.5 | tol=1e-8 | T=306.64 | SW-LW=-0.13266
+sim152 | N_pts=400 | dtmax_multiple=1.5 | tol=1e-8 | T=306.64 | SW-LW=-0.12990
+## sim153 | N_pts=400 | dtmax_multiple=5.0 | tol=1e-8 | T=306.63 | SW-LW=-0.12032
+sim154 | N_pts=400 | dtmax_multiple=0.5 | tol=1e-9 | T=306.69 | SW-LW=-0.23531
+sim155 | N_pts=400 | dtmax_multiple=1.5 | tol=1e-9 | T=306.69 | SW-LW=-0.23381
+sim156 | N_pts=400 | dtmax_multiple=5.0 | tol=1e-9 | T=306.69 | SW-LW=-0.22441
+
+sim157 | N_pts=500 | dtmax_multiple=0.5 | tol=1e-7 | T=306.05 | SW-LW=0.97002
+sim158 | N_pts=500 | dtmax_multiple=1.5 | tol=1e-7 | T=306.05 | SW-LW=0.97160
+sim159 | N_pts=500 | dtmax_multiple=5.0 | tol=1e-7 | T=306.04 | SW-LW=0.97945
+sim160 | N_pts=500 | dtmax_multiple=0.5 | tol=1e-8 | T=306.59 | SW-LW=-0.08582
+sim161 | N_pts=500 | dtmax_multiple=1.5 | tol=1e-8 | T=306.59 | SW-LW=-0.08401
+## sim162 | N_pts=500 | dtmax_multiple=5.0 | tol=1e-8 | T=306.58 | SW-LW=-0.07760
+sim163 | N_pts=500 | dtmax_multiple=0.5 | tol=1e-9 | T=306.64 | SW-LW=-0.18880
+sim164 | N_pts=500 | dtmax_multiple=1.5 | tol=1e-9 | T=306.64 | SW-LW=-0.18704
+## sim165 | N_pts=500 | dtmax_multiple=5.0 | tol=1e-9 | T=306.64 | SW-LW=-0.18096
+
+==> Conclusions: 
+- tol=1e-8 seems to be the sweet spot
+- Best combo is tol=1e-8 dtmax_multiple=5.0, N_pts=500 for SW-LW.
+- if we take tol=1e-9, dtmax_multiple=0.5, N_pts=500 to be the "best", then t=306.64 is the goal.
+	- this is met with just tol=1e-8, dtmax_multiple=5.0, N_pts=400 and it has a reasonable SW-LW.
+	==> Choosing sim153 setup
+
+# Control simulation with full_wvf at sim153 setup, saving to 
+sim166 | lat0=15 | M=0 | full_wvf |
+
+---
+# 12-19
+---
+# Sensitivity experiments
+sim167 | perturbation | lat0=15 | M=5  | full_wvf |
+sim168 | perturbation | lat0=15 | M=10 | full_wvf |
+sim169 | perturbation | lat0=15 | M=15 | full_wvf |
+sim170 | perturbation | lat0=15 | M=18 | full_wvf |
+sim171 | perturbation | lat0=60 | M=5  | full_wvf |
+sim172 | perturbation | lat0=60 | M=10 | full_wvf |
+sim173 | perturbation | lat0=60 | M=15 | full_wvf |
+sim174 | perturbation | lat0=60 | M=18 | full_wvf |
+
+sim175 | perturbation | lat0=15 | M=5  | full_no_wvf |
+sim176 | perturbation | lat0=15 | M=10 | full_no_wvf |
+sim177 | perturbation | lat0=15 | M=15 | full_no_wvf |
+sim178 | perturbation | lat0=15 | M=18 | full_no_wvf |
+sim179 | perturbation | lat0=60 | M=5  | full_no_wvf |
+sim180 | perturbation | lat0=60 | M=10 | full_no_wvf |
+sim181 | perturbation | lat0=60 | M=15 | full_no_wvf |
+sim182 | perturbation | lat0=60 | M=18 | full_no_wvf |
+
+# Results: full_wvf
+15, 4.94,  5, -3.1718168144378698, -2.0299627612402369
+15, 4.94, 10, -5.7548406003070687, -3.6830979841965239
+15, 4.94, 15, -7.9609632250828808, -5.0950164640530442
+15, 4.94, 18, -9.1485044700733393, -5.8550428608469378
+60, 9.89,  5, -1.1115030804823236, -0.7113619715086871
+60, 9.89, 10, -2.0750710015199161, -1.3280454409727462
+60, 9.89, 15, -2.8968228899314106, -1.8539666495561027
+60, 9.89, 18, -3.3564721906561608, -2.1481422020199430
+
+# Results: full_no_wvf
+15, 4.94,  5, -1.8407911244452462, -1.1781063196449575
+15, 4.94, 10, -3.4201999179392675, -2.1889279474811314
+15, 4.94, 15, -4.8312330499042258, -3.0919891519387046
+15, 4.94, 18, -5.6171067943712725, -3.5949483483976148
+60, 9.89,  5, -0.3607981489878263, -0.2309108153522088
+60, 9.89, 10, -0.6995922581793135, -0.4477390452347607
+60, 9.89, 15, -1.0249369955978405, -0.6559596771826178
+60, 9.89, 18, -1.2149633921247027, -0.7775765709598098
+
+---
+# 12-21
+---
+The folder sim183 contains an identical simulation to sim166 (control full_wvf) but with doubled CO2. 
+See plot of Delta T in that folder. 
+
+I modified EBM.py to match as much of Merlis and Henry's EBM as possible (mostly just changed my constants) in sim184.
+I used the exact same linear OLR as them to test the doubled CO2 forcing. 
+I got almost identical results (see folder's plot).
+
+A redo of sim183 is done in sim185 with MH's numbers and insolation/albedo. 
+The results are surprisingly different from those in sim183, but both have lower numbers that we expect.
+
+---
+# 12-26
+---
+sim186 is for a calculation of dRdT for water vapor. see emails with Bill.
+
+---
+# 12-29
+---
+EBM_FeedbackParameters.py created so that the feedback parameters c_i can be prescribed as in Roe et al. 
+
+---
+# 12-30
+---
+sim187 used for tests on CliMT to see if I am using it right. seems okay.
+
+---
+# 1-1-19
+---
+sim188 has the three summarizing calculations with EBM_FeedbackParameters.py from Roe et al. to show to Bill tomorrow.
+
+---
+# 1-8
+---
+sim189 contains feedback calculations (lambdas). See email with Bill.
+
+---
+# 1-13
+---
+Redo convergence tests now that we have slightly diff error calculation nad we know we can do higher dtmax
+Planck radiation. Implicit scheme.
+sim190 | N_pts=401 | dtmax_multiple=0.5  | tol=1e-8  | T_avg=306.60 | SW-LW= -0.04967 |
+sim191 | N_pts=401 | dtmax_multiple=1.0  | tol=1e-8  | T_avg=306.60 | SW-LW= -0.04843 |
+sim192 | N_pts=401 | dtmax_multiple=5.0  | tol=1e-8  | T_avg=306.59 | SW-LW= -0.03694 |
+sim193 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-8  | T_avg=306.58 | SW-LW= -0.02463 |
+sim194 | N_pts=401 | dtmax_multiple=50.0 | tol=1e-8  | T_avg=306.53 | SW-LW= +0.06657 |
+sim195 | N_pts=401 | dtmax_multiple=0.5  | tol=1e-9  | T_avg=306.69 | SW-LW= -0.22256 |
+sim196 | N_pts=401 | dtmax_multiple=1.0  | tol=1e-9  | T_avg=306.69 | SW-LW= -0.22400 |
+##sim197 | N_pts=401 | dtmax_multiple=5.0  | tol=1e-9  | T_avg=306.68 | SW-LW= -0.21335 |
+sim198 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-9  | T_avg=306.67 | SW-LW= -0.20049 |
+sim199 | N_pts=401 | dtmax_multiple=50.0 | tol=1e-9  | T_avg=306.63 | SW-LW= -0.11629 |
+sim200 | N_pts=401 | dtmax_multiple=0.1  | tol=1e-10 | T_avg=306.70 | SW-LW= -0.24141 |
+sim201 | N_pts=401 | dtmax_multiple=1.0  | tol=1e-10 | T_avg=306.70 | SW-LW= -0.24069 |
+sim202 | N_pts=401 | dtmax_multiple=5.0  | tol=1e-10 | T_avg=306.69 | SW-LW= -0.23030 |
+##sim203 | N_pts=401 | dtmax_multiple=10.0 | tol=1e-10 | T_avg=306.68 | SW-LW= -0.21756 |
+sim204 | N_pts=401 | dtmax_multiple=50.0 | tol=1e-10 | T_avg=306.64 | SW-LW= -0.13438 |
+
+sim205 | N_pts=501 | dtmax_multiple=0.5  | tol=1e-8  | T_avg=306.55 | SW-LW= -0.00381 |
+sim206 | N_pts=501 | dtmax_multiple=1.0  | tol=1e-8  | T_avg=306.55 | SW-LW= -0.00294 |
+sim207 | N_pts=501 | dtmax_multiple=5.0  | tol=1e-8  | T_avg=306.54 | SW-LW= +0.00378 |
+sim208 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-8  | T_avg=306.54 | SW-LW= +0.01191 |
+sim209 | N_pts=501 | dtmax_multiple=50.0 | tol=1e-8  | T_avg=306.50 | SW-LW= +0.06964 |
+sim210 | N_pts=501 | dtmax_multiple=0.5  | tol=1e-9  | T_avg=306.63 | SW-LW= -0.17520 |
+sim211 | N_pts=501 | dtmax_multiple=1.0  | tol=1e-9  | T_avg=306.63 | SW-LW= -0.17705 |
+sim212 | N_pts=501 | dtmax_multiple=5.0  | tol=1e-9  | T_avg=306.63 | SW-LW= -0.17018 |
+sim213 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-9  | T_avg=306.62 | SW-LW= -0.16191 |
+sim214 | N_pts=501 | dtmax_multiple=50.0 | tol=1e-9  | T_avg=306.59 | SW-LW= -0.10551 |
+#sim215 | N_pts=501 | dtmax_multiple=0.5  | tol=1e-10 | T_avg=306.64 | SW-LW= -0.19440 |
+sim216 | N_pts=501 | dtmax_multiple=1.0  | tol=1e-10 | T_avg=306.64 | SW-LW= -0.19359 |
+sim217 | N_pts=501 | dtmax_multiple=5.0  | tol=1e-10 | T_avg=306.64 | SW-LW= -0.18664 |
+sim218 | N_pts=501 | dtmax_multiple=10.0 | tol=1e-10 | T_avg=306.63 | SW-LW= -0.17841 |
+sim219 | N_pts=501 | dtmax_multiple=50.0 | tol=1e-10 | T_avg=306.60 | SW-LW= -0.12246 |
+
+"The Best" should be sim215 with the most points, smallest times step, and smallest tolerance. 
+It seems that SW-LW= -0.2 is going to be a consistent issue, so we need to look for sims that went long enough to get to that point.
+We would like to do N_pts=401. 
+Either sim197 or sim203 would be fine.
+
+Calculation of seconds it took to finish each:
+sim197: 33401 its * 0.0010054225 s/it = 33.5821169225 s
+sim203: 22379 its * 0.0010560593 s/it = 23.6335510747 s
+
+So we go with sim203: N_pts=401, dtmax_multiple=10.0, tol=1e-10
+
+# Control Simulation: sim220
+sim220 | perturbation | lat0=15 | M=0 | full_radiation |
+
+# Sensitivity Experiments
+sim221 | perturbation | lat0=15 | M=5  | full_radiation |
+sim222 | perturbation | lat0=15 | M=10 | full_radiation |
+sim223 | perturbation | lat0=15 | M=15 | full_radiation |
+sim224 | perturbation | lat0=15 | M=18 | full_radiation |
+sim225 | perturbation | lat0=60 | M=5  | full_radiation |
+sim226 | perturbation | lat0=60 | M=10 | full_radiation |
+sim227 | perturbation | lat0=60 | M=15 | full_radiation |
+sim228 | perturbation | lat0=60 | M=18 | full_radiation |
+In data/sensitivity_full_radiation.dat:
+15, 4.94,  5, -3.2234487159344911, -2.0630071781980743
+15, 4.94, 10, -5.7254538783852755, -3.6642904821665758
+15, 4.94, 15, -7.9629868864638578, -5.0963116073368688
+15, 4.94, 18, -9.1536291345546008, -5.8583226461149440
+60, 9.89,  5, -1.1008438010507908, -0.7045400326725061
+60, 9.89, 10, -2.1022327864970007, -1.3454289833580804
+60, 9.89, 15, -2.9467608164108263, -1.8859269225029289
+60, 9.89, 18, -3.3616588870803148, -2.1514616877314015
+
+sim229 | perturbation | lat0=15 | M=5  | full_radiation_no_wv |
+sim230 | perturbation | lat0=15 | M=10 | full_radiation_no_wv |
+sim231 | perturbation | lat0=15 | M=15 | full_radiation_no_wv |
+sim232 | perturbation | lat0=15 | M=18 | full_radiation_no_wv |
+sim233 | perturbation | lat0=60 | M=5  | full_radiation_no_wv |
+sim234 | perturbation | lat0=60 | M=10 | full_radiation_no_wv |
+sim235 | perturbation | lat0=60 | M=15 | full_radiation_no_wv |
+sim236 | perturbation | lat0=60 | M=18 | full_radiation_no_wv |
+In data/sensitivity_full_radiation_no_wv.dat:
+15, 4.94,  5, -1.8380935581346449, -1.1763798772061727
+15, 4.94, 10, -3.4182479649863042, -2.1876786975912350
+15, 4.94, 15, -4.8298285131576852, -3.0910902484209188
+15, 4.94, 18, -5.6167321509760431, -3.5947085766246674
+60, 9.89,  5, -0.3577732629205488, -0.2289748882691513
+60, 9.89, 10, -0.6977868566892077, -0.4465835882810929
+60, 9.89, 15, -1.0239566534654339, -0.6553322582178776
+60, 9.89, 18, -1.2143733106399131, -0.7771989188095444
+
+sim237 | perturbation | lat0=15 | M=5  | full_radiation_no_lr |
+sim238 | perturbation | lat0=15 | M=10 | full_radiation_no_lr |
+sim239 | perturbation | lat0=15 | M=15 | full_radiation_no_lr |
+sim240 | perturbation | lat0=15 | M=18 | full_radiation_no_lr |
+sim241 | perturbation | lat0=60 | M=5  | full_radiation_no_lr |
+sim242 | perturbation | lat0=60 | M=10 | full_radiation_no_lr |
+sim243 | perturbation | lat0=60 | M=15 | full_radiation_no_lr |
+sim244 | perturbation | lat0=60 | M=18 | full_radiation_no_lr |
+In data/sensitivity_full_radiation_no_lr.dat:
+15, 4.94,  5, -3.6032143491206812, -2.3060571834372361
+15, 4.94, 10, -6.4952576087417748, -4.1569648695947361
+15, 4.94, 15, -8.9069748118523790, -5.7004638795855236
+15, 4.94, 18, -10.2431673868576176, -6.5556271275888758
+60, 9.89,  5, -1.3868908664378452, -0.8876101545202210
+60, 9.89, 10, -2.5221633108169681, -1.6141845189228596
+60, 9.89, 15, -3.5384305396274192, -2.2645955453615483
+60, 9.89, 18, -3.9934085298511501, -2.5557814591047361
+
+---
+# 1-15
+---
+sim245 | perturbation | lat0=15 | M=5  | planck |
+sim246 | perturbation | lat0=15 | M=10 | planck |
+sim247 | perturbation | lat0=15 | M=15 | planck |
+sim248 | perturbation | lat0=15 | M=18 | planck |
+sim249 | perturbation | lat0=60 | M=5  | planck |
+sim250 | perturbation | lat0=60 | M=10 | planck |
+sim251 | perturbation | lat0=60 | M=15 | planck |
+sim252 | perturbation | lat0=60 | M=18 | planck |
+In data/sensitivity_planck.dat
+15, 4.94,  5, -3.1494998205014380, -2.0156798851209206
+15, 4.94, 10, -5.7440202149305986, -3.6761729375555836
+15, 4.94, 15, -7.9567318640917453, -5.0923083930187163
+15, 4.94, 18, -9.1442386347135098, -5.8523127262166463
+60, 9.89,  5, -1.0038917951101700, -0.6424907488705088
+60, 9.89, 10, -1.8870866903752386, -1.2077354818401527
+60, 9.89, 15, -2.6764319785967081, -1.7129164663018932
+60, 9.89, 18, -3.1140937526275718, -1.9930200016816459
+
+sim253 | perturbation | lat0=15 | M=5  | linear |
+sim254 | perturbation | lat0=15 | M=10 | linear |
+sim255 | perturbation | lat0=15 | M=15 | linear |
+sim256 | perturbation | lat0=15 | M=18 | linear |
+sim257 | perturbation | lat0=60 | M=5  | linear |
+sim258 | perturbation | lat0=60 | M=10 | linear |
+sim259 | perturbation | lat0=60 | M=15 | linear |
+sim260 | perturbation | lat0=60 | M=18 | linear |
+In data/sensitivity_linear.dat
+15, 4.94,  5, -3.0744458752479513, -1.9676453601586890
+15, 4.94, 10, -5.6730942532154902, -3.6307803220579138
+15, 4.94, 15, -7.9215269397551893, -5.0697772414433206
+15, 4.94, 18, -9.1360729660580731, -5.8470866982771668
+60, 9.89,  5, -1.0823297604923698, -0.6926910467151167
+60, 9.89, 10, -2.0023941973712449, -1.2815322863175966
+60, 9.89, 15, -2.7985326888989621, -1.7910609208953361
+60, 9.89, 18, -3.2291193621593246, -2.0666363917819677
+
+sim261 | perturbation | lat0=15 | M=5  | linear |
+sim262 | perturbation | lat0=15 | M=10 | linear |
+sim263 | perturbation | lat0=15 | M=15 | linear |
+sim264 | perturbation | lat0=15 | M=18 | linear |
+sim265 | perturbation | lat0=60 | M=5  | linear |
+sim266 | perturbation | lat0=60 | M=10 | linear |
+sim267 | perturbation | lat0=60 | M=15 | linear |
+sim268 | perturbation | lat0=60 | M=18 | linear |
+15, 4.94,  5, -2.8867143571118601, -1.8474971885515907
+15, 4.94, 10, -5.4581925598396115, -3.4932432382973517
+15, 4.94, 15, -7.7765373430101929, -4.9769838995265241
+15, 4.94, 18, -9.0645487766907973, -5.8013112170821106
+60, 9.89,  5, -2.0658601627843320, -1.3221505041819726
+60, 9.89, 10, -3.7907979488662620, -2.4261106872744076
+60, 9.89, 15, -5.2178047757500448, -3.3393950564800288
+60, 9.89, 18, -5.9494718357130170, -3.8076619748563307
+
+---
+# 2-4
+---
+plot_asymmetries.py shows the asymmetries btwn WV and no WV runs as in Clark et al.
+
+sim269 tests to see if taking control sim as basic state and dRdT calculations as c_i's gives the same results for ITCZ shift.
+It did not work well... need to investigate further.
+
+!FIXME: looks like temperatures are much lower now that I have updated climt. 
+I suggest looking at all those spots where you reshaped arrays and seeing if something is wrong.
+Investigation is taking place in sim270
+
+---
+# 2-7
+---
+Looks like the issue with colder temperatures was indeed how I was handling the new array shapes.
+In sim270 I fixed the problem with the line
+	self.state['air_temperature'].values[:] = self.interpolated_moist_adiabat.ev(Tgrid, pressures).T.reshape( (self.N_levels, self.N_pts, 1) )
+The .T transpose is key here.
+
+---
+# 2-8
+---
+sim271 and sim272 contain M=15 simulations for interactive and prescribed wv but at lower temp (alb = .25).
+We use these to compare asymmetries to before.
+
+sim271: Interactive
+15, 4.94, 15, -8.0471898976742491, -5.1502015345115195
+sim272: Prescribed
+15, 4.94, 15, -5.2086807503393624, -3.3335556802171915
+
+---
+# 2-25
+---
+I have been bad and not logged lots of things that happened. 
+The reason for this is that I have not been doing actual simulation folders but rather little isolated tests.
+Here is what I can remember:
+	- I updated the EBM with sparse matrices and a new finite difference scheme from Persson
+	- We have been testing CliMT and find it to be fairly accurate compared to MODTRAN 
+	- What we also noticed was RH = 0 does not change ITCZ sensitivity very much :(
+		- This led us to looking at my moist adiabat calculation, which is now updated in moist_adiabat_calculation.py
+	- Still no fix for our sensitivity problem. I even tried messing with diffusivity and got no change.
+
+---
+# 3-6
+---
+Updates to the EBM_shortwave.py code so that now the EBM can run with full blown CliMT shortwave.
+I have noticed that I can take gigantic (dtmax_mult ~ 1e4) time steps and still get the same EFE and T_avg within 0.1 absolute error from finer simulations.
+
+---
+# 3-29
+---
+We continue to investigate the discrepancy between our shifts and Clark et al's. 
+Bill noticed that it could simply be that we have different basic states: their MSE flux has a different slope than ours on the equator.
+Bill ran a CESM aqua planet simulation and gave me access to the results on savio.
+I noticed that, on top of the WV feedback, there is a RH feedback: the NH cell gets drier as the ITCZ shifts S.
+Implementing this in my RH distribution in sim273, I am finally getting better sensitivites (the best so far was a bit past 7 degrees south).
+
+---
+# 4-16
+---
+sim273 has now been merged to the current EBM with a nice idealized RH dist.
+
+# Perturbation simulations (all in sim274) with latest RH
+sim274 | perturbation | lat0=15 | M=5  | full_radiation |
+sim274 | perturbation | lat0=15 | M=10 | full_radiation |
+sim274 | perturbation | lat0=15 | M=15 | full_radiation |
+sim274 | perturbation | lat0=15 | M=18 | full_radiation |
+sim274 | perturbation | lat0=60 | M=5  | full_radiation |
+sim274 | perturbation | lat0=60 | M=10 | full_radiation |
+sim274 | perturbation | lat0=60 | M=15 | full_radiation |
+sim274 | perturbation | lat0=60 | M=18 | full_radiation |
+
+# Results 
+15, 4.94,  5, -3.3223584155869803
+15, 4.94, 10, -5.9371946735764425
+15, 4.94, 15, -8.1800252021915263
+15, 4.94, 18, -9.3515690283177424
+60, 9.89,  5, -1.0462154591205688
+60, 9.89, 10, -1.9146081166041153
+60, 9.89, 15, -2.7285023106575603
+60, 9.89, 18, -3.1153792113153997
+
+---
+# 4-17
+---
+sim275 has albedo experiments
+sim276 has a control run for albedo feedback (data/ctrl_alb.npz)
+sim274 has a general control run (data/ctrl.npz)
+
+# Perturbation sims with albedo feedback
+sim276 | perturbation | lat0=15 | M=5  | full_radiation | alb_feedback=True 
+sim276 | perturbation | lat0=15 | M=10 | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=15 | M=15 | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=15 | M=18 | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=60 | M=5  | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=60 | M=10 | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=60 | M=15 | full_radiation | alb_feedback=True
+sim276 | perturbation | lat0=60 | M=18 | full_radiation | alb_feedback=True
+
+# Results:
+15, 4.94,  5, -3.2927939038501104
+15, 4.94, 10, -5.8959919680603186
+15, 4.94, 15, -8.2066331824127854
+15, 4.94, 18, -9.6390512342067414
+60, 9.89,  5, -1.8827592950189780
+60, 9.89, 10, -2.9811587079640414
+60, 9.89, 15, -3.7632659700589244
+60, 9.89, 18, -4.2123948486828677
+
+Summary of today: 
+	- implemented albedo feedback
+	- ran sensitivity experiments
+	- fixed itcz width in RH
+	- fixed flux calculations for new control sims and new RH function
+	- changed transport calculation from derivative to integral
+	- savio stuff: cesm plots for M0-M18
+
+---
+# 4-21
+---
+Fixed flux calculations in EBM.py. Issues with reshaping arrays again now that the control data is a different shape.
+Conducted experiment with M=5:
+15, 4.94,  5, -3.3212228067989180 | no alb
+15, 4.94,  5, -3.4099646410717042 | no lr, no alb
+15, 4.94,  5, -1.7117388809106620 | no wv, no alb
+15, 4.94,  5, -3.2908123235786739 | all
+15, 4.94,  5, -3.7038847713630689 | no lr
+15, 4.94,  5, -1.6862651582233983 | no wv
+
+---
+# 4-29
+---
+# No WV
+sim277 | perturbation | lat0=15 | M=5  | full_radiation_no_wv |
+sim277 | perturbation | lat0=15 | M=10 | full_radiation_no_wv |
+sim277 | perturbation | lat0=15 | M=15 | full_radiation_no_wv |
+sim277 | perturbation | lat0=15 | M=18 | full_radiation_no_wv |
+sim277 | perturbation | lat0=60 | M=5  | full_radiation_no_wv |
+sim277 | perturbation | lat0=60 | M=10 | full_radiation_no_wv |
+sim277 | perturbation | lat0=60 | M=15 | full_radiation_no_wv |
+sim277 | perturbation | lat0=60 | M=18 | full_radiation_no_wv |
+15, 4.94,  5, -1.6892825603082215
+15, 4.94, 10, -3.3198826732336402
+15, 4.94, 15, -5.0219214999893804
+15, 4.94, 18, -6.0040788142376886
+60, 9.89,  5, -0.3777696896198366
+60, 9.89, 10, -0.7040511993887014
+60, 9.89, 15, -0.9746084422365825
+60, 9.89, 18, -1.1233508297010446
+# No LR
+sim278 | perturbation | lat0=15 | M=5  | full_radiation_no_lr |
+sim278 | perturbation | lat0=15 | M=10 | full_radiation_no_lr |
+sim278 | perturbation | lat0=15 | M=15 | full_radiation_no_lr |
+sim278 | perturbation | lat0=15 | M=18 | full_radiation_no_lr |
+sim278 | perturbation | lat0=60 | M=5  | full_radiation_no_lr |
+sim278 | perturbation | lat0=60 | M=10 | full_radiation_no_lr |
+sim278 | perturbation | lat0=60 | M=15 | full_radiation_no_lr |
+sim278 | perturbation | lat0=60 | M=18 | full_radiation_no_lr |
+15, 4.94,  5, -3.6907066090066034
+15, 4.94, 10, -6.9703231430260999
+15, 4.94, 15, -8.2925050120734927 #froze
+15, 4.94, 18, -9.4468432029463134 #froze
+60, 9.89,  5, -2.4798183813759938
+60, 9.89, 10, -3.6817427414056905
+60, 9.89, 15, -4.5537667291730219
+60, 9.89, 18, -5.1045066135826609
+
+---
+# 5-1
+---
+Tropical M = 18 runs with different D in sim279:
+D   | EFE 
+--- | --- 
+1e0 | -0.6588934146321173
+1e1 | -0.6586095086603067
+1e2 | -0.6679028748718897
+1e3 | -0.8886624807445799
+1e4 | -3.2303113843686146
+1e5 | -8.6676274752345748
+1e6 | -9.3722829625362944 # close to normal
+1e7 | -9.2013377970207735
+1e8 | -9.3886056092815764
+1e9 | -9.5978189574587134
+
+---
+# 5-5
+---
+More sensitivity experiments, now with no albedo feedback.
+sim280 | perturbation | lat0=15 | M=5  | full_radiation_no_wv |
+sim280 | perturbation | lat0=15 | M=10 | full_radiation_no_wv |
+sim280 | perturbation | lat0=15 | M=15 | full_radiation_no_wv |
+sim280 | perturbation | lat0=15 | M=18 | full_radiation_no_wv |
+sim280 | perturbation | lat0=60 | M=5  | full_radiation_no_wv |
+sim280 | perturbation | lat0=60 | M=10 | full_radiation_no_wv |
+sim280 | perturbation | lat0=60 | M=15 | full_radiation_no_wv |
+sim280 | perturbation | lat0=60 | M=18 | full_radiation_no_wv |
+15, 4.94,  5, -1.7136735785038948
+15, 4.94, 10, -3.4217479133231561
+15, 4.94, 15, -5.3727332667534329
+15, 4.94, 18, -6.5035074701549860
+60, 9.89,  5, -0.2983265807403424
+60, 9.89, 10, -0.5916006682562850
+60, 9.89, 15, -0.8828516225889347
+60, 9.89, 18, -1.0583541815850654
+
+sim281 | perturbation | lat0=15 | M=5  | full_radiation_no_lr |
+sim281 | perturbation | lat0=15 | M=10 | full_radiation_no_lr |
+sim281 | perturbation | lat0=15 | M=15 | full_radiation_no_lr |
+sim281 | perturbation | lat0=15 | M=18 | full_radiation_no_lr |
+sim281 | perturbation | lat0=60 | M=5  | full_radiation_no_lr |
+sim281 | perturbation | lat0=60 | M=10 | full_radiation_no_lr |
+sim281 | perturbation | lat0=60 | M=15 | full_radiation_no_lr |
+sim281 | perturbation | lat0=60 | M=18 | full_radiation_no_lr |
+15, 4.94,  5, -3.4112033667554225
+15, 4.94, 10, -6.1919235432401747
+15, 4.94, 15, -8.4834120352589135
+15, 4.94, 18, -9.6770012815649693
+60, 9.89,  5, -1.0991104524840789
+60, 9.89, 10, -2.0093203796588659
+60, 9.89, 15, -2.8442026769920590
+60, 9.89, 18, -3.3434543521386542
+
+---
+# 5-8
+---
+sim282 contains ctrl simulation with albedo feedback. 
+From now on, no albedo feedback means albeado from this ctrl sim.
+
+sim276 now contains a plot of dh_vs_dT, looking at just how nonlinear h(T) is.
+L_basic.csv created from sim276 ctrl.
+
+---
+# 5-9
+---
+Redid sim282 ctrl with RH dist updated (see sim283).
+
+---
+# 5-10
+---
+Fixed albedo feedback with Bill. 
+sim282 has the new ctrl: ice when temp is below -10 C and alb_ice=0.6 alb_water=0.2.
+
+Some test runs:
+sim282 | perturbation | lat0=15 | M=5  | full_radiation |
+sim282 | perturbation | lat0=15 | M=10 | full_radiation |
+sim282 | perturbation | lat0=15 | M=15 | full_radiation |
+sim282 | perturbation | lat0=15 | M=18 | full_radiation |
+sim282 | perturbation | lat0=60 | M=5  | full_radiation |
+sim282 | perturbation | lat0=60 | M=10 | full_radiation |
+sim282 | perturbation | lat0=60 | M=15 | full_radiation |
+sim282 | perturbation | lat0=60 | M=18 | full_radiation |
+
+15, 4.94,  5, -3.2050882382576305
+15, 4.94, 10, -5.7005734827005616
+15, 4.94, 15, -7.9610151525075024
+15, 4.94, 18, -9.1398858739564446
+60, 9.89,  5, -1.3029473667640126
+60, 9.89, 10, -2.2685687835387363
+60, 9.89, 15, -3.0867986684966655
+60, 9.89, 18, -3.5117191297638888
+
+---
+# 5-17
+---
+sim284 has linearlization of water vapor tests.
+
+sim282 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=True
+15, 4.94,  5, -3.2279970146752697
+15, 4.94, 10, -5.7154205658695139
+15, 4.94, 15, -7.9737030143798036
+15, 4.94, 18, -9.1496195053420557
+60, 9.89,  5, -1.3497029510533458
+60, 9.89, 10, -2.2806979209943554
+60, 9.89, 15, -3.0996598238737909
+60, 9.89, 18, -3.4975394794278225
+sim282 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=False
+sim282 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=False
+15, 4.94,  5, -3.1186568032477457
+15, 4.94, 10, -5.6612381093080497
+15, 4.94, 15, -7.8006253177681746
+15, 4.94, 18, -8.9294846039253244
+60, 9.89,  5, -0.8393744970383180
+60, 9.89, 10, -1.6267602766437042
+60, 9.89, 15, -2.2744762367154876
+60, 9.89, 18, -2.7230421341768101
+sim282 | perturbation | lat0=15 | M=5  | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=10 | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=15 | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=18 | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=5  | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=10 | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=15 | full_radiation_no_wv | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=18 | full_radiation_no_wv | albedo_feedback=True
+15, 4.94,  5, -1.6901812610168361
+15, 4.94, 10, -3.1954516908459087
+15, 4.94, 15, -4.6144527285078869
+15, 4.94, 18, -5.4050645596918807
+60, 9.89,  5, -0.3625061526901177
+60, 9.89, 10, -0.6836147680025617
+60, 9.89, 15, -0.9610977496974509
+60, 9.89, 18, -1.1232427335411004
+sim282 | perturbation | lat0=15 | M=5  | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=10 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=15 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=18 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=5  | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=10 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=15 | full_radiation_no_lr | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=18 | full_radiation_no_lr | albedo_feedback=True
+15, 4.94,  5, -3.4521498890249789
+15, 4.94, 10, -6.1875087102426960
+15, 4.94, 15, -8.5256943683746620
+15, 4.94, 18, -9.7307430487609778
+60, 9.89,  5, -1.5131130688593966
+60, 9.89, 10, -2.5561877830353001
+60, 9.89, 15, -3.5377615325286280
+60, 9.89, 18, -3.9685127184505822
+sim282 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True | RH_feedback=True
+15, 4.94, 18, -15.8985401957816226
+
+---
+# 5-18
+---
+sim285 contains new numerical scheme and tests with non-constant diffusivity.
+sim286 is scratchwork for implimenting an RH feedback.
+
+---
+# 5-25
+---
+RH feedback parameterized by linear fit of CESM funs created and merged.
+D directly from CESM (and smoothed) implemented and merged.
+Plotting fixes.
+
+Simulations with RH feedback:
+sim282 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=True
+sim282 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=True
+15, 4.94,  5, -5.4051484508544752
+15, 4.94, 10, -9.7075427450869416
+15, 4.94, 15, -14.0200822931963067
+15, 4.94, 18, -14.9858557839959268
+60, 9.89,  5, -2.3092610489626892
+60, 9.89, 10, -3.9796890824613445
+60, 9.89, 15, -5.3644139688206858
+60, 9.89, 18, -5.9843362661152684
+
+Simulations with CESM2 Diffusivity:
+sim282 | perturbation | lat0=15 | M=5  | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=15 | M=10 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=15 | M=15 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=15 | M=18 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=60 | M=5  | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=60 | M=10 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=60 | M=15 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+sim282 | perturbation | lat0=60 | M=18 | full_radiation_no_rh | albedo_feedback=True | diffusivity=cesm2
+15, 4.94,  5, -1.7382237372483460
+15, 4.94, 10, -3.2454223608076496
+15, 4.94, 15, -4.6656764181445185
+15, 4.94, 18, -5.5163654905021797
+60, 9.89,  5, -0.7734878085443578
+60, 9.89, 10, -1.3958206521309160
+60, 9.89, 15, -1.9330901658413082
+60, 9.89, 18, -2.2324836405008890
+
+---
+# 5-27
+---
+Updated EBM.py:
+	- saves ctrl.npz in save_data() method
+	- made S incoming SW without albedo everywhere
+	- fixed taylor expansion to have dS in it and also delta_flux_no_fb
+
+
+---
+# 6-1
+---
+Non-const D simulations: (sim285)
+
+D_ref: const
+	15, 4.94, 10, -5.7154493817314371 
+	15, 4.94, 15, -7.9738692248957577 
+	15, 4.94, 18, -9.1496963439513355 
+	60, 9.89, 18, -3.5577134370377146 
+
+D_pole: higher D at poles, lower at EQ
+	15, 4.94, 10, -5.3563556800204211 
+	15, 4.94, 15, -7.2114957148140073 
+	15, 4.94, 18, -10.966301478042911 (AL creep)
+	60, 9.89, 18, -4.4938771487395535 
+
+D_EQ: higher D at EQ, lower at Poles
+	15, 4.94, 10, -7.0940836553790367 
+	15, 4.94, 15, -9.6813176050273775 
+	15, 4.94, 18, -11.143412960437846 
+	60, 9.89, 18, -3.3232239168426223 
+
+---
+# 6-4
+---
+New plotting again.
+Update to EBM to include the D's above in preparation for sensitivity experiments.
+The EBM now includes x=+/-1 because of the slightly better numerical scheme.
+
+---
+# 6-6
+---
+Sensitivities for D1, D2, D_cesm2:
+sim287 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=True | D1
+sim287 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=True | D1
+sim287 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=True | D1
+sim287 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True | D1
+sim287 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=True | D1
+sim287 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=True | D1
+sim287 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=True | D1
+sim287 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=True | D1
+60, 9.89,  5, -1.2581869851882059
+60, 9.89, 10, -2.0575297206500687
+60, 9.89, 15, -2.9129987388175551
+60, 9.89, 18, -3.3297314983751050
+15, 4.94,  5, -3.8923138802653909
+15, 4.94, 10, -6.9248236822047540
+15, 4.94, 15, -9.4164940744620544
+15, 4.94, 18, -10.8166785162881371
+sim287 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=True | D2
+sim287 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=True | D2
+sim287 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=True | D2
+sim287 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True | D2
+sim287 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=True | D2
+sim287 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=True | D2
+sim287 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=True | D2
+sim287 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=True | D2
+60, 9.89,  5, -1.1464436454017886
+60, 9.89, 10, -2.0389927926276301
+60, 9.89, 15, -3.3483101902159671
+60, 9.89, 18, -5.0555458088737488
+15, 4.94,  5, -3.0402583926243745
+15, 4.94, 10, -5.1949658621332198
+15, 4.94, 15, -7.1773056135050224
+15, 4.94, 18, -11.3086134776987812
+sim287 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=True | D_cesm2
+sim287 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=True | D_cesm2
+sim287 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=True | D_cesm2
+sim287 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True | D_cesm2
+sim287 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=True | D_cesm2
+sim287 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=True | D_cesm2
+sim287 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=True | D_cesm2
+sim287 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=True | D_cesm2
+60, 9.89,  5, -0.5826620040880730
+60, 9.89, 10, -1.1606368344398481
+60, 9.89, 15, -1.6561166983784101
+60, 9.89, 18, -1.9340580098313396
+15, 4.94,  5, -1.5097228533530722
+15, 4.94, 10, -2.8908330514722120
+15, 4.94, 15, -4.1172275416436861
+15, 4.94, 18, -4.8802790843780324
+
+Sensitivities for D_const:
+sim287 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=True
+60, 9.89,  5, -1.3182035355489696
+60, 9.89, 10, -2.2453092051696775
+60, 9.89, 15, -3.0703698652513576
+60, 9.89, 18, -3.5546421554387200
+15, 4.94,  5, -3.1281131622092047
+15, 4.94, 10, -5.7379875925040862
+15, 4.94, 15, -7.9521868830371636
+15, 4.94, 18, -9.1407532732893522
+sim287 | perturbation | lat0=15 | M=5  | full_radiation_no_wv | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=10 | full_radiation_no_wv | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=15 | full_radiation_no_wv | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=18 | full_radiation_no_wv | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=5  | full_radiation_no_wv | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=10 | full_radiation_no_wv | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=15 | full_radiation_no_wv | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=18 | full_radiation_no_wv | albedo_feedback=True
+15, 4.94,  5, -1.6366949520521832
+15, 4.94, 10, -3.0813294905903739
+15, 4.94, 15, -4.4527836553385667
+15, 4.94, 18, -5.2538911810158613
+60, 9.89,  5, -0.3535764568359660
+60, 9.89, 10, -0.6675203523605631
+60, 9.89, 15, -0.9387421900979558
+60, 9.89, 18, -1.0978534337535109
+sim287 | perturbation | lat0=15 | M=5  | full_radiation_no_lr | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=10 | full_radiation_no_lr | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=15 | full_radiation_no_lr | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=18 | full_radiation_no_lr | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=5  | full_radiation_no_lr | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=10 | full_radiation_no_lr | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=15 | full_radiation_no_lr | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=18 | full_radiation_no_lr | albedo_feedback=True
+60, 9.89,  5, -1.4082902494746670
+60, 9.89, 10, -2.4944725198127791
+60, 9.89, 15, -3.3889153333999471
+60, 9.89, 18, -3.9033261464038942
+15, 4.94,  5, -3.3905166946268221
+15, 4.94, 10, -6.1775155817720089
+15, 4.94, 15, -8.3696636472339065
+15, 4.94, 18, -9.6714019048895583
+sim287 | perturbation | lat0=15 | M=5  | full_radiation | albedo_feedback=False
+sim287 | perturbation | lat0=15 | M=10 | full_radiation | albedo_feedback=False
+sim287 | perturbation | lat0=15 | M=15 | full_radiation | albedo_feedback=False
+sim287 | perturbation | lat0=15 | M=18 | full_radiation | albedo_feedback=False
+sim287 | perturbation | lat0=60 | M=5  | full_radiation | albedo_feedback=False
+sim287 | perturbation | lat0=60 | M=10 | full_radiation | albedo_feedback=False
+sim287 | perturbation | lat0=60 | M=15 | full_radiation | albedo_feedback=False
+sim287 | perturbation | lat0=60 | M=18 | full_radiation | albedo_feedback=False
+60, 9.89,  5, -0.8134654077360050
+60, 9.89, 10, -1.5805601208544602
+60, 9.89, 15, -2.2085495032014912
+60, 9.89, 18, -2.5509064293606012
+15, 4.94,  5, -3.1185505187261087
+15, 4.94, 10, -5.6610707111125071
+15, 4.94, 15, -7.7573945807310816
+15, 4.94, 18, -8.9009291336860503
+sim287 | perturbation | lat0=15 | M=5  | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=10 | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=15 | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=15 | M=18 | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=5  | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=10 | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=15 | full_radiation_rh | albedo_feedback=True
+sim287 | perturbation | lat0=60 | M=18 | full_radiation_rh | albedo_feedback=True
+60, 9.89,  5, -2.5330296785247204
+60, 9.89, 10, -4.3296882764428268
+60, 9.89, 15, -5.7437474009932270
+60, 9.89, 18, -6.6286548240126297
+15, 4.94,  5, -6.0004673305859395
+15, 4.94, 10, -12.1896278720165228
+15, 4.94, 15, -14.1138239746200860
+15, 4.94, 18, -15.2428426341790040
+
+---
+# 6-11
+---
+Redoing sensitivities for D1 and D2 with more dramatic idealizations.
+sim287 | lat0=15 | M=5  | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=15 | M=10 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=15 | M=15 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=15 | M=18 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=5  | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=10 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=15 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=18 | full_radiation | albedo_feedback=True | D1
+60, 9.89,  5, -1.3574229243485467
+60, 9.89, 10, -2.4047617618329564
+60, 9.89, 15, -3.2177932734696277
+60, 9.89, 18, -3.6187602725720587
+15, 4.94,  5, -4.1509593914369018
+15, 4.94, 10, -7.2710808593283627
+15, 4.94, 15, -9.8575505501352598
+15, 4.94, 18, -11.1427983663801076
+sim287 | lat0=15 | M=5  | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=15 | M=10 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=15 | M=15 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=15 | M=18 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=5  | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=10 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=15 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=18 | full_radiation | albedo_feedback=True | D2
+60, 9.89,  5, -0.6297204331355193
+60, 9.89, 10, -1.1415250757810096
+60, 9.89, 15, -1.5153001251129652
+60, 9.89, 18, -1.7812325576952004
+15, 4.94,  5, -1.7266268069252522
+15, 4.94, 10, -3.1366482726467741
+15, 4.94, 15, -4.3733374900036956
+15, 4.94, 18, -7.4380559687809402
+
+---
+# 6-16
+---
+Attempting to take out PL from model:
+15, 4.94,  5, -2.6043526870285754 ctrl
+15, 4.94,  5, -2.6274178211096588 LR
+15, 4.94,  5, -2.6364154225911403 WV
+15, 4.94,  5, -1.8911691557017427 PL
+15, 4.94,  5, -1.9101696248593802 AL, PL
+
+15, 4.94, 18, -8.5429239574404772 ctrl
+15, 4.94, 18, -8.5924598010854645 LR
+15, 4.94, 18, -8.6136946192665320 WV
+15, 4.94, 18, -6.3290779014945082 PL
+15, 4.94, 18, -6.4175736680537305 AL, PL
+
+---
+# 6-17
+---
+sim288 contains tests with perturbation equation nabla^2 h' + lambda T' = dS' attempting to see if lambda = 0 is the same as the mean OLR model. 
+
+---
+# 6-29
+---
+Continued work on sim288, now with updated idea that removing the PL is L_ctrl + L_pert_bar. 
+Perturbation equation solution is with LAMBDA = 0 but dS must integrate to zero.
+
+---
+# 6-29
+---
+Redo D1, D2 to have Hwang & Frierson mean.
+sim287 | lat0=15 | M=5  | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=15 | M=10 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=15 | M=15 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=15 | M=18 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=5  | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=10 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=15 | full_radiation | albedo_feedback=True | D1
+sim287 | lat0=60 | M=18 | full_radiation | albedo_feedback=True | D1
+60, 9.89,  5, -1.3575599417935205
+60, 9.89, 10, -2.3343062425022656
+60, 9.89, 15, -3.1960804900301305
+60, 9.89, 18, -3.7211015471281006
+15, 4.94,  5, -4.0552498484630748
+15, 4.94, 10, -7.1039489207142710
+15, 4.94, 15, -9.7032906921535425
+15, 4.94, 18, -11.0904659994273533
+
+sim287 | lat0=15 | M=5  | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=15 | M=10 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=15 | M=15 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=15 | M=18 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=5  | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=10 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=15 | full_radiation | albedo_feedback=True | D2
+sim287 | lat0=60 | M=18 | full_radiation | albedo_feedback=True | D2
+60, 9.89,  5, -0.6308037926043256
+60, 9.89, 10, -1.1670790398863440
+60, 9.89, 15, -1.5298175752061440
+60, 9.89, 18, -1.7958540898534479
+15, 4.94,  5, -1.7274043211229262
+15, 4.94, 10, -3.1339225983835983
+15, 4.94, 15, -4.3528161354605963
+15, 4.94, 18, -7.4197965065300027
+
+
+---
+# 7-5
+---
+sim289 contains a re-check of shortwave WV feedback to ensure that it is negligible. 
+
+---
+# 7-9
+---
+Testing no PL
+sim287 | lat0=15 | M=5  | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=15 | M=10 | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=15 | M=15 | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=15 | M=18 | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=60 | M=5  | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=60 | M=10 | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=60 | M=15 | full_radiation_homog | albedo_feedback=False | constant
+sim287 | lat0=60 | M=18 | full_radiation_homog | albedo_feedback=False | constant
+60, 9.89,  5, -2.8101063510500413
+60, 9.89, 10, -5.8655332448744781
+60, 9.89, 15, -9.3103510367195010
+60, 9.89, 18, -11.4107630287235295
+15, 4.94,  5, -3.4772211393010832
+15, 4.94, 10, -7.4122140010035409
+15, 4.94, 15, -11.7146842102960633
+15, 4.94, 18, -14.1844176717412473
+
+---
+# 7-11
+---
+Testing no PL but with AL
+sim287 | lat0=15 | M=5  | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=15 | M=10 | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=15 | M=15 | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=15 | M=18 | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=60 | M=5  | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=60 | M=10 | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=60 | M=15 | full_radiation_homog | albedo_feedback=True | constant
+sim287 | lat0=60 | M=18 | full_radiation_homog | albedo_feedback=True | constant
+60, 9.89,  5, -55.8217922087725213
+60, 9.89, 10, -58.3454325662901283
+60, 9.89, 15, -60.4383590688964816
+60, 9.89, 18, -61.5287842868998780
+15, 4.94,  5, -57.2440148894001766
+15, 4.94, 10, -60.3561883043982164
+15, 4.94, 15, -62.7105099548356790
+15, 4.94, 18, -64.1089872113456067
+
+Getting PL by taking away everything else.
+sim287 | lat0=15 | M=5  | full_radiation_no_wv_no_lr | albedo_feedback=False | constant
+sim287 | lat0=15 | M=10 | full_radiation_no_wv_no_lr | albedo_feedback=False | constant
+sim287 | lat0=15 | M=15 | full_radiation_no_wv_no_lr | albedo_feedback=False | constant
+sim287 | lat0=15 | M=18 | full_radiation_no_wv_no_lr | albedo_feedback=False | constant
+sim287 | lat0=60 | M=5  | full_radiation_no_wv_no_lr | albedo_feedback=False | constant
+sim287 | lat0=60 | M=10 | full_radiation_no_wv_no_lr | albedo_feedback=False | constant
+sim287 | lat0=60 | M=15 | full_radiation_no_wv_no_lr | albedo_feedback=False | constant
+sim287 | lat0=60 | M=18 | full_radiation_no_wv_no_lr | albedo_feedback=False | constant
+60, 9.89,  5, -0.3554545168161826
+60, 9.89, 10, -0.6938102461346097
+60, 9.89, 15, -1.0208434114696705
+60, 9.89, 18, -1.2137227003426441
+15, 4.94,  5, -1.8908276024548050
+15, 4.94, 10, -3.6385265812061509
+15, 4.94, 15, -5.3304520867430956
+15, 4.94, 18, -6.3251785770500657
+
+---
+# 7-16
+---
+Adjusted homog_olr so it is NF.
+sim290 for multigrid.
+
+---
+# 7-31
+---
+Redoing sims with multigrid in sim291. 
+sim291 | lat0=15 | M=5  | full_radiation | al_feedback=True | constant
+sim291 | lat0=15 | M=10 | full_radiation | al_feedback=True | constant
+sim291 | lat0=15 | M=15 | full_radiation | al_feedback=True | constant
+sim291 | lat0=15 | M=18 | full_radiation | al_feedback=True | constant
+sim291 | lat0=60 | M=5  | full_radiation | al_feedback=True | constant
+sim291 | lat0=60 | M=10 | full_radiation | al_feedback=True | constant
+sim291 | lat0=60 | M=15 | full_radiation | al_feedback=True | constant
+sim291 | lat0=60 | M=18 | full_radiation | al_feedback=True | constant
+60, 9.89,  5, -1.3169174891337745
+60, 9.89, 10, -2.2272790211206357
+60, 9.89, 15, -3.0731532769950616
+60, 9.89, 18, -3.5259671577597724
+15, 4.94,  5, -3.1407498968866330
+15, 4.94, 10, -5.7304363273161618
+15, 4.94, 15, -7.9239877462923465
+15, 4.94, 18, -9.1286390989077280
+sim291 | lat0=15 | M=5  | full_radiation_no_wv | al_feedback=True | constant
+sim291 | lat0=15 | M=10 | full_radiation_no_wv | al_feedback=True | constant
+sim291 | lat0=15 | M=15 | full_radiation_no_wv | al_feedback=True | constant
+sim291 | lat0=15 | M=18 | full_radiation_no_wv | al_feedback=True | constant
+sim291 | lat0=60 | M=5  | full_radiation_no_wv | al_feedback=True | constant
+sim291 | lat0=60 | M=10 | full_radiation_no_wv | al_feedback=True | constant
+sim291 | lat0=60 | M=15 | full_radiation_no_wv | al_feedback=True | constant
+sim291 | lat0=60 | M=18 | full_radiation_no_wv | al_feedback=True | constant
+60, 9.89,  5, -0.3584416377691662
+60, 9.89, 10, -0.6735815559808263
+60, 9.89, 15, -0.9402873761860354
+60, 9.89, 18, -1.1018391958808913
+15, 4.94,  5, -1.6410030692315956
+15, 4.94, 10, -3.1003685426210930
+15, 4.94, 15, -4.4681010574763267
+15, 4.94, 18, -5.2678343812197417
+sim291 | lat0=15 | M=5  | full_radiation_no_lr | al_feedback=True | constant
+sim291 | lat0=15 | M=10 | full_radiation_no_lr | al_feedback=True | constant
+sim291 | lat0=15 | M=15 | full_radiation_no_lr | al_feedback=True | constant
+sim291 | lat0=15 | M=18 | full_radiation_no_lr | al_feedback=True | constant
+sim291 | lat0=60 | M=5  | full_radiation_no_lr | al_feedback=True | constant
+sim291 | lat0=60 | M=10 | full_radiation_no_lr | al_feedback=True | constant
+sim291 | lat0=60 | M=15 | full_radiation_no_lr | al_feedback=True | constant
+sim291 | lat0=60 | M=18 | full_radiation_no_lr | al_feedback=True | constant
+60, 9.89,  5, -1.4690664310527519
+60, 9.89, 10, -2.5424121391570469
+60, 9.89, 15, -3.4077393192975540
+60, 9.89, 18, -3.8871362785587635
+15, 4.94,  5, -3.3833032930345781
+15, 4.94, 10, -6.1337029819502273
+15, 4.94, 15, -8.4202355954468704
+15, 4.94, 18, -9.6439605472290530
+sim291 | lat0=15 | M=5  | full_radiation_rh | al_feedback=True | constant
+sim291 | lat0=15 | M=10 | full_radiation_rh | al_feedback=True | constant
+sim291 | lat0=15 | M=15 | full_radiation_rh | al_feedback=True | constant
+sim291 | lat0=15 | M=18 | full_radiation_rh | al_feedback=True | constant
+sim291 | lat0=60 | M=5  | full_radiation_rh | al_feedback=True | constant
+sim291 | lat0=60 | M=10 | full_radiation_rh | al_feedback=True | constant
+sim291 | lat0=60 | M=15 | full_radiation_rh | al_feedback=True | constant
+sim291 | lat0=60 | M=18 | full_radiation_rh | al_feedback=True | constant
+60, 9.89,  5, -2.6160884533161615
+60, 9.89, 10, -4.3956986793023018
+60, 9.89, 15, -5.9205714962117009
+60, 9.89, 18, -6.7109367463496863
+15, 4.94,  5, -5.9979971448731328
+15, 4.94, 10, -12.1337464573319966
+15, 4.94, 15, -14.0937172976696434
+15, 4.94, 18, -15.1561306137674894
+sim291 | lat0=15 | M=5  | no_feedback | al_feedback=False | constant
+sim291 | lat0=15 | M=10 | no_feedback | al_feedback=False | constant
+sim291 | lat0=15 | M=15 | no_feedback | al_feedback=False | constant
+sim291 | lat0=15 | M=18 | no_feedback | al_feedback=False | constant
+sim291 | lat0=60 | M=5  | no_feedback | al_feedback=False | constant
+sim291 | lat0=60 | M=10 | no_feedback | al_feedback=False | constant
+sim291 | lat0=60 | M=15 | no_feedback | al_feedback=False | constant
+sim291 | lat0=60 | M=18 | no_feedback | al_feedback=False | constant
+60, 9.89,  5, -2.8426198539055165
+60, 9.89, 10, -5.9198300961159402
+60, 9.89, 15, -9.3915158128748804
+60, 9.89, 18, -11.5035320980615321
+15, 4.94,  5, -3.4955681000348990
+15, 4.94, 10, -7.4391965843799550
+15, 4.94, 15, -11.7493616810862775
+15, 4.94, 18, -14.2195135235556371
+sim291 | lat0=15 | M=5  | full_radiation | al_feedback=False | constant
+sim291 | lat0=15 | M=10 | full_radiation | al_feedback=False | constant
+sim291 | lat0=15 | M=15 | full_radiation | al_feedback=False | constant
+sim291 | lat0=15 | M=18 | full_radiation | al_feedback=False | constant
+sim291 | lat0=60 | M=5  | full_radiation | al_feedback=False | constant
+sim291 | lat0=60 | M=10 | full_radiation | al_feedback=False | constant
+sim291 | lat0=60 | M=15 | full_radiation | al_feedback=False | constant
+sim291 | lat0=60 | M=18 | full_radiation | al_feedback=False | constant
+60, 9.89,  5, -0.7918314415213265
+60, 9.89, 10, -1.5126868706033421
+60, 9.89, 15, -2.1757172633211281
+60, 9.89, 18, -2.5506203948807924
+15, 4.94,  5, -3.1055487873018728
+15, 4.94, 10, -5.6315299022455090
+15, 4.94, 15, -7.7669977346625423
+15, 4.94, 18, -8.9056501796967584
+sim291 | lat0=15 | M=5  | full_radiation_no_wv_no_lr | al_feedback=False | constant
+sim291 | lat0=15 | M=10 | full_radiation_no_wv_no_lr | al_feedback=False | constant
+sim291 | lat0=15 | M=15 | full_radiation_no_wv_no_lr | al_feedback=False | constant
+sim291 | lat0=15 | M=18 | full_radiation_no_wv_no_lr | al_feedback=False | constant
+sim291 | lat0=60 | M=5  | full_radiation_no_wv_no_lr | al_feedback=False | constant
+sim291 | lat0=60 | M=10 | full_radiation_no_wv_no_lr | al_feedback=False | constant
+sim291 | lat0=60 | M=15 | full_radiation_no_wv_no_lr | al_feedback=False | constant
+sim291 | lat0=60 | M=18 | full_radiation_no_wv_no_lr | al_feedback=False | constant
+60, 9.89,  5, -0.3567948505525101
+60, 9.89, 10, -0.6978584113610947
+60, 9.89, 15, -1.0270429051314738
+60, 9.89, 18, -1.2201237892489472
+15, 4.94,  5, -1.8923086956176542
+15, 4.94, 10, -3.6422260276113643
+15, 4.94, 15, -5.3364726721381279
+15, 4.94, 18, -6.3326957385110383
+sim291 | lat0=15 | M=5  | full_radiation | al_feedback=True | cesm2
+sim291 | lat0=15 | M=10 | full_radiation | al_feedback=True | cesm2
+sim291 | lat0=15 | M=15 | full_radiation | al_feedback=True | cesm2
+sim291 | lat0=15 | M=18 | full_radiation | al_feedback=True | cesm2
+sim291 | lat0=60 | M=5  | full_radiation | al_feedback=True | cesm2
+sim291 | lat0=60 | M=10 | full_radiation | al_feedback=True | cesm2
+sim291 | lat0=60 | M=15 | full_radiation | al_feedback=True | cesm2
+sim291 | lat0=60 | M=18 | full_radiation | al_feedback=True | cesm2
+60, 9.89,  5, -0.6079913639589294
+60, 9.89, 10, -1.1777067936041781
+60, 9.89, 15, -1.6462105311519399
+60, 9.89, 18, -1.9279544742682380
+15, 4.94,  5, -1.5445999484845163
+15, 4.94, 10, -2.9080559010214366
+15, 4.94, 15, -4.1553923220657198
+15, 4.94, 18, -4.9105372671935799
+sim291 | lat0=15 | M=5  | full_radiation | al_feedback=True | D1
+sim291 | lat0=15 | M=10 | full_radiation | al_feedback=True | D1
+sim291 | lat0=15 | M=15 | full_radiation | al_feedback=True | D1
+sim291 | lat0=15 | M=18 | full_radiation | al_feedback=True | D1
+sim291 | lat0=60 | M=5  | full_radiation | al_feedback=True | D1
+sim291 | lat0=60 | M=10 | full_radiation | al_feedback=True | D1
+sim291 | lat0=60 | M=15 | full_radiation | al_feedback=True | D1
+sim291 | lat0=60 | M=18 | full_radiation | al_feedback=True | D1
+60, 9.89,  5, -1.3303981484138709
+60, 9.89, 10, -2.2605029602834326
+60, 9.89, 15, -3.1401873434363901
+60, 9.89, 18, -3.6129831912520878
+15, 4.94,  5, -3.9556605407106016
+15, 4.94, 10, -7.0794821438604174
+15, 4.94, 15, -9.6426555250317900
+15, 4.94, 18, -10.964847745216735
+sim291 | lat0=15 | M=5  | full_radiation | al_feedback=True | D2
+sim291 | lat0=15 | M=10 | full_radiation | al_feedback=True | D2
+sim291 | lat0=15 | M=15 | full_radiation | al_feedback=True | D2
+sim291 | lat0=15 | M=18 | full_radiation | al_feedback=True | D2
+sim291 | lat0=60 | M=5  | full_radiation | al_feedback=True | D2
+sim291 | lat0=60 | M=10 | full_radiation | al_feedback=True | D2
+sim291 | lat0=60 | M=15 | full_radiation | al_feedback=True | D2
+sim291 | lat0=60 | M=18 | full_radiation | al_feedback=True | D2
+60, 9.89,  5, -0.6747429441108270
+60, 9.89, 10, -1.1777619952366429
+60, 9.89, 15, -1.6041294248450664
+60, 9.89, 18, -1.8637739347048317
+15, 4.94,  5, -1.7315649122531023
+15, 4.94, 10, -3.1140255155529228
+15, 4.94, 15, -4.3690690863243606
+15, 4.94, 18, -7.3979112374139859

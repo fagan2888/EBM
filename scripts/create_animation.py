@@ -2,49 +2,27 @@
 
 import numpy as np 
 import matplotlib.pyplot as plt
-from matplotlib import animation, rc
+from matplotlib import animation
 
-### STYLES
-rc('animation', html='html5')
-rc('lines', linewidth=2, color='b', markersize=10)
-rc('axes', titlesize=20, labelsize=16, xmargin=0.01, ymargin=0.01, 
-        linewidth=1.5)
-rc('axes.spines', top=False, right=False)
-rc('xtick', labelsize=13)
-rc('xtick.major', size=5, width=1.5)
-rc('ytick', labelsize=13)
-rc('ytick.major', size=5, width=1.5)
-rc('legend', fontsize=14)
+plt.style.use("/home/hpeter/Documents/ResearchBoos/EBM_files/EBM/plot_styles.mplstyle")
 
-# show = 'T'
-# show = 'E'
-show = 'alb'
-# show = 'L'
+show = 'T'
 print('\nCreating Animation of {}'.format(show))
 
 # set up the figure, the axis, and the plot element we want to animate
-fig, ax = plt.subplots(1, figsize=(16, 10))
+fig, ax = plt.subplots(1)
 
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
-ax.set_xticklabels(['-90', '', '', '-60', '', '', '-30', '', '', 'EQ', '', '', '30', '', '', '60', '', '', '90'])
-ax.set_xlabel('Lat')
+ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
+ax.set_xlabel('Latitude')
 if show == 'T':
-    array = np.load('T_array.npz')['arr_0']
-    ax.set_ylabel('T (K)')
-elif show == 'E':
-    array = np.load('E_array.npz')['arr_0']
-    ax.set_ylabel("J/kg")
-elif show == 'alb':
-    array = np.load('alb_array.npz')['arr_0']
-    ax.set_ylabel("$\\alpha$")
-elif show == 'L':
-    array = np.load('L_array.npz')['arr_0']
-    ax.set_ylabel("W/m$^2$")
+    array = np.load('simulation_data.npz')['T']
+    ax.set_ylabel('$T$ (K)')
 ax.set_title('EBM frame = 0')
 plt.tight_layout(pad=3)
 
-dx = 2 / array.shape[1]
-sin_lats = np.linspace(-1.0 + dx/2, 1.0 - dx/2, array.shape[1])
+dx = 2 / (array.shape[1] - 1)
+sin_lats = np.linspace(-1.0, 1.0, array.shape[1])
 
 line, = ax.plot(sin_lats, array[0, :], 'b')
 

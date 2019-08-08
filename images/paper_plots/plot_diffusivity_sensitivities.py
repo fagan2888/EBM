@@ -57,7 +57,7 @@ gs1 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[0], wspace=0.4, 
 gs2 = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=outer[1], wspace=0)
 
 ax1 = plt.subplot(gs1[0])
-colors = [(1.0, 0.5, 0.3), (0.2, 0.8, 0.2), (0.0, 0.5, 0.8), (0.0, 0.0, 0.0)]
+colors = [(1.0, 0.4, 0.4), (0.2, 0.7, 0.2), (0.0, 0.5, 0.8), (0.0, 0.0, 0.0)]
 l1, = ax1.plot(sin_lats_cesm2, D_cesm2, c=colors[0], ls="-", label="CESM2")
 l2, = ax1.plot(sin_lats, ps/g*D1/Re**2, c=colors[1], ls="--", label="$D_1$")
 l3, = ax1.plot(sin_lats, ps/g*D2/Re**2, c=colors[2], ls="-.", label="$D_2$")
