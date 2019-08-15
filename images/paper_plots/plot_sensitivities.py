@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from cycler import cycler
 from scipy.integrate import quadrature
 from matplotlib import rc
+from matplotlib.lines import Line2D
 import os
 
 EBM_PATH = os.environ["EBM_PATH"]
@@ -29,7 +30,6 @@ def get_data(filename, location):
 if __name__ == "__main__":
     # two plots: tropics and extratropics perturbations
     f, axes = plt.subplots(1, 2, figsize=(7.057, 7.057/1.62/1.8), sharey=True)
-    # f, axes = plt.subplots(1, 2, figsize=(7.057, 7.057/1.62/2))
     ax1 = axes[0]; ax2 = axes[1]
     
     # dictionary of 'file' : ['label', 'color', 'marker'] elements
@@ -38,7 +38,7 @@ if __name__ == "__main__":
             'sensitivity_full_radiation_no_al.dat': ['MEBM No AL Feedback', 'g', '*'],
             'sensitivity_full_radiation_no_wv.dat': ['MEBM No WV Feedback', 'm', 'v'],
             'sensitivity_full_radiation_no_lr.dat': ['MEBM No LR Feedback', 'y', 's'],
-            'sensitivity_full_radiation_rh.dat': ['MEBM RH Feedback', 'c', '^'],
+            'sensitivity_full_radiation_rh.dat': ['MEBM RH Feedback', 'b', '^'],
             }
     
     # plot all the data
@@ -49,34 +49,29 @@ if __name__ == "__main__":
     
     # CESM
     color = 'k'
-    alpha = 1.0
     linestyle = '-'
-    markersize = 4
-    linewidth = 0.5
     marker = 'o'
     centers, spreads, intensities, efes = get_data("sensitivity_cesm2.dat", "tropics")
-    ax1.plot(intensities, efes, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
+    ax1.plot(intensities, efes, color=color, marker=marker, markeredgecolor='k', markerfacecolor='none', linestyle=linestyle, alpha=0.5)
     centers, spreads, intensities, efes = get_data("sensitivity_cesm2.dat", "extratropics")
-    ax2.plot(intensities, efes, marker=marker, color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label="CESM2", markersize=markersize)
+    ax2.plot(intensities, efes, color=color, marker=marker, markeredgecolor='k', markerfacecolor='none', linestyle=linestyle, alpha=0.5)
 
     # C18
     color = 'k'
-    alpha = 0.5
     linestyle = '--'
-    markersize = 4
-    linewidth = 0.5
     marker = 'v'
     centers, spreads, intensities, efes = get_data('sensitivity_clark_no_wv.dat', 'tropics')
-    ax1.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (C18)', markersize=markersize)
+    ax1.plot(intensities, efes, color=color, marker=marker, markeredgecolor='k', markerfacecolor='none', linestyle=linestyle, alpha=0.5)
     centers, spreads, intensities, efes = get_data('sensitivity_clark_no_wv.dat', 'extratropics')
-    ax2.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Prescribed WV (C18)', markersize=markersize)
+    ax2.plot(intensities, efes, color=color, marker=marker, markeredgecolor='k', markerfacecolor='none', linestyle=linestyle, alpha=0.5)
     
+    color = 'k'
     marker = 'o'
-    linestyle = '-.'
+    linestyle = '--'
     centers, spreads, intensities, efes = get_data('sensitivity_clark.dat', 'tropics')
-    ax1.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Interactive WV (C18)', markersize=markersize)
+    ax1.plot(intensities, efes, color=color, marker=marker, markeredgecolor='k', markerfacecolor='none', linestyle=linestyle, alpha=0.5)
     centers, spreads, intensities, efes = get_data('sensitivity_clark.dat', 'extratropics')
-    ax2.plot(intensities, efes, color=color, marker=marker, alpha=alpha, linestyle=linestyle, linewidth=linewidth, label='Interactive WV (C18)', markersize=markersize)
+    ax2.plot(intensities, efes, color=color, marker=marker, markeredgecolor='k', markerfacecolor='none', linestyle=linestyle, alpha=0.5)
     
     ax1.set_xlim(0, 20)
     ax1.set_xticks([0, 5, 10, 15, 18])
@@ -89,13 +84,18 @@ if __name__ == "__main__":
     
     ax2.set_xlim(0, 20)
     ax2.set_xticks([0, 5, 10, 15, 18])
-    # ax2.set_ylim(-16, 0)
-    # ax2.set_yticks(np.arange(-16, 1, 2))
-    # ax2.set_yticklabels(['16°S', '14°S', '12°S', '10°S', '8°S', '6°S', '4°S', '2°S', 'EQ'])
-    ax2.legend(loc='lower left')
+    legend_elements = [Line2D([0], [0], color="k", linestyle="",   marker="o", label="Control"),
+                       Line2D([0], [0], color="g", linestyle="",   marker="*", label="No AL feedback"),
+                       Line2D([0], [0], color="m", linestyle="",   marker="v", label="No WV feedback"),
+                       Line2D([0], [0], color="y", linestyle="",   marker="s", label="No LR feedback"),
+                       Line2D([0], [0], color="b", linestyle="",   marker="^", label="RH parameterization"),
+                       Line2D([0], [0], color="k", linestyle="-",  alpha=0.5, marker="", label="CESM2"),
+                       Line2D([0], [0], color="k", linestyle="--", alpha=0.5, marker="", label="Clark et al. (C18)")]
+    ax2.legend(handles=legend_elements, loc="lower left", fontsize=6)
+    ax1.annotate("open for GCM", xy=(9.8, -7.8), xycoords="data", xytext=(-60, -40), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=0.2"))
+    ax2.annotate("closed for MEBM", xy=(17.8, -7), xycoords="data", xytext=(-60, -40), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=0.2"))
     ax2.annotate("(b)", (0.02, 0.93), xycoords="axes fraction")
     ax2.set_xlabel('Forcing Strength, $M$ (W m$^{-2}$)')
-    # ax2.set_ylabel('EFE Latitude, $\phi_E$')
     
     plt.tight_layout()
     

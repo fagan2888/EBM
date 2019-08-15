@@ -130,17 +130,17 @@ def get_bar_height(filename, location, control_efe=0):
 
 # Set up bars
 bars_dict = { 
-                 0 : {"filename" : "sensitivity_clark.dat", "control" : None, "label" : "C18 Total", "color" : "k", "alpha" : 0.5},
-                 1 : {"filename" : "sensitivity_clark_no_wv.dat", "control" : 0, "label" : "C18 WV", "color" : "m", "alpha" : 0.5},
-                 3 : {"filename" : "sensitivity_cesm2.dat", "control" : None, "label" : "CESM2 Total", "color" : "k", "alpha" : 0.5},
-                 5 : {"filename" : "sensitivity_full_radiation.dat", "control" : None, "label" : "MEBM Total", "color" : "k", "alpha" : 1.0},
-                 6 : {"filename" : None, "control" : None, "label" : "MEBM Sum", "color" : (0.8, 0.8, 0.8), "alpha" : 1.0},
-                 7 : {"filename" : "sensitivity_no_feedback_no_al.dat", "control" : None, "label" : "MEBM NF", "color" : (1, 1, 1), "alpha" : 1.0},
-                 8 : {"filename" : "sensitivity_full_radiation_no_al_no_wv_no_lr.dat", "control" : 7, "label" : "MEBM PL", "color" : "r", "alpha" : 1.0},
-                 9 : {"filename" : "sensitivity_full_radiation_no_wv.dat", "control" : 5, "label" : "MEBM WV", "color" : "m", "alpha" : 1.0},
-                10 : {"filename" : "sensitivity_full_radiation_no_al.dat", "control" : 5, "label" : "MEBM AL", "color" : "g", "alpha" : 1.0},
-                11 : {"filename" : "sensitivity_full_radiation_no_lr.dat", "control" : 5, "label" : "MEBM LR", "color" : "y", "alpha" : 1.0},
-                12 : {"filename" : "sensitivity_full_radiation_rh.dat", "control" : 5, "label" : "MEBM RH", "color" : "b", "alpha" : 1.0}
+                 0 : {"filename" : "sensitivity_clark.dat", "control" : None, "label" : "C18 Total", "color" : "k", "alpha" : 0.5, "hatch" : "//"},
+                 1 : {"filename" : "sensitivity_clark_no_wv.dat", "control" : 0, "label" : "C18 WV", "color" : "m", "alpha" : 0.5, "hatch" : "//"},
+                 3 : {"filename" : "sensitivity_cesm2.dat", "control" : None, "label" : "CESM2 Total", "color" : "k", "alpha" : 0.5, "hatch" : "\\\\"},
+                 5 : {"filename" : "sensitivity_full_radiation.dat", "control" : None, "label" : "MEBM Total", "color" : "k", "alpha" : 1.0, "hatch" : ""},
+                 6 : {"filename" : None, "control" : None, "label" : "MEBM Sum", "color" : "k", "alpha" : 0.2, "hatch" : ""},
+                 7 : {"filename" : "sensitivity_no_feedback_no_al.dat", "control" : None, "label" : "MEBM NF", "color" : (1, 1, 1), "alpha" : 1.0, "hatch" : ""},
+                 8 : {"filename" : "sensitivity_full_radiation_no_al_no_wv_no_lr.dat", "control" : 7, "label" : "MEBM PL", "color" : "r", "alpha" : 1.0, "hatch" : ""},
+                 9 : {"filename" : "sensitivity_full_radiation_no_wv.dat", "control" : 5, "label" : "MEBM WV", "color" : "m", "alpha" : 1.0, "hatch" : ""},
+                10 : {"filename" : "sensitivity_full_radiation_no_al.dat", "control" : 5, "label" : "MEBM AL", "color" : "g", "alpha" : 1.0, "hatch" : ""},
+                11 : {"filename" : "sensitivity_full_radiation_no_lr.dat", "control" : 5, "label" : "MEBM LR", "color" : "y", "alpha" : 1.0, "hatch" : ""},
+                12 : {"filename" : "sensitivity_full_radiation_rh.dat", "control" : 5, "label" : "MEBM RH", "color" : "c", "alpha" : 1.0, "hatch" : ""}
             }
 
 xvals = np.zeros(len(bars_dict))
@@ -201,8 +201,8 @@ for i, x in enumerate(bars_dict):
             height_e = get_bar_height(filename, location="extratropics", control_efe=control_efes_e[0]) 
         heights_t[i] = height_t
         heights_e[i] = height_e
-        ax1.bar(x, height_t, color=bar["color"], alpha=bar["alpha"], align="edge", edgecolor="k", linewidth=0.8)
-        ax2.bar(x, height_e, color=bar["color"], alpha=bar["alpha"], align="edge", edgecolor="k", linewidth=0.8)
+        ax1.bar(x, height_t, color=bar["color"], alpha=bar["alpha"], hatch=bar["hatch"], align="edge", edgecolor="k", linewidth=0.8)
+        ax2.bar(x, height_e, color=bar["color"], alpha=bar["alpha"], hatch=bar["hatch"], align="edge", edgecolor="k", linewidth=0.8)
 
 # calculate sum
 i = 4
@@ -210,8 +210,8 @@ x = 6
 heights_t[i] = np.sum(heights_t[i+1:i+6])
 heights_e[i] = np.sum(heights_e[i+1:i+6])
 bar = bars_dict[x]
-ax1.bar(x, heights_t[i], color=bar["color"], alpha=bar["alpha"], align="edge", edgecolor="k", linewidth=0.8)
-ax2.bar(x, heights_e[i], color=bar["color"], alpha=bar["alpha"], align="edge", edgecolor="k", linewidth=0.8)
+ax1.bar(x, heights_t[i], color=bar["color"], alpha=bar["alpha"], hatch=bar["hatch"], align="edge", edgecolor="k", linewidth=0.8)
+ax2.bar(x, heights_e[i], color=bar["color"], alpha=bar["alpha"], hatch=bar["hatch"], align="edge", edgecolor="k", linewidth=0.8)
 
 ax1.plot([-100, 100], [0, 0], "k-", lw=0.8)
 ax2.plot([-100, 100], [0, 0], "k-", lw=0.8)

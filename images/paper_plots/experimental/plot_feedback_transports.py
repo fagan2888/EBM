@@ -9,7 +9,6 @@ EBM_PATH = os.environ["EBM_PATH"]
 plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 
 def plot_diffs(ax):
-    ax.plot([-1, 1], [0, 0], "k-", lw=0.5)
     l0, = ax.plot(sin_lats, dS*(1 - alb), color=colors[0], linestyle=linestyles[0])
     l1, = ax.plot(sin_lats, -(S + dS)*dalb, color=colors[1], linestyle=linestyles[1])
     l2, = ax.plot(sin_lats, -dL_pl, color=colors[2], linestyle=linestyles[2])
@@ -19,12 +18,11 @@ def plot_diffs(ax):
     # l6, = ax.plot(sin_lats, dS*(1 - alb) - (S + dS)*dalb - (dL_pl + dL_wv + dL_rh + dL_lr), color=colors[6], linestyle=linestyles[6])
     l6, = ax.plot(sin_lats, dS*(1 - alb) - (S + dS)*dalb - (dL_pl + dL_wv + dL_lr), color=colors[6], linestyle=linestyles[6])
     l7, = ax.plot(sin_lats, dS*(1 - alb) - (S + dS)*dalb - dL, color=colors[7], linestyle=linestyles[7])
-    l8, = ax.plot([np.sin(EFE), np.sin(EFE)], [-1000, 1000],  "r-", lw=0.5)
+    l8, = ax.plot(np.sin(EFE), 0,  "or")
 
     ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
     ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
     ax.set_yticks(np.arange(-150, 101, 50))
-    ax.set_xlim([-1, 1])
     ax.set_ylim([-120, 90])
     ax.set_xlabel("Latitude")
     ax.set_ylabel("Energy Perturbation (W m$^{-2}$)")
@@ -33,8 +31,6 @@ def plot_diffs(ax):
     return (l0, l1, l2, l3, l5, l6, l7, l8)
 
 def plot_transports(ax):
-    ax.plot([-1, 1], [0, 0], "k-", lw=0.5)
-
     ax.plot(sin_lats, 10**-15 * dtrans_dS, c=colors[0], ls=linestyles[0])
     ax.plot(sin_lats, -10**-15 * dtrans_dalb, c=colors[1], ls=linestyles[1])
     ax.plot(sin_lats, -10**-15 * dtrans_pl, c=colors[2], ls=linestyles[2])
@@ -44,12 +40,11 @@ def plot_transports(ax):
     # ax.plot(sin_lats, 10**-15 * (dtrans_dS - dtrans_dalb - (dtrans_pl + dtrans_wv + dtrans_rh + dtrans_lr)), c=colors[6], ls=linestyles[6])
     ax.plot(sin_lats, 10**-15 * (dtrans_dS - dtrans_dalb - (dtrans_pl + dtrans_wv + dtrans_lr)), c=colors[6], ls=linestyles[6])
     ax.plot(sin_lats, 10**-15 * dtrans_total, c=colors[7], ls=linestyles[7])
-    ax.plot([np.sin(EFE), np.sin(EFE)], [-1000, 1000],  "r-", lw=0.5)
+    ax.plot(np.sin(EFE), 0,  "or")
     
     ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
     ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
-    ax.set_xlim([-1, 1])
-    ax.set_ylim([-5.5, 4])
+    ax.set_ylim([-5, 4])
     ax.set_xlabel("Latitude")
     ax.set_ylabel("Energy Transport (PW)")
 
