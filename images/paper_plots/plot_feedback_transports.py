@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 import os
 
-EBM_PATH = os.environ["EBM_PATH"]
+EBM_PATH = "/home/hpeter/Documents/ResearchBoos/EBM_files/EBM"
+# EBM_PATH = os.environ["EBM_PATH"]
 plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 
 def plot_diffs(ax):

@@ -21,7 +21,7 @@ def plot_RH(ax, sin_lats, pressures, RH):
 f, axes = plt.subplots(2, 2, figsize=(7.057, 7.057/1.62))
 
 # top left plot
-data = np.load("RH_M0_cesm2.npz")
+data = np.load("RH_ctrl_cesm2.npz")
 RH = data["RH"]
 sin_lats = np.sin(data["lats"])
 pressures = data["pressures"]
@@ -31,30 +31,30 @@ ax.set_xlabel("Latitude")
 ax.set_ylabel("Pressure, $p$ (hPa)")
 ax.annotate("(a)", (0.02, 1.05), xycoords="axes fraction")
 
-# bottom left plot
-data = np.load("RH_M18_cesm2.npz")
+# top right plot
+data = np.load("RH_shifted_cesm2.npz")
 RH = data["RH"]
 sin_lats = np.sin(data["lats"])
 pressures = data["pressures"]
-ax = axes[1, 0]
-cf =plot_RH(ax, sin_lats, pressures, RH)
-ax.set_xlabel("Latitude")
-ax.set_ylabel("Pressure, $p$ (hPa)")
-ax.annotate("(c)", (0.02, 1.05), xycoords="axes fraction")
-
-# top right plot
-data = np.load("RH_M0_mebm.npz")
-RH = data["RH"][:, :, 0]
-sin_lats = np.sin(data["lats"])
-pressures = data["pressures"]/100
 ax = axes[0, 1]
-cf = plot_RH(ax, sin_lats, pressures, RH)
+cf =plot_RH(ax, sin_lats, pressures, RH)
 ax.set_xlabel("Latitude")
 ax.set_ylabel("Pressure, $p$ (hPa)")
 ax.annotate("(b)", (0.02, 1.05), xycoords="axes fraction")
 
+# bottom left plot
+data = np.load("RH_ctrl_mebm.npz")
+RH = data["RH"][:, :, 0]
+sin_lats = np.sin(data["lats"])
+pressures = data["pressures"]/100
+ax = axes[1, 0]
+cf = plot_RH(ax, sin_lats, pressures, RH)
+ax.set_xlabel("Latitude")
+ax.set_ylabel("Pressure, $p$ (hPa)")
+ax.annotate("(c)", (0.02, 1.05), xycoords="axes fraction")
+
 # bottom right plot
-data = np.load("RH_M18_mebm.npz")
+data = np.load("RH_shifted_mebm.npz")
 RH = data["RH"][:, :, 0]
 sin_lats = np.sin(data["lats"])
 pressures = data["pressures"]/100

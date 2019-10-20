@@ -51,39 +51,33 @@ def linregress(x, y, b=None):
 f, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.057, 7.057/1.62/2))
 
 p0 = 600
-for M in [0, 18]:
-    if M != 0:
-        data = np.load("RH_M{}_cesm2.npz".format(M))
-    else:
-        data = np.load("RH_M{}_cesm2.npz".format(M))
+for sim_type in ["ctrl", "shifted"]:
+    data = np.load("RH_{}_cesm2.npz".format(sim_type))
     RH = data["RH"]
     sin_lats = np.sin(data["lats"])
     pressures = data["pressures"]
     Ip0 = np.argmin(np.abs(pressures - p0))
     
-    if M != 0:
-        ax1.plot(sin_lats, RH[Ip0, :], c=(0.2, 0.6, 0.4), ls="-.", label="CESM2 $M={}$ tropical".format(M))
+    if sim_type == "shifted":
+        ax1.plot(sin_lats, RH[Ip0, :], c=(0.2, 0.6, 0.4), ls="-.", label="CESM2 $M=18$ tropical")
     else:
-        ax1.plot(sin_lats, RH[Ip0, :], c=(0.5, 0.4, 0.0), ls="-", label="CESM2 Control")
+        ax1.plot(sin_lats, RH[Ip0, :], c=(0.5, 0.4, 0.0), ls="-", label="CESM2 control")
 
-    if M != 0:
-        data = np.load("RH_M{}_mebm.npz".format(M))
-    else:
-        data = np.load("RH_M{}_mebm.npz".format(M))
+    data = np.load("RH_{}_mebm.npz".format(sim_type))
     RH = data["RH"]
     sin_lats = np.sin(data["lats"])
     pressures = data["pressures"]/100
     Ip0 = np.argmin(np.abs(pressures - p0))
     
-    if M != 0:
-        ax1.plot(sin_lats, RH[Ip0, :], c=(0.2, 0.6, 0.4), ls=":", label="MEBM $M={}$ tropical".format(M))
+    if sim_type == "shifted":
+        ax1.plot(sin_lats, RH[Ip0, :], c=(0.2, 0.6, 0.4), ls=":", label="RH param. $\\phi_E = 10.7$°S")
     else:
-        ax1.plot(sin_lats, RH[Ip0, :], c=(0.5, 0.4, 0.0), ls="--", label="MEBM Control")
+        ax1.plot(sin_lats, RH[Ip0, :], c=(0.5, 0.4, 0.0), ls="--", label="MEBM control")
 
 ax1.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax1.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
 ax1.set_ylim([0, 1])
-ax1.legend(loc="upper center", ncol=2, bbox_to_anchor=(0.51, 1.01))
+ax1.legend(loc="upper center", ncol=2, bbox_to_anchor=(0.52, 1.04))
 ax1.annotate("(a)", (0.02, 1.025), xycoords="axes fraction") 
 ax1.set_xlabel("Latitude")
 ax1.set_ylabel("Relative Humidity at {:3d} hPa".format(p0))
