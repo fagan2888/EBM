@@ -5,9 +5,11 @@ import scipy as sp
 import scipy.integrate, scipy.interpolate
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+import mebm
 import os
 
-EBM_PATH = os.environ["EBM_PATH"]
+# EBM_PATH = os.environ["EBM_PATH"]
+EBM_PATH = "/home/hpeter/Documents/ResearchBoos/EBM_files/EBM"
 plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 
 ps = 98000    
@@ -84,28 +86,31 @@ dx = 2 / (N_pts - 1)
 sin_lats = np.linspace(-1.0, 1.0, N_pts)
 
 # Plot
+m = mebm.MoistEnergyBalanceModel(N_pts=513)
+ctrl_alb = m.ctrl_data["alb"]
+
 f, axes = plt.subplots(3, 1, figsize=(3.404, 3.404/1.62*3))
 
 ax = axes[0]
 for i, M in enumerate([5, 10, 15, 18]):
     dS = get_dS(M, "tropics")
-    ax.plot(sin_lats, dS, "r-", alpha=0.5, label="$M={:2d}$".format(M))
+    ax.plot(sin_lats, dS*(1-ctrl_alb), "r-", alpha=0.5, label="$M={:2d}$".format(M))
     dS = get_dS(M, "extratropics")
-    ax.plot(sin_lats, dS, "b--", alpha=0.5)
+    ax.plot(sin_lats, dS*(1-ctrl_alb), "b--", alpha=0.5)
 dS = 0 * dS
 ax.plot(sin_lats, dS, color="k", linestyle="-", label="$M=0$, control", lw=1.5)
 
 ax.annotate("(a)", (0.02, 0.94), xycoords="axes fraction")
 ax.annotate("control", xy=(np.sin(np.deg2rad(15.5)),   0), xycoords="data", xytext=(-80, -12), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=0.2"))
-ax.annotate("$M=5$", xy=(np.sin(np.deg2rad(14.5)),  -47), xycoords="data", xytext=(-45, -1.8), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3"))
-ax.annotate("$M=10$", xy=(np.sin(np.deg2rad(14.5)),  -95), xycoords="data", xytext=(-45, -1.8), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3"))
-ax.annotate("$M=15$", xy=(np.sin(np.deg2rad(14.5)), -140), xycoords="data", xytext=(-45, -1.8), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3"))
-ax.annotate("$M=18$", xy=(np.sin(np.deg2rad(14.5)), -170), xycoords="data", xytext=(-45, -1.8), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3"))
+ax.annotate("$M=5$", xy=(np.sin(np.deg2rad(14.5)),   0.8*-47),  xycoords="data", xytext=(-45, 0.8*-1.8), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3"))
+ax.annotate("$M=10$", xy=(np.sin(np.deg2rad(14.5)),  0.8*-95),  xycoords="data", xytext=(-45, 0.8*-1.8), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3"))
+ax.annotate("$M=15$", xy=(np.sin(np.deg2rad(14.5)),  0.8*-140), xycoords="data", xytext=(-45, 0.8*-1.8), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3"))
+ax.annotate("$M=18$", xy=(np.sin(np.deg2rad(14.5)),  0.8*-170), xycoords="data", xytext=(-45, 0.8*-1.8), textcoords="offset points", arrowprops=dict(arrowstyle="->", connectionstyle="arc3"))
 ax.set_xticks(np.sin(np.deg2rad(np.arange(-90, 91, 10))))
 ax.set_xticklabels(["90°S", "", "", "", "", "", "30°S", "", "", "EQ", "", "", "30°N", "", "", "", "", "", "90°N"])
-ax.set_ylim([-200, 20])
+ax.set_ylim([0.8*-200, 0.8*20])
 ax.set_xlabel("Latitude")
-ax.set_ylabel("Insolation Forcing, $S'$ (W m$^{-2}$)")
+ax.set_ylabel("Forcing, $S'(1 - \\alpha)$ (W m$^{-2}$)")
 
 legend_elements = [Line2D([0], [0], color="r", linestyle="-",  alpha=0.5, label="Tropical"),
                    Line2D([0], [0], color="b", linestyle="--", alpha=0.5, label="Extratropical")]

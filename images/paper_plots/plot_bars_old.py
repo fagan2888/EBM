@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 import os
 
-EBM_PATH = os.environ["EBM_PATH"]
+# EBM_PATH = os.environ["EBM_PATH"]
+EBM_PATH = "/home/hpeter/Documents/ResearchBoos/EBM_files/EBM"
 plt.style.use(EBM_PATH + "/plot_styles.mplstyle")
 rc("axes", xmargin=0.01)
 
@@ -180,8 +181,8 @@ for i, M in enumerate([5, 10, 15, 18]):
     dS_eq_trans_e[i] = 10**-15 * dS_trans[I_equator] 
     dS_eq_trans_e_c18[i] = 10**-15 * dS_trans_c18[I_equator] 
 
-print(dS_eq_trans_t_c18)
-print(dS_eq_trans_t)
+# print(dS_eq_trans_t_c18)
+# print(dS_eq_trans_t)
 
 # Plot
 f, (ax1, ax2) = plt.subplots(2, 1, figsize=(3.404, 3.404/1.62*2), sharex=True)
@@ -203,15 +204,18 @@ for i, x in enumerate(bars_dict):
         heights_e[i] = height_e
         ax1.bar(x, height_t, color=bar["color"], alpha=bar["alpha"], align="edge", edgecolor="k", linewidth=0.8)
         ax2.bar(x, height_e, color=bar["color"], alpha=bar["alpha"], align="edge", edgecolor="k", linewidth=0.8)
+        print("{:10s}:          {:2.3f}T, {:2.3f}E".format(bar["label"], height_t, height_e))
 
 # calculate sum
 i = 4
 x = 6
 heights_t[i] = np.sum(heights_t[i+1:i+6])
 heights_e[i] = np.sum(heights_e[i+1:i+6])
+print(heights_e[i])
 bar = bars_dict[x]
 ax1.bar(x, heights_t[i], color=bar["color"], alpha=bar["alpha"], align="edge", edgecolor="k", linewidth=0.8)
 ax2.bar(x, heights_e[i], color=bar["color"], alpha=bar["alpha"], align="edge", edgecolor="k", linewidth=0.8)
+
 
 ax1.plot([-100, 100], [0, 0], "k-", lw=0.8)
 ax2.plot([-100, 100], [0, 0], "k-", lw=0.8)
